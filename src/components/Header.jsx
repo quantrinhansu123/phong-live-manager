@@ -35,7 +35,7 @@ export default function Header() {
               className="h-10 w-10 rounded-full shadow-md"
             />
             <span className="text-white text-xl font-bold">
-              Marketing Report
+              Lumi Global
             </span>
           </div>
           <div className="flex items-center space-x-4">

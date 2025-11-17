@@ -2,9 +2,9 @@ import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Pagination } from "../components/shared/Pagination";
-import { ref, update, push, set, get } from "firebase/database";
-import { database } from "../firebase/config";
+// Removed Firebase SDK usage. Will use REST endpoints directly.
 import FilterPanel from "../components/FilterPanel";
+import { ArrowLeft } from "lucide-react";
 
 export default function VanDon() {
   // Get user info from localStorage
@@ -87,6 +87,26 @@ export default function VanDon() {
     paymentMethod: true,
   });
 
+  // Configuration for columns shown in the FilterPanel
+  const columnsConfig = [
+    { key: "stt", label: "STT" },
+    { key: "orderCode", label: "Mã đơn hàng" },
+    { key: "customerName", label: "Tên khách hàng" },
+    { key: "phone", label: "Điện thoại" },
+    { key: "address", label: "Địa chỉ" },
+    { key: "product", label: "Mặt hàng" },
+    { key: "quantity", label: "Số lượng" },
+    { key: "price", label: "Giá bán" },
+    { key: "totalVND", label: "Tổng tiền VNĐ" },
+    { key: "marketing", label: "NV Marketing" },
+    { key: "sale", label: "NV Sale" },
+    { key: "team", label: "Team" },
+    { key: "shift", label: "Ca" },
+    { key: "orderDate", label: "Ngày lên đơn" },
+    { key: "status", label: "Trạng thái đơn" },
+    { key: "paymentMethod", label: "Hình thức TT" },
+  ];
+
   // Column order state for drag and drop
   const [columnOrder, setColumnOrder] = useState([
     "stt",
@@ -116,8 +136,8 @@ export default function VanDon() {
   const [ripplePosition, setRipplePosition] = useState({ x: 0, y: 0 });
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [sortConfig, setSortConfig] = useState({
-    column: null,
-    direction: null,
+    column: "orderDate",
+    direction: "desc",
   });
 
   // Check if user can edit status - All roles can edit
@@ -150,7 +170,8 @@ export default function VanDon() {
     orderData = null
   ) => {
     try {
-      const changeLogsUrl = "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/ChangeLog.json";
+      const changeLogsUrl =
+        "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/ChangeLog.json";
 
       const logData = {
         orderId,
@@ -168,9 +189,9 @@ export default function VanDon() {
       };
 
       await fetch(changeLogsUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(logData),
       });
@@ -374,7 +395,8 @@ export default function VanDon() {
         setLoading(true);
 
         // Fetch F3 data from direct URL
-        const F3_URL = "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3.json";
+        const F3_URL =
+          "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3.json";
         const f3Response = await fetch(F3_URL);
         const f3DataRaw = await f3Response.json();
 
@@ -384,7 +406,7 @@ export default function VanDon() {
             ...item,
           }));
           setF3Data(dataArray);
-        } else if (f3DataRaw && typeof f3DataRaw === 'object') {
+        } else if (f3DataRaw && typeof f3DataRaw === "object") {
           // Handle object format where keys are IDs
           const dataArray = Object.entries(f3DataRaw).map(([key, value]) => ({
             id: key,
@@ -396,7 +418,8 @@ export default function VanDon() {
         }
 
         // Fetch human resources data from direct URL
-        const HR_URL = "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/Nh%C3%A2n_s%E1%BB%B1.json";
+        const HR_URL =
+          "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/Nh%C3%A2n_s%E1%BB%B1.json";
         const hrResponse = await fetch(HR_URL);
         const hrDataRaw = await hrResponse.json();
 
@@ -440,23 +463,27 @@ export default function VanDon() {
       filtered = filtered.filter((item) => {
         const marketing = item["Nhân viên Marketing"] || "";
         const sale = item["Nhân viên Sale"] || "";
-        const matches = teamMembers.some((member) =>
-          marketing.toLowerCase().includes(member.toLowerCase()) ||
-          sale.toLowerCase().includes(member.toLowerCase())
+        const matches = teamMembers.some(
+          (member) =>
+            marketing.toLowerCase().includes(member.toLowerCase()) ||
+            sale.toLowerCase().includes(member.toLowerCase())
         );
         return matches;
       });
     } else if (userRole === "user") {
       // User: only see their own data (match by name in NV Marketing or NV Sale)
       // Find user's real name from HR data using email
-      const userRecord = humanResources.find(hr => hr.email === userEmail);
-      const userName = userRecord ? userRecord["Họ Và Tên"] : userEmail.split("@")[0]; // Fallback to email prefix if not found
+      const userRecord = humanResources.find((hr) => hr.email === userEmail);
+      const userName = userRecord
+        ? userRecord["Họ Và Tên"]
+        : userEmail.split("@")[0]; // Fallback to email prefix if not found
 
       filtered = filtered.filter((item) => {
         const marketing = item["Nhân viên Marketing"] || "";
         const sale = item["Nhân viên Sale"] || "";
-        const matches = marketing.toLowerCase().includes(userName.toLowerCase()) ||
-                       sale.toLowerCase().includes(userName.toLowerCase());
+        const matches =
+          marketing.toLowerCase().includes(userName.toLowerCase()) ||
+          sale.toLowerCase().includes(userName.toLowerCase());
         return matches;
       });
     } else {
@@ -464,23 +491,16 @@ export default function VanDon() {
       filtered = [];
     }
 
-    // Search text filter (tìm trong tên khách hàng, mã đơn, điện thoại, địa chỉ, NV Marketing, NV Sale)
+    // Search text filter (tìm kiếm toàn văn trong tất cả các trường)
     if (filters.searchText) {
       const searchLower = filters.searchText.toLowerCase();
       filtered = filtered.filter((item) => {
-        const searchFields = [
-          item["Name*"],
-          item["Tên lên đơn"],
-          item["Mã đơn hàng"],
-          item["Phone*"],
-          item["Add"],
-          item["City"],
-          item["State"],
-          item["Nhân viên Marketing"],
-          item["Nhân viên Sale"],
-        ];
-        return searchFields.some(
-          (field) => field && String(field).toLowerCase().includes(searchLower)
+        // Tìm kiếm trong tất cả các trường có thể có của item
+        const allFields = Object.values(item).filter(
+          (value) => value != null && value !== ""
+        );
+        return allFields.some((field) =>
+          String(field).toLowerCase().includes(searchLower)
         );
       });
     }
@@ -527,8 +547,12 @@ export default function VanDon() {
     if (filters.products && filters.products.length > 0) {
       filtered = filtered.filter((item) => {
         const product = item["Mặt hàng"] || item["Tên mặt hàng 1"];
-        return filters.products.some((p) =>
-          product && String(product).toLowerCase().includes(String(p || '').toLowerCase())
+        return filters.products.some(
+          (p) =>
+            product &&
+            String(product)
+              .toLowerCase()
+              .includes(String(p || "").toLowerCase())
         );
       });
     }
@@ -542,8 +566,12 @@ export default function VanDon() {
     if (filters.markets && filters.markets.length > 0) {
       filtered = filtered.filter((item) => {
         const market = item["Thị trường"] || item["Market"];
-        return filters.markets.some((m) =>
-          market && String(market).toLowerCase().includes(String(m || '').toLowerCase())
+        return filters.markets.some(
+          (m) =>
+            market &&
+            String(market)
+              .toLowerCase()
+              .includes(String(m || "").toLowerCase())
         );
       });
     }
@@ -556,18 +584,28 @@ export default function VanDon() {
     }
 
     // Payment method filter (supports array of selected methods)
-    if (Array.isArray(filters.paymentMethod) && filters.paymentMethod.length > 0) {
-      const lowers = filters.paymentMethod.map((p) => String(p || '').toLowerCase());
+    if (
+      Array.isArray(filters.paymentMethod) &&
+      filters.paymentMethod.length > 0
+    ) {
+      const lowers = filters.paymentMethod.map((p) =>
+        String(p || "").toLowerCase()
+      );
       filtered = filtered.filter((item) => {
-        const method = item['Hình thức thanh toán'] || item['Hình thức TT'] || '';
+        const method =
+          item["Hình thức thanh toán"] || item["Hình thức TT"] || "";
         const m = String(method).toLowerCase();
         return lowers.some((l) => m.includes(l));
       });
-    } else if (filters.paymentMethod && typeof filters.paymentMethod === 'string') {
+    } else if (
+      filters.paymentMethod &&
+      typeof filters.paymentMethod === "string"
+    ) {
       // backward-compat: single-string filter
       const payLower = String(filters.paymentMethod).toLowerCase();
       filtered = filtered.filter((item) => {
-        const method = item['Hình thức thanh toán'] || item['Hình thức TT'] || '';
+        const method =
+          item["Hình thức thanh toán"] || item["Hình thức TT"] || "";
         return String(method).toLowerCase().includes(payLower);
       });
     }
@@ -698,7 +736,8 @@ export default function VanDon() {
         if (item["Mặt hàng"]) productsSet.add(String(item["Mặt hàng"]).trim());
         if (item["Team"]) teamsSet.add(String(item["Team"]).trim());
         if (item["Ca"]) shiftsSet.add(String(item["Ca"]).trim());
-        if (item["Hình thức thanh toán"]) paymentMethodsSet.add(String(item["Hình thức thanh toán"]).trim());
+        if (item["Hình thức thanh toán"])
+          paymentMethodsSet.add(String(item["Hình thức thanh toán"]).trim());
       });
 
       setAvailableFilters({
@@ -713,12 +752,20 @@ export default function VanDon() {
   // Handle filter value change (checkbox toggles and simple values)
   const handleFilterChange = (filterType, value) => {
     setFilters((prev) => {
+      // If caller passed a full array, replace directly
+      if (Array.isArray(value)) {
+        return { ...prev, [filterType]: value };
+      }
+
+      // If the existing filter is an array, toggle the single value
       if (Array.isArray(prev[filterType])) {
         const newValues = prev[filterType].includes(value)
           ? prev[filterType].filter((v) => v !== value)
           : [...prev[filterType], value];
         return { ...prev, [filterType]: newValues };
       }
+
+      // Otherwise set simple value
       return { ...prev, [filterType]: value };
     });
     setCurrentPage(1);
@@ -818,8 +865,9 @@ export default function VanDon() {
       const currentOrder = localF3Data.find((item) => item.id === orderId);
       const oldStatus = currentOrder ? currentOrder["Trạng thái đơn"] : null;
 
-      const orderRef = ref(database, `f3_data/${orderId}`);
-      await update(orderRef, { "Trạng thái đơn": newStatus });
+      // Note: this project stores canonical data in /datasheet/F3.json.
+      // The `/f3_data/<id>` path may not exist in this database. We persist
+      // changes directly to `/datasheet/F3` below instead.
 
       // Log the change with full order data for oldValue
       await logChange(
@@ -830,7 +878,62 @@ export default function VanDon() {
         currentOrder
       );
 
-      // Update local data directly without reloading
+      // Also persist status change to datasheet/F3
+      try {
+        const BASE_URL =
+          "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app";
+        const F3_URL = `${BASE_URL}/datasheet/F3.json`;
+        const resp = await fetch(F3_URL);
+        const f3DataRaw = await resp.json();
+
+        const orderCode = currentOrder
+          ? currentOrder["Mã đơn hàng"] || currentOrder["Mã đơn"] || currentOrder["Mã"]
+          : null;
+
+        if (Array.isArray(f3DataRaw)) {
+          const idx = f3DataRaw.findIndex((item) => {
+            if (!item) return false;
+            const code =
+              item["Mã đơn hàng"] || item["Mã đơn"] || item["Mã Đơn"] || item["OrderCode"] || item["Mã"];
+            return code && orderCode && String(code).trim() === String(orderCode).trim();
+          });
+
+          if (idx !== -1) {
+            const entryUrl = `${BASE_URL}/datasheet/F3/${idx}.json`;
+            await fetch(entryUrl, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ "Trạng thái đơn": newStatus }),
+            });
+          }
+        } else if (f3DataRaw && typeof f3DataRaw === "object") {
+          const foundKey = Object.keys(f3DataRaw).find((k) => {
+            const item = f3DataRaw[k];
+            if (!item) return false;
+            const code =
+              item["Mã đơn hàng"] || item["Mã đơn"] || item["Mã Đơn"] || item["OrderCode"] || item["Mã"];
+            return code && orderCode && String(code).trim() === String(orderCode).trim();
+          });
+
+          if (foundKey) {
+            const entryUrl = `${BASE_URL}/datasheet/F3/${foundKey}.json`;
+            await fetch(entryUrl, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ "Trạng thái đơn": newStatus }),
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to persist status to datasheet/F3 (non-fatal):", e);
+      }
+
+      // Update both f3Data and localF3Data
+      setF3Data((prevData) =>
+        prevData.map((item) =>
+          item.id === orderId ? { ...item, "Trạng thái đơn": newStatus } : item
+        )
+      );
       setLocalF3Data((prevData) =>
         prevData.map((item) =>
           item.id === orderId ? { ...item, "Trạng thái đơn": newStatus } : item
@@ -838,8 +941,6 @@ export default function VanDon() {
       );
 
       toast.success("Cập nhật trạng thái đơn thành công");
-
-      // Close dropdown
       setOpenStatusDropdown(null);
     } catch (err) {
       console.error("Error updating order status:", err);
@@ -900,7 +1001,6 @@ export default function VanDon() {
     });
   };
 
-  // Update full order details
   const handleUpdateFullOrder = async () => {
     if (!editingFullOrder) return;
 
@@ -930,8 +1030,84 @@ export default function VanDon() {
         "Hình thức thanh toán": editingFullOrder["Hình thức thanh toán"] || "",
       };
 
-      const orderRef = ref(database, `f3_data/${editingFullOrder.id}`);
-      await update(orderRef, editFormData);
+      // Note: this project uses `/datasheet/F3.json` as the primary dataset.
+      // The `/f3_data/<id>` collection may be absent; we persist edits to
+      // `datasheet/F3` below to ensure changes survive a reload.
+
+      // Also persist changes to datasheet/F3 (the app reads from this URL on load)
+      try {
+        const BASE_URL =
+          "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app";
+        const F3_URL = `${BASE_URL}/datasheet/F3.json`;
+        const resp = await fetch(F3_URL);
+        if (!resp.ok) throw new Error(`Failed to fetch datasheet (status ${resp.status})`);
+        const f3DataRaw = await resp.json();
+
+        // Determine order code to match entries. Prefer the original code
+        // from editingFullOrder, but also consider a changed code from the
+        // edit form data as a fallback.
+        const originalCode =
+          editingFullOrder["Mã đơn hàng"] || editingFullOrder["Mã đơn"] || editingFullOrder["Mã"] || null;
+        const newCode = editFormData["Mã đơn hàng"] || editFormData["Mã đơn"] || editFormData["Mã"] || null;
+        const tryCodes = [originalCode, newCode].filter(Boolean).map((c) => String(c).trim());
+
+        let patched = false;
+
+        if (Array.isArray(f3DataRaw)) {
+          for (const code of tryCodes) {
+            const idx = f3DataRaw.findIndex((item) => {
+              if (!item) return false;
+              const codeField =
+                item["Mã đơn hàng"] || item["Mã đơn"] || item["Mã Đơn"] || item["OrderCode"] || item["Mã"];
+              return codeField && String(codeField).trim() === code;
+            });
+            if (idx !== -1) {
+              const entryUrl = `${BASE_URL}/datasheet/F3/${idx}.json`;
+              const putResp = await fetch(entryUrl, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(editFormData),
+              });
+              if (!putResp.ok) throw new Error(`PATCH failed (status ${putResp.status})`);
+              patched = true;
+              break;
+            }
+          }
+        } else if (f3DataRaw && typeof f3DataRaw === "object") {
+          for (const code of tryCodes) {
+            const foundKey = Object.keys(f3DataRaw).find((k) => {
+              const item = f3DataRaw[k];
+              if (!item) return false;
+              const codeField =
+                item["Mã đơn hàng"] || item["Mã đơn"] || item["Mã Đơn"] || item["OrderCode"] || item["Mã"];
+              return codeField && String(codeField).trim() === code;
+            });
+            if (foundKey) {
+              const entryUrl = `${BASE_URL}/datasheet/F3/${foundKey}.json`;
+              const putResp = await fetch(entryUrl, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(editFormData),
+              });
+              if (!putResp.ok) throw new Error(`PATCH failed (status ${putResp.status})`);
+              patched = true;
+              break;
+            }
+          }
+        }
+
+        if (!patched) {
+          // If we couldn't find an existing entry to update, throw so the
+          // caller gets a failure notification. Creating a new entry could
+          // be done here, but that may duplicate records; prefer error.
+          throw new Error("Could not find matching datasheet/F3 entry to update");
+        }
+      } catch (e) {
+        console.error("Failed to persist to datasheet/F3 (fatal):", e);
+        toast.error("Lỗi khi ghi dữ liệu lên server — thay đổi chưa được lưu");
+        // Re-throw to allow outer catch to handle rollback or further logging
+        throw e;
+      }
 
       // Log the full update with old values
       await logChange(
@@ -942,7 +1118,12 @@ export default function VanDon() {
         editingFullOrder
       );
 
-      // Update local data directly without reloading
+      // Update both f3Data and localF3Data
+      setF3Data((prevData) =>
+        prevData.map((item) =>
+          item.id === editingFullOrder.id ? { ...item, ...editFormData } : item
+        )
+      );
       setLocalF3Data((prevData) =>
         prevData.map((item) =>
           item.id === editingFullOrder.id ? { ...item, ...editFormData } : item
@@ -950,8 +1131,6 @@ export default function VanDon() {
       );
 
       toast.success("Cập nhật vận đơn thành công");
-
-      // Close modal
       closeEditFullOrder();
     } catch (err) {
       console.error("Error updating full order:", err);
@@ -1128,12 +1307,69 @@ export default function VanDon() {
 
       const deletePromises = idsToDelete.map(async (id) => {
         const order = localF3Data.find((item) => item.id === id) || null;
-        const orderRef = ref(database, `f3_data/${id}`);
-        // remove by setting null
-        await set(orderRef, null);
+
+        // Note: there is no /f3_data collection in this database. Deletion
+        // is performed on the canonical `/datasheet/F3` below.
+
+        // Xóa trong datasheet/F3
+        try {
+          const f3Url =
+            "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3.json";
+          const resp = await fetch(f3Url);
+          const f3Data = await resp.json();
+
+          const orderCode = order
+            ? order["Mã đơn hàng"] || order["Mã đơn"]
+            : null;
+
+          if (Array.isArray(f3Data)) {
+            const idx = f3Data.findIndex((item) => {
+              if (!item) return false;
+              const code =
+                item["Mã đơn hàng"] ||
+                item["Mã đơn"] ||
+                item["Mã Đơn"] ||
+                item["OrderCode"] ||
+                item["Mã"];
+              return code && String(code).trim() === String(orderCode).trim();
+            });
+
+            if (idx !== -1) {
+              const entryUrl = `https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3/${idx}.json`;
+              await fetch(entryUrl, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+              });
+            }
+          } else if (f3Data && typeof f3Data === "object") {
+            const foundKey = Object.keys(f3Data).find((k) => {
+              const item = f3Data[k];
+              if (!item) return false;
+              const code =
+                item["Mã đơn hàng"] ||
+                item["Mã đơn"] ||
+                item["Mã Đơn"] ||
+                item["OrderCode"] ||
+                item["Mã"];
+              return code && String(code).trim() === String(orderCode).trim();
+            });
+
+            if (foundKey) {
+              const entryUrl = `https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3/${foundKey}.json`;
+              await fetch(entryUrl, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+              });
+            }
+          }
+        } catch (err) {
+          console.error(
+            "Delete: failed to delete from datasheet (non-fatal):",
+            err
+          );
+        }
 
         try {
-          // Log deletion for audit (oldValue = order, newValue = null)
           await logChange(id, "delete", order, null, order);
         } catch (e) {
           console.error("Error logging deletion for", id, e);
@@ -1142,10 +1378,12 @@ export default function VanDon() {
 
       await Promise.all(deletePromises);
 
-      // Remove from local state
+      // Remove from both f3Data and localF3Data
+      setF3Data((prev) => prev.filter((item) => !selectedRows.has(item.id)));
       setLocalF3Data((prev) =>
         prev.filter((item) => !selectedRows.has(item.id))
       );
+
       setSelectedRows(new Set());
       toast.success(`Đã xóa ${idsToDelete.length} vận đơn thành công`);
     } catch (err) {
@@ -1203,35 +1441,94 @@ export default function VanDon() {
 
   return (
     <div className="px-8 py-6">
-      <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
-        <FilterPanel
-          activeTab={"f3"}
-          filters={filters}
-          handleFilterChange={handleFilterChange}
-          quickSelectValue={quickSelectValue}
-          handleQuickDateSelect={handleQuickDateSelect}
-          availableFilters={availableFilters}
-          userRole={userRole}
-          hasActiveFilters={hasActiveFilters}
-          clearAllFilters={clearFilters}
-          showMarkets={false}
-          showPaymentMethodSearch={true}
-        />
+      <div className="flex items-center justify-between mb-6">
+        <Link
+          to="/"
+          className="text-sm text-gray-600 hover:text-gray-800 flex-shrink-0 flex items-center gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Quay lại
+        </Link>
 
-        <div className="lg:col-span-5">
-          {/* Header */}
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-primary">Quản lý vận đơn</h2>
-            <div>
-              <Link
-                to="/lich-su-thay-doi"
-                className="px-3 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition text-sm font-medium"
+        <h2 className="text-2xl font-bold text-primary uppercase text-center flex-1">
+          Vận đơn
+        </h2>
+
+        <Link
+          to="/lich-su-thay-doi"
+          className="ml-4 flex-shrink-0 inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-700 hover:bg-gray-50 hover:shadow-sm"
+          title="Xem lịch sử thay đổi"
+        >
+          Lịch sử thay đổi
+        </Link>
+      </div>
+      <div className="mb-4">
+        <div className="relative max-w-md">
+          <input
+            type="text"
+            value={filters.searchText || ""}
+            onChange={(e) => handleFilterChange("searchText", e.target.value)}
+            placeholder="Tìm kiếm trong bảng..."
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm transition-all"
+          />
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+          {filters.searchText && (
+            <button
+              onClick={() => handleFilterChange("searchText", "")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                Xem lịch sử thay đổi
-              </Link>
-            </div>
-          </div>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+        <div className="lg:col-span-6">
+          <FilterPanel
+            activeTab={"f3"}
+            filters={filters}
+            handleFilterChange={handleFilterChange}
+            quickSelectValue={quickSelectValue}
+            handleQuickDateSelect={handleQuickDateSelect}
+            availableFilters={availableFilters}
+            userRole={userRole}
+            hasActiveFilters={hasActiveFilters}
+            clearAllFilters={clearFilters}
+            showMarkets={false}
+            showPaymentMethodSearch={true}
+            variant="topbar"
+            columnsConfig={columnsConfig}
+            visibleColumns={visibleColumns}
+            onVisibleColumnsChange={setVisibleColumns}
+          />
+        </div>
 
+        <div className="lg:col-span-6">
+          {/* Search input grouped under the filter panel (appears above the table) */}
           {/* Summary Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-lg p-6 text-white transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
@@ -1395,175 +1692,6 @@ export default function VanDon() {
             </div>
           </div>
 
-          {/* Column Visibility Controls */}
-          <div className="mb-4 bg-white rounded-lg shadow-md p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-bold text-gray-700">
-                Chọn cột hiển thị
-              </h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={selectAllColumns}
-                  className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-all duration-300 transform hover:scale-105 hover:shadow-md"
-                >
-                  Chọn tất cả
-                </button>
-                <button
-                  onClick={deselectAllColumns}
-                  className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-all duration-300 transform hover:scale-105 hover:shadow-md"
-                >
-                  Bỏ chọn tất cả
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.stt}
-                  onChange={() => toggleColumn("stt")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">STT</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.orderCode}
-                  onChange={() => toggleColumn("orderCode")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Mã đơn hàng</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.customerName}
-                  onChange={() => toggleColumn("customerName")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Tên khách hàng</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.phone}
-                  onChange={() => toggleColumn("phone")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Điện thoại</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.address}
-                  onChange={() => toggleColumn("address")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Địa chỉ</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.product}
-                  onChange={() => toggleColumn("product")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Mặt hàng</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.quantity}
-                  onChange={() => toggleColumn("quantity")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Số lượng</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.price}
-                  onChange={() => toggleColumn("price")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Giá bán</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.totalVND}
-                  onChange={() => toggleColumn("totalVND")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Tổng tiền VNĐ</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.marketing}
-                  onChange={() => toggleColumn("marketing")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">NV Marketing</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.sale}
-                  onChange={() => toggleColumn("sale")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">NV Sale</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.team}
-                  onChange={() => toggleColumn("team")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Team</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.shift}
-                  onChange={() => toggleColumn("shift")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Ca</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.orderDate}
-                  onChange={() => toggleColumn("orderDate")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Ngày lên đơn</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.status}
-                  onChange={() => toggleColumn("status")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Trạng thái đơn</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded transition-all duration-200 hover:shadow-sm transform hover:scale-105">
-                <input
-                  type="checkbox"
-                  checked={visibleColumns.paymentMethod}
-                  onChange={() => toggleColumn("paymentMethod")}
-                  className="w-4 h-4 transition-all duration-200"
-                />
-                <span className="text-sm">Hình thức TT</span>
-              </label>
-            </div>
-          </div>
-
           {/* F3 Data Table */}
           {localF3Data.length === 0 ? (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
@@ -1648,7 +1776,7 @@ export default function VanDon() {
                                   e.stopPropagation();
                                   toggleSort(columnKey);
                                 }}
-                                className="flex items-center gap-2 px-2 py-1 bg-white bg-opacity-10 hover:bg-opacity-30 rounded text-sm font-medium"
+                                className="w-full flex items-center gap-2 px-2 py-1 bg-white bg-opacity-10 hover:bg-opacity-30 rounded text-sm font-medium"
                                 title="Sắp xếp"
                               >
                                 <span>{columnLabels[columnKey]}</span>
@@ -2394,29 +2522,31 @@ export default function VanDon() {
                     }`}
                     disabled={deleteInProgress}
                   >
-                    {deleteInProgress ? (
-                      <svg
-                        className="w-4 h-4 animate-spin"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="white"
-                          strokeWidth="4"
-                          className="opacity-50"
-                        />
-                        <path
-                          d="M4 12a8 8 0 018-8"
-                          stroke="white"
-                          strokeWidth="4"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                    ) : null}
-                    Xác nhận xóa
+                    <>
+                      {deleteInProgress ? (
+                        <svg
+                          className="w-4 h-4 animate-spin"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="white"
+                            strokeWidth="4"
+                            className="opacity-50"
+                          />
+                          <path
+                            d="M4 12a8 8 0 018-8"
+                            stroke="white"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                      ) : null}
+                      Xác nhận xóa
+                    </>
                   </button>
                 </div>
               </div>

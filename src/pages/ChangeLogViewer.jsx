@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ref, onValue, off, update, push, set, get } from "firebase/database";
-import { database } from "../firebase/config";
+// Use REST calls to Firebase Realtime Database; avoid using the Firebase SDK here
 import { toast } from "react-toastify";
 
 export default function ChangeLogViewer() {
@@ -35,12 +34,12 @@ export default function ChangeLogViewer() {
     if (userRole === "admin") return true;
     if (userRole === "leader") {
       // Leader can revert logs of their team members
-      const userRecord = humanResources.find(hr => hr["email"] === userEmail);
+      const userRecord = humanResources.find((hr) => hr["email"] === userEmail);
       if (userRecord) {
         const leaderTeam = userRecord["Team"];
         const teamMemberEmails = humanResources
-          .filter(hr => hr["Team"] === leaderTeam)
-          .map(hr => hr["email"]);
+          .filter((hr) => hr["Team"] === leaderTeam)
+          .map((hr) => hr["email"]);
         return teamMemberEmails.includes(log.userEmail);
       }
       return false;
@@ -61,7 +60,8 @@ export default function ChangeLogViewer() {
     orderData = null
   ) => {
     try {
-      const changeLogsUrl = "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/ChangeLog.json";
+      const changeLogsUrl =
+        "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/ChangeLog.json";
 
       const logData = {
         orderId,
@@ -79,9 +79,9 @@ export default function ChangeLogViewer() {
       };
 
       await fetch(changeLogsUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(logData),
       });
@@ -94,7 +94,8 @@ export default function ChangeLogViewer() {
   useEffect(() => {
     const fetchChangeLogs = async () => {
       try {
-        const changeLogsUrl = "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/ChangeLog.json";
+        const changeLogsUrl =
+          "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/ChangeLog.json";
         const response = await fetch(changeLogsUrl);
         if (!response.ok) {
           throw new Error("Failed to fetch change logs");
@@ -153,45 +154,69 @@ export default function ChangeLogViewer() {
 
   // Base filtered logs with role-based access control
   const baseFilteredLogs = useMemo(() => {
-    console.log('Filtering logs for user:', { userRole, userEmail, userTeam });
-    console.log('Human resources loaded:', humanResources.length, 'records');
+    console.log("Filtering logs for user:", { userRole, userEmail, userTeam });
+    console.log("Human resources loaded:", humanResources.length, "records");
 
     if (userRole === "admin") {
-      console.log('Admin user - showing all logs');
+      console.log("Admin user - showing all logs");
       return changeLogs;
     } else if (userRole === "leader") {
-      console.log('Leader user - filtering by team');
-      console.log('Looking for userEmail:', userEmail);
-      console.log('Sample HR emails:', humanResources.slice(0, 5).map(hr => hr["email"]));
+      console.log("Leader user - filtering by team");
+      console.log("Looking for userEmail:", userEmail);
+      console.log(
+        "Sample HR emails:",
+        humanResources.slice(0, 5).map((hr) => hr["email"])
+      );
 
-      const userRecord = humanResources.find(hr => hr["email"] === userEmail);
-      console.log('User record found:', userRecord);
+      const userRecord = humanResources.find((hr) => hr["email"] === userEmail);
+      console.log("User record found:", userRecord);
 
       if (userRecord) {
         const leaderTeam = userRecord["Team"];
-        console.log('Leader team:', leaderTeam);
+        console.log("Leader team:", leaderTeam);
 
         const teamMemberEmails = humanResources
-          .filter(hr => hr["Team"] === leaderTeam)
-          .map(hr => hr["email"]);
-        console.log('Team members found:', humanResources.filter(hr => hr["Team"] === leaderTeam).length);
-        console.log('Sample team member records:', humanResources.filter(hr => hr["Team"] === leaderTeam).slice(0, 3).map(hr => ({ name: hr["Họ Và Tên"], email: hr["email"] })));
-        console.log('Team member emails:', teamMemberEmails);
+          .filter((hr) => hr["Team"] === leaderTeam)
+          .map((hr) => hr["email"]);
+        console.log(
+          "Team members found:",
+          humanResources.filter((hr) => hr["Team"] === leaderTeam).length
+        );
+        console.log(
+          "Sample team member records:",
+          humanResources
+            .filter((hr) => hr["Team"] === leaderTeam)
+            .slice(0, 3)
+            .map((hr) => ({ name: hr["Họ Và Tên"], email: hr["email"] }))
+        );
+        console.log("Team member emails:", teamMemberEmails);
 
-        const filtered = changeLogs.filter(log => teamMemberEmails.includes(log.userEmail));
-        console.log('Filtered logs for leader:', filtered.length, 'out of', changeLogs.length);
+        const filtered = changeLogs.filter((log) =>
+          teamMemberEmails.includes(log.userEmail)
+        );
+        console.log(
+          "Filtered logs for leader:",
+          filtered.length,
+          "out of",
+          changeLogs.length
+        );
         return filtered;
       } else {
-        console.log('No user record found for leader - showing no logs');
+        console.log("No user record found for leader - showing no logs");
         return [];
       }
     } else if (userRole === "user") {
-      console.log('User role - showing only own logs');
-      const filtered = changeLogs.filter(log => log.userEmail === userEmail);
-      console.log('Filtered logs for user:', filtered.length, 'out of', changeLogs.length);
+      console.log("User role - showing only own logs");
+      const filtered = changeLogs.filter((log) => log.userEmail === userEmail);
+      console.log(
+        "Filtered logs for user:",
+        filtered.length,
+        "out of",
+        changeLogs.length
+      );
       return filtered;
     } else {
-      console.log('Unknown role - showing no logs');
+      console.log("Unknown role - showing no logs");
       return [];
     }
   }, [changeLogs, userRole, userEmail, humanResources]);
@@ -202,12 +227,16 @@ export default function ChangeLogViewer() {
       const matchesOrderCode =
         !filters.orderCode ||
         (log.orderCode &&
-          log.orderCode.toLowerCase().includes(filters.orderCode.toLowerCase()));
+          log.orderCode
+            .toLowerCase()
+            .includes(filters.orderCode.toLowerCase()));
 
       const matchesUserEmail =
         !filters.userEmail ||
         (log.userEmail &&
-          log.userEmail.toLowerCase().includes(filters.userEmail.toLowerCase()));
+          log.userEmail
+            .toLowerCase()
+            .includes(filters.userEmail.toLowerCase()));
 
       const matchesChangeType =
         !filters.changeType ||
@@ -255,12 +284,16 @@ export default function ChangeLogViewer() {
   const fetchFullOrderData = async (orderId) => {
     setLoadingFullOrder(true);
     try {
-      // f3_data is the source used elsewhere (revert, updates). Use it to fetch the
-      // canonical order state for status_change show-all view.
-      const orderRef = ref(database, `f3_data/${orderId}`);
-      const snapshot = await get(orderRef);
-      if (snapshot.exists()) {
-        setFullOrderData(snapshot.val());
+      // f3_data is the source used elsewhere (revert, updates). Use REST to
+      // fetch the canonical order state for status_change show-all view.
+      const url = `https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/f3_data/${orderId}.json`;
+      const resp = await fetch(url);
+      if (!resp.ok) {
+        throw new Error(`Failed to fetch order data: ${resp.status}`);
+      }
+      const data = await resp.json();
+      if (data) {
+        setFullOrderData(data);
       } else {
         toast.error("Không tìm thấy dữ liệu đơn hàng");
       }
@@ -481,7 +514,8 @@ export default function ChangeLogViewer() {
     if (!logToRevert) return;
 
     try {
-      const orderRef = ref(database, `f3_data/${logToRevert.orderId}`);
+      // Use REST endpoint for canonical f3_data updates (avoid Firebase SDK)
+      const orderUrlBase = "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3.json";
 
       if (logToRevert.changeType === "status_change") {
         // Revert status change - get old status from the oldValue object
@@ -496,25 +530,80 @@ export default function ChangeLogViewer() {
           oldStatus = logToRevert.oldValue;
         }
 
-        await update(orderRef, { "Trạng thái đơn": oldStatus });
+        // PATCH the canonical order object at /f3_data/<orderId>.json
+        try {
+          const patchUrl = `${orderUrlBase}/${logToRevert.orderId}.json`;
+          await fetch(patchUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 'Trạng thái đơn': oldStatus }),
+          });
+        } catch (err) {
+          console.error('Failed to PATCH canonical f3_data entry (status_change):', err);
+          // continue - datasheet patch below is non-fatal
+        }
 
-        // Save reverted data to F3 datasheet
-        const f3Url = "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3.json";
-        const revertedData = {
-          ...logToRevert.oldValue,
-          "Trạng thái đơn": oldStatus,
-          revertedAt: new Date().toISOString(),
-          revertedBy: userEmail,
-          originalLogId: logToRevert.id
-        };
+        // Update existing datasheet entry for this order
+        try {
+          const f3Url =
+            "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3.json";
+          const resp = await fetch(f3Url);
+          const f3Data = await resp.json();
 
-        await fetch(f3Url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(revertedData),
-        });
+          const orderCode =
+            logToRevert.orderCode ||
+            (logToRevert.oldValue &&
+              (logToRevert.oldValue["Mã đơn hàng"] ||
+                logToRevert.oldValue["Mã đơn"]));
+
+          if (Array.isArray(f3Data)) {
+            const idx = f3Data.findIndex((item) => {
+              if (!item) return false;
+              const code =
+                item["Mã đơn hàng"] ||
+                item["Mã đơn"] ||
+                item["Mã Đơn"] ||
+                item["OrderCode"] ||
+                item["Mã"];
+              return code && String(code).trim() === String(orderCode).trim();
+            });
+
+            if (idx !== -1) {
+              const entryUrl = `https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3/${idx}.json`;
+              await fetch(entryUrl, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ "Trạng thái đơn": oldStatus }),
+              });
+            }
+          } else if (f3Data && typeof f3Data === "object") {
+            const foundKey = Object.keys(f3Data).find((k) => {
+              const item = f3Data[k];
+              if (!item) return false;
+              const code =
+                item["Mã đơn hàng"] ||
+                item["Mã đơn"] ||
+                item["Mã Đơn"] ||
+                item["OrderCode"] ||
+                item["Mã"];
+              return code && String(code).trim() === String(orderCode).trim();
+            });
+
+            if (foundKey) {
+              const entryUrl = `https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3/${foundKey}.json`;
+              await fetch(entryUrl, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ "Trạng thái đơn": oldStatus }),
+              });
+            }
+          }
+        } catch (err) {
+          console.error(
+            "Revert: failed to update datasheet entry (non-fatal):",
+            err
+          );
+        }
 
         // Log the revert
         await logChange(
@@ -522,7 +611,7 @@ export default function ChangeLogViewer() {
           "revert_status",
           logToRevert.newValue,
           oldStatus,
-          logToRevert.oldValue // Pass full old data to include customer name
+          logToRevert.oldValue
         );
 
         toast.success("Đã hoàn tác thay đổi trạng thái");
@@ -546,24 +635,78 @@ export default function ChangeLogViewer() {
           return;
         }
 
-        await update(orderRef, oldValues);
+        // PATCH the canonical order object at /f3_data/<orderId>.json
+        try {
+          const patchUrl = `${orderUrlBase}/${logToRevert.orderId}.json`;
+          await fetch(patchUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(oldValues),
+          });
+        } catch (err) {
+          console.error('Failed to PATCH canonical f3_data entry (full_update):', err);
+          // continue - datasheet patch below is non-fatal
+        }
 
-        // Save reverted data to F3 datasheet
-        const f3Url = "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3.json";
-        const revertedData = {
-          ...oldValues,
-          revertedAt: new Date().toISOString(),
-          revertedBy: userEmail,
-          originalLogId: logToRevert.id
-        };
+        // Update existing datasheet entry for this order
+        try {
+          const f3Url =
+            "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3.json";
+          const resp = await fetch(f3Url);
+          const f3Data = await resp.json();
 
-        await fetch(f3Url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(revertedData),
-        });
+          const orderCode =
+            logToRevert.orderCode ||
+            (oldValues && (oldValues["Mã đơn hàng"] || oldValues["Mã đơn"]));
+
+          if (Array.isArray(f3Data)) {
+            const idx = f3Data.findIndex((item) => {
+              if (!item) return false;
+              const code =
+                item["Mã đơn hàng"] ||
+                item["Mã đơn"] ||
+                item["Mã Đơn"] ||
+                item["OrderCode"] ||
+                item["Mã"];
+              return code && String(code).trim() === String(orderCode).trim();
+            });
+
+            if (idx !== -1) {
+              const entryUrl = `https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3/${idx}.json`;
+              await fetch(entryUrl, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(oldValues),
+              });
+            }
+          } else if (f3Data && typeof f3Data === "object") {
+            const foundKey = Object.keys(f3Data).find((k) => {
+              const item = f3Data[k];
+              if (!item) return false;
+              const code =
+                item["Mã đơn hàng"] ||
+                item["Mã đơn"] ||
+                item["Mã Đơn"] ||
+                item["OrderCode"] ||
+                item["Mã"];
+              return code && String(code).trim() === String(orderCode).trim();
+            });
+
+            if (foundKey) {
+              const entryUrl = `https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3/${foundKey}.json`;
+              await fetch(entryUrl, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(oldValues),
+              });
+            }
+          }
+        } catch (err) {
+          console.error(
+            "Revert full_update: failed to update datasheet entry (non-fatal):",
+            err
+          );
+        }
 
         // Log the revert
         await logChange(
@@ -571,25 +714,26 @@ export default function ChangeLogViewer() {
           "revert_full_update",
           logToRevert.newValue,
           oldValues,
-          oldValues // Pass full old data to include customer name
+          oldValues
         );
 
         toast.success("Đã hoàn tác cập nhật đầy đủ");
       }
 
       // Mark the original log as reverted
-      const changeLogsUrl = "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/ChangeLog.json";
+      const changeLogsUrl =
+        "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/ChangeLog.json";
       await fetch(`${changeLogsUrl}/${logToRevert.id}.json`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ reverted: true }),
       });
 
       // Update local state to reflect the change immediately
-      setChangeLogs(prevLogs =>
-        prevLogs.map(log =>
+      setChangeLogs((prevLogs) =>
+        prevLogs.map((log) =>
           log.id === logToRevert.id ? { ...log, reverted: true } : log
         )
       );
@@ -623,7 +767,7 @@ export default function ChangeLogViewer() {
   const getChangeTypeColor = (changeType) => {
     switch (changeType) {
       case "status_change":
-  return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800";
       case "full_update":
         return "bg-green-100 text-green-800";
       case "revert_status":
@@ -894,7 +1038,7 @@ export default function ChangeLogViewer() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-  <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm opacity-90 mb-1">Tổng thay đổi</p>
@@ -1301,13 +1445,13 @@ export default function ChangeLogViewer() {
                                 {d.field}
                               </div>
                               <div className="text-sm text-gray-700">
-                                <span className="text-red-700">{renderValue(
-                                  d.oldValue
-                                )}</span>
+                                <span className="text-red-700">
+                                  {renderValue(d.oldValue)}
+                                </span>
                                 <span className="mx-2">→</span>
-                                <span className="text-green-700">{renderValue(
-                                  d.newValue
-                                )}</span>
+                                <span className="text-green-700">
+                                  {renderValue(d.newValue)}
+                                </span>
                               </div>
                             </div>
                           );
@@ -1317,20 +1461,32 @@ export default function ChangeLogViewer() {
                         return (
                           <div>
                             <div className="mb-1">
-                              Đã thay đổi <span className="font-semibold">{changed.length}</span> trường
+                              Đã thay đổi{" "}
+                              <span className="font-semibold">
+                                {changed.length}
+                              </span>{" "}
+                              trường
                             </div>
                             <div className="text-sm text-gray-700 space-y-1">
                               {changed.slice(0, 3).map((d, i) => (
                                 <div key={i} className="flex items-center">
                                   <span className="mr-2 text-gray-600">•</span>
-                                  <span className="font-medium mr-2">{d.field}:</span>
-                                  <span className="text-red-700 mr-1">{renderValue(d.oldValue)}</span>
+                                  <span className="font-medium mr-2">
+                                    {d.field}:
+                                  </span>
+                                  <span className="text-red-700 mr-1">
+                                    {renderValue(d.oldValue)}
+                                  </span>
                                   <span className="mx-1">→</span>
-                                  <span className="text-green-700 ml-1">{renderValue(d.newValue)}</span>
+                                  <span className="text-green-700 ml-1">
+                                    {renderValue(d.newValue)}
+                                  </span>
                                 </div>
                               ))}
                               {changed.length > 3 && (
-                                <div className="text-xs text-gray-500">và {changed.length - 3} trường khác</div>
+                                <div className="text-xs text-gray-500">
+                                  và {changed.length - 3} trường khác
+                                </div>
                               )}
                             </div>
                           </div>
@@ -1373,7 +1529,8 @@ export default function ChangeLogViewer() {
                           <div className="truncate max-w-md text-sm text-gray-600 mr-4">
                             <span className="font-medium">Tóm tắt:</span>{" "}
                             <span className="text-gray-700">
-                              {renderValue(summary.old)} {"→"} {renderValue(summary.new)}
+                              {renderValue(summary.old)} {"→"}{" "}
+                              {renderValue(summary.new)}
                             </span>
                           </div>
                         );
@@ -1381,17 +1538,34 @@ export default function ChangeLogViewer() {
 
                       if (Array.isArray(summary)) {
                         const changed = summary.filter((d) => d.changed);
-                        if (changed.length === 0) return <div className="text-sm text-gray-600 mr-4">Không có thay đổi</div>;
+                        if (changed.length === 0)
+                          return (
+                            <div className="text-sm text-gray-600 mr-4">
+                              Không có thay đổi
+                            </div>
+                          );
                         // Only show the count of changed fields (do not list field names)
                         return (
                           <div className="truncate max-w-md text-sm text-gray-600 mr-4">
-                            <span className="font-medium">{changed.length} thay đổi</span>
+                            <span className="font-medium">
+                              {changed.length} thay đổi
+                            </span>
                           </div>
                         );
                       }
 
-                      if (selectedLog.changeType === "status_change") return <div className="text-sm text-gray-600 mr-4">Thay đổi trạng thái đơn hàng</div>;
-                      if (selectedLog.changeType === "full_update") return <div className="text-sm text-gray-600 mr-4">Cập nhật nhiều trường thông tin</div>;
+                      if (selectedLog.changeType === "status_change")
+                        return (
+                          <div className="text-sm text-gray-600 mr-4">
+                            Thay đổi trạng thái đơn hàng
+                          </div>
+                        );
+                      if (selectedLog.changeType === "full_update")
+                        return (
+                          <div className="text-sm text-gray-600 mr-4">
+                            Cập nhật nhiều trường thông tin
+                          </div>
+                        );
                       return null;
                     })()}
                   </div>
@@ -1399,55 +1573,65 @@ export default function ChangeLogViewer() {
                   {/* Render full details only when requested via the button above */}
                   {showAllFields &&
                     (selectedLog.changeType === "status_change" ||
-                      selectedLog.changeType === "full_update") && (
-                      (() => {
-                        if (loadingFullOrder) {
-                          return (
-                            <div className="text-center py-8">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
-                              <p className="text-gray-600">Đang tải dữ liệu đơn hàng...</p>
-                            </div>
-                          );
-                        }
+                      selectedLog.changeType === "full_update") &&
+                    (() => {
+                      if (loadingFullOrder) {
+                        return (
+                          <div className="text-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
+                            <p className="text-gray-600">
+                              Đang tải dữ liệu đơn hàng...
+                            </p>
+                          </div>
+                        );
+                      }
 
-                        let orderDataToShow = null;
-                        if (
-                          selectedLog.changeType === "status_change" &&
-                          fullOrderData
-                        ) {
-                          orderDataToShow = fullOrderData;
-                        } else if (typeof selectedLog.oldValue === "object") {
-                          orderDataToShow = selectedLog.oldValue;
-                        } else {
-                          try {
-                            orderDataToShow = JSON.parse(selectedLog.oldValue);
-                          } catch (e) {
-                            return (
-                              <div className="text-center py-8 text-gray-500">
-                                <p>Không thể tải dữ liệu đơn hàng trước khi thay đổi</p>
-                              </div>
-                            );
-                          }
-                        }
-
-                        if (!orderDataToShow) {
+                      let orderDataToShow = null;
+                      if (
+                        selectedLog.changeType === "status_change" &&
+                        fullOrderData
+                      ) {
+                        orderDataToShow = fullOrderData;
+                      } else if (typeof selectedLog.oldValue === "object") {
+                        orderDataToShow = selectedLog.oldValue;
+                      } else {
+                        try {
+                          orderDataToShow = JSON.parse(selectedLog.oldValue);
+                        } catch (e) {
                           return (
                             <div className="text-center py-8 text-gray-500">
-                              <p>Không có dữ liệu đơn hàng</p>
+                              <p>
+                                Không thể tải dữ liệu đơn hàng trước khi thay
+                                đổi
+                              </p>
                             </div>
                           );
                         }
+                      }
 
-                        const newValueForView =
-                          selectedLog.changeType === "status_change"
-                            ? { ...orderDataToShow, "Trạng thái đơn": selectedLog.newValue }
-                            : selectedLog.newValue;
-
+                      if (!orderDataToShow) {
                         return (
-                          <OrderDataView orderData={orderDataToShow} newValue={newValueForView} />
+                          <div className="text-center py-8 text-gray-500">
+                            <p>Không có dữ liệu đơn hàng</p>
+                          </div>
                         );
-                      })()
-                    )}
+                      }
+
+                      const newValueForView =
+                        selectedLog.changeType === "status_change"
+                          ? {
+                              ...orderDataToShow,
+                              "Trạng thái đơn": selectedLog.newValue,
+                            }
+                          : selectedLog.newValue;
+
+                      return (
+                        <OrderDataView
+                          orderData={orderDataToShow}
+                          newValue={newValueForView}
+                        />
+                      );
+                    })()}
                 </div>
               )}
 
@@ -1655,7 +1839,10 @@ export default function ChangeLogViewer() {
                   // state (status) consistently with full_update view.
                   const newValueForView =
                     logToRevert.changeType === "status_change"
-                      ? { ...orderDataToShow, "Trạng thái đơn": logToRevert.newValue }
+                      ? {
+                          ...orderDataToShow,
+                          "Trạng thái đơn": logToRevert.newValue,
+                        }
                       : logToRevert.newValue;
 
                   return (
