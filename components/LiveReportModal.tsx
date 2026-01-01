@@ -99,13 +99,13 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        <h2 className="text-xl font-bold text-gray-800 mb-6 uppercase border-b pb-2">Nhập Báo Cáo Live</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-6 uppercase border-b pb-2">Nhập Báo Cáo Live (输入直播报告)</h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
 
           {/* Section 1: Thông tin cơ bản */}
           <div className="bg-gray-50 p-4 rounded border border-gray-200">
-            <h3 className="text-sm font-bold text-gray-700 uppercase mb-3 border-b border-gray-300 pb-1">1. Thông tin chung</h3>
+            <h3 className="text-sm font-bold text-gray-700 uppercase mb-3 border-b border-gray-300 pb-1">1. Thông tin chung (基本信息)</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Ngày (开始日期)</label>
@@ -129,7 +129,7 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Host (主播)</label>
-                <input required type="text" name="hostName" value={formData.hostName} onChange={handleChange} placeholder="Tên Host" className="w-full border rounded px-3 py-2" />
+                <input required type="text" name="hostName" value={formData.hostName} onChange={handleChange} placeholder="Tên Host (主播名称)" className="w-full border rounded px-3 py-2" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Thời lượng (直播时长)</label>
@@ -137,14 +137,14 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
               </div>
               <div className="md:col-span-2">
                 <label className="block text-xs font-medium text-gray-700 mb-1">Người báo cáo (NGƯỜI BÁO CÁO)</label>
-                <input required type="text" name="reporter" value={formData.reporter || ''} onChange={handleChange} placeholder="Tên người nhập" className="w-full border rounded px-3 py-2 focus:border-brand-red" />
+                <input required type="text" name="reporter" value={formData.reporter || ''} onChange={handleChange} placeholder="Tên người nhập (输入人姓名)" className="w-full border rounded px-3 py-2 focus:border-brand-red" />
               </div>
             </div>
           </div>
 
           {/* Section 2: Tài chính */}
           <div className="bg-red-50 p-4 rounded border border-red-200">
-            <h3 className="text-sm font-bold text-red-800 uppercase mb-3 border-b border-red-300 pb-1">2. Tài chính & Hiệu quả</h3>
+            <h3 className="text-sm font-bold text-red-800 uppercase mb-3 border-b border-red-300 pb-1">2. Tài chính & Hiệu quả (财务与效果)</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">GMV (交易额)</label>
@@ -167,7 +167,7 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
 
           {/* Section 3: Chỉ số chi tiết */}
           <div className="bg-blue-50 p-4 rounded border border-blue-200">
-            <h3 className="text-sm font-bold text-blue-800 uppercase mb-3 border-b border-blue-300 pb-1">3. Chỉ số chi tiết</h3>
+            <h3 className="text-sm font-bold text-blue-800 uppercase mb-3 border-b border-blue-300 pb-1">3. Chỉ số chi tiết (详细指标)</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Số lượt bán (订单数)</label>
@@ -198,7 +198,7 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
 
           {/* Section 4: Lượng xem & Follow */}
           <div className="bg-yellow-50 p-4 rounded border border-yellow-200">
-            <h3 className="text-sm font-bold text-yellow-800 uppercase mb-3 border-b border-yellow-300 pb-1">4. Người xem & Tương tác</h3>
+            <h3 className="text-sm font-bold text-yellow-800 uppercase mb-3 border-b border-yellow-300 pb-1">4. Người xem & Tương tác (观看与互动)</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Tổng lượt xem (直播观看次数)</label>
@@ -220,13 +220,13 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
           </div>
 
           <div className="pt-4 border-t flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50">Hủy</button>
+            <button type="button" onClick={onClose} className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50">Hủy (取消)</button>
             <button
               type="submit"
               disabled={loading}
               className="px-8 py-2 bg-brand-red text-white rounded font-bold hover:bg-red-700 disabled:opacity-50"
             >
-              {loading ? 'Đang lưu...' : 'Lưu Báo Cáo'}
+              {loading ? 'Đang lưu... (保存中...)' : 'Lưu Báo Cáo (保存报告)'}
             </button>
           </div>
 

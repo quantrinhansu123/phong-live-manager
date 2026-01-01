@@ -229,7 +229,7 @@ export const LiveSessionReport: React.FC = () => {
 
       {/* Header & Filter */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý Live</h2>
+        <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý Live (直播管理)</h2>
         <div className="flex gap-2 flex-wrap items-center">
           <select
             className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-red bg-white shadow-sm"
@@ -251,27 +251,27 @@ export const LiveSessionReport: React.FC = () => {
             className="bg-brand-red hover:bg-red-700 text-white px-4 py-2 rounded shadow text-sm font-bold flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            Nhập Báo Cáo
+            Nhập Báo Cáo (输入报告)
           </button>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12 text-gray-500">Đang tải dữ liệu...</div>
+        <div className="text-center py-12 text-gray-500">Đang tải dữ liệu... (正在加载数据...)</div>
       ) : (
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="bg-white p-4 rounded shadow-sm border-l-4 border-blue-500">
-              <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV</p>
+              <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV (总GMV)</p>
               <p className="text-xl font-bold text-gray-800 mt-1">{formatCurrency(metrics.totalGMV)}</p>
             </div>
             <div className="bg-white p-4 rounded shadow-sm border-l-4 border-brand-red">
-              <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC</p>
+              <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC (总广告费)</p>
               <p className="text-xl font-bold text-brand-red mt-1">{formatCurrency(metrics.totalAdCost)}</p>
             </div>
             <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
-              <p className="text-xs text-gray-500 uppercase font-bold">ROI Tổng</p>
+              <p className="text-xs text-gray-500 uppercase font-bold">ROI Tổng (总ROI)</p>
               <p className="text-xl font-bold text-green-600 mt-1">{formatPercent(metrics.roi)}</p>
             </div>
           </div>
@@ -296,7 +296,7 @@ export const LiveSessionReport: React.FC = () => {
           {/* Weekly Report by Host */}
           <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <h3 className="text-lg font-bold text-gray-800">Báo Cáo Theo Tuần - Tổng Doanh Thu Theo Host</h3>
+              <h3 className="text-lg font-bold text-gray-800">Báo Cáo Theo Tuần (周报) - Tổng Doanh Thu Theo Host (按主播总营收)</h3>
               <div className="flex gap-2 items-center flex-wrap">
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Từ ngày:</label>
                 <input
@@ -317,18 +317,25 @@ export const LiveSessionReport: React.FC = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="bg-gray-100 border-b">
-                    <th className="px-4 py-3 border-r text-left font-bold text-gray-700 sticky left-0 bg-gray-100 z-10 min-w-[120px]">
-                      Ngày
+                  {/* First header row with merged cells */}
+                  <tr>
+                    <th rowSpan={2} className="px-4 py-3 border-r text-center font-bold text-gray-800 bg-blue-200 sticky left-0 z-20 min-w-[120px]">
+                      NGÀY (日期)
                     </th>
+                    <th colSpan={weeklyReportData.hosts.length} className="px-4 py-3 border-r text-center font-bold text-gray-800 bg-yellow-100">
+                      TÊN HOST (主播名称)
+                    </th>
+                    <th rowSpan={2} className="px-4 py-3 text-center font-bold text-white bg-red-600 min-w-[140px]">
+                      TỔNG DOANH THU TUẦN (周总营收)
+                    </th>
+                  </tr>
+                  {/* Second header row with host names */}
+                  <tr>
                     {weeklyReportData.hosts.map(host => (
-                      <th key={host} className="px-4 py-3 border-r text-center font-bold text-gray-700 min-w-[140px]">
+                      <th key={host} className="px-4 py-3 border-r text-center font-bold text-gray-800 bg-yellow-100 min-w-[140px]">
                         {host}
                       </th>
                     ))}
-                    <th className="px-4 py-3 text-center font-bold text-gray-700 bg-blue-50 min-w-[140px]">
-                      TỔNG DOANH THU TUẦN
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -338,44 +345,44 @@ export const LiveSessionReport: React.FC = () => {
                     const dayTotal = weeklyReportData.hosts.reduce((sum, host) => sum + (weeklyReportData.dateHostMap[date][host] || 0), 0);
                     return (
                       <tr key={date} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-3 border-r font-medium text-gray-800 sticky left-0 bg-white z-10">
+                        <td className="px-4 py-3 border-r font-medium text-gray-800 bg-blue-100 sticky left-0 z-10">
                           {dateStr}
                         </td>
                         {weeklyReportData.hosts.map(host => {
                           const revenue = weeklyReportData.dateHostMap[date][host] || 0;
                           return (
-                            <td key={host} className="px-4 py-3 border-r text-right">
+                            <td key={host} className="px-4 py-3 border-r text-right bg-white">
                               {revenue > 0 ? (
                                 <span className="font-medium text-gray-800">{formatCurrency(revenue)}</span>
                               ) : (
-                                <span className="text-gray-400">x</span>
+                                <span className="text-gray-500 font-medium">x</span>
                               )}
                             </td>
                           );
                         })}
-                        <td className="px-4 py-3 text-right font-bold text-blue-600 bg-blue-50">
+                        <td className="px-4 py-3 text-right font-bold text-gray-800 bg-red-100">
                           {dayTotal > 0 ? formatCurrency(dayTotal) : '-'}
                         </td>
                       </tr>
                     );
                   })}
-                  <tr className="border-t-2 border-gray-400 bg-gray-100 font-bold">
-                    <td className="px-4 py-3 border-r sticky left-0 bg-gray-100 z-10">
+                  <tr className="border-t-2 border-gray-700 font-bold">
+                    <td className="px-4 py-3 border-r bg-amber-800 text-white sticky left-0 z-10">
                       TOTAL
                     </td>
                     {weeklyReportData.hosts.map(host => {
                       const total = weeklyReportData.totals[host] || 0;
                       return (
-                        <td key={host} className="px-4 py-3 border-r text-right">
+                        <td key={host} className="px-4 py-3 border-r text-right bg-amber-100">
                           {total > 0 ? (
-                            <span className="text-gray-800">{formatCurrency(total)}</span>
+                            <span className="text-gray-800 font-bold">{formatCurrency(total)}</span>
                           ) : (
-                            <span className="text-gray-400">-</span>
+                            <span className="text-gray-500">-</span>
                           )}
                         </td>
                       );
                     })}
-                    <td className="px-4 py-3 text-right text-blue-700 bg-blue-100">
+                    <td className="px-4 py-3 text-right text-white bg-red-700 font-bold">
                       {formatCurrency(weeklyReportData.grandTotal)}
                     </td>
                   </tr>
@@ -387,7 +394,7 @@ export const LiveSessionReport: React.FC = () => {
           {/* Personnel Summary Table */}
           <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <h3 className="text-lg font-bold text-gray-800">Báo Cáo Tổng Kết Nhân Viên</h3>
+              <h3 className="text-lg font-bold text-gray-800">Báo Cáo Tổng Kết Nhân Viên (员工汇总报告)</h3>
               <div className="flex gap-2 items-center flex-wrap">
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Từ ngày:</label>
                 <input
@@ -409,12 +416,12 @@ export const LiveSessionReport: React.FC = () => {
               <table className="w-full text-sm">
                 <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b">
                   <tr>
-                    <th className="px-6 py-3 border-r text-left">Nhân viên</th>
+                    <th className="px-6 py-3 border-r text-left">Nhân viên (员工)</th>
                     <th className="px-6 py-3 border-r text-left">Phòng ban</th>
-                    <th className="px-6 py-3 border-r text-right">Tổng GMV</th>
-                    <th className="px-6 py-3 border-r text-right">Tổng Chi phí QC</th>
-                    <th className="px-6 py-3 border-r text-right">ROI TB</th>
-                    <th className="px-6 py-3 border-r text-center">Số báo cáo</th>
+                    <th className="px-6 py-3 border-r text-right">Tổng GMV (总GMV)</th>
+                    <th className="px-6 py-3 border-r text-right">Tổng Chi phí QC (总广告费)</th>
+                    <th className="px-6 py-3 border-r text-right">ROI TB (平均ROI)</th>
+                    <th className="px-6 py-3 border-r text-center">Số báo cáo (报告数)</th>
                     <th className="px-6 py-3 text-right">Lợi nhuận</th>
                   </tr>
                 </thead>
@@ -422,7 +429,7 @@ export const LiveSessionReport: React.FC = () => {
                   {personnelSummary.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-gray-400">
-                        Chưa có dữ liệu trong khoảng thời gian này
+                        Chưa có dữ liệu trong khoảng thời gian này (此时间段暂无数据)
                       </td>
                     </tr>
                   ) : (
@@ -474,7 +481,7 @@ export const LiveSessionReport: React.FC = () => {
           {/* Detailed Table */}
           <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-800">Chi tiết Báo Cáo Live</h3>
+              <h3 className="text-lg font-bold text-gray-800">Chi tiết Báo Cáo Live (直播报告详情)</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-center">
@@ -492,7 +499,7 @@ export const LiveSessionReport: React.FC = () => {
                 </thead>
                 <tbody>
                   {filteredData.length === 0 ? (
-                    <tr><td colSpan={8} className="py-8 text-gray-400">Chưa có dữ liệu</td></tr>
+                    <tr><td colSpan={8} className="py-8 text-gray-400">Chưa có dữ liệu (暂无数据)</td></tr>
                   ) : (
                     filteredData.map((row) => {
                       const gmv = Number(row.gmv);

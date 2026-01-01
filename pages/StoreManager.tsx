@@ -40,13 +40,13 @@ export const StoreManager: React.FC = () => {
                 store={selectedStore}
             />
 
-             <h2 className="text-2xl font-bold text-gray-800 uppercase mb-6">Quản lý Cửa Hàng</h2>
+             <h2 className="text-2xl font-bold text-gray-800 uppercase mb-6">Quản lý Cửa Hàng (店铺管理)</h2>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* List */}
                 <div className="bg-white rounded shadow-sm border border-gray-200">
                     <div className="p-4 border-b border-gray-200 bg-gray-50">
-                        <h3 className="text-lg font-bold text-gray-800">Danh sách Cửa Hàng</h3>
+                        <h3 className="text-lg font-bold text-gray-800">Danh sách Cửa Hàng (店铺列表)</h3>
                     </div>
                     <ul className="divide-y divide-gray-200">
                         {stores.map(store => (
@@ -70,19 +70,19 @@ export const StoreManager: React.FC = () => {
                 {/* Add Form */}
                 <div className="bg-white rounded shadow-sm border border-gray-200 h-fit">
                     <div className="p-4 border-b border-gray-200 bg-gray-50">
-                        <h3 className="text-lg font-bold text-gray-800">Thêm Cửa Hàng Mới</h3>
+                        <h3 className="text-lg font-bold text-gray-800">Thêm Cửa Hàng Mới (添加新店铺)</h3>
                     </div>
                     <div className="p-6">
                         <form onSubmit={handleAddStore}>
                             <div className="mb-4">
                                 <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="storeName">
-                                    Tên Cửa Hàng
+                                    Tên Cửa Hàng (店铺名称)
                                 </label>
                                 <input 
                                     className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-brand-red" 
                                     id="storeName" 
                                     type="text" 
-                                    placeholder="Ví dụ: Phong Live Đà Nẵng"
+                                    placeholder="Ví dụ: Phong Live Đà Nẵng (例如: Phong Live 岘港)"
                                     value={newStoreName}
                                     onChange={(e) => setNewStoreName(e.target.value)}
                                 />
@@ -91,7 +91,7 @@ export const StoreManager: React.FC = () => {
                                 className="bg-brand-red hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full transition-colors" 
                                 type="submit"
                             >
-                                Thêm Cửa Hàng
+                                Thêm Cửa Hàng (添加店铺)
                             </button>
                         </form>
                     </div>

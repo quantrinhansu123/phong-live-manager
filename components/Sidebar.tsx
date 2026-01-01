@@ -3,10 +3,10 @@ import { NavLink } from 'react-router-dom';
 import { ReportType } from '../types';
 
 const MENU_ITEMS = [
-  { id: ReportType.LIVE_ADS, label: 'Quản lý Live', path: '/' },
-  { id: ReportType.VIDEO_PARAM, label: 'Quản lý Video & KPI', path: '/video-report' },
-  { id: ReportType.STORE_MGR, label: 'Quản lý Cửa Hàng', path: '/stores' },
-  { id: ReportType.PERSONNEL, label: 'Nhân sự', path: '/personnel' },
+  { id: ReportType.LIVE_ADS, label: 'Quản lý Live (直播管理)', path: '/' },
+  { id: ReportType.VIDEO_PARAM, label: 'Quản lý Video & KPI (视频和KPI管理)', path: '/video-report' },
+  { id: ReportType.STORE_MGR, label: 'Quản lý Cửa Hàng (店铺管理)', path: '/stores' },
+  { id: ReportType.PERSONNEL, label: 'Nhân sự (人事)', path: '/personnel' },
 ];
 
 export const Sidebar: React.FC = () => {

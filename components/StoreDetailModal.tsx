@@ -137,7 +137,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              Nhân sự phụ trách
+              Nhân sự phụ trách (负责人事)
             </button>
             <button
               onClick={() => setActiveTab('metrics')}
@@ -147,7 +147,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              Chỉ số cửa hàng
+              Chỉ số cửa hàng (店铺指标)
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -157,7 +157,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
-              Lịch sử hoạt động
+              Lịch sử hoạt động (活动历史)
             </button>
           </div>
         </div>
@@ -222,7 +222,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
               {/* Tab 2: Chỉ số cửa hàng */}
               {activeTab === 'metrics' && storeMetrics && (
                 <div className="space-y-6">
-                  <h3 className="text-lg font-bold text-gray-800 mb-4">Tổng quan chỉ số</h3>
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">Tổng quan chỉ số (指标总览)</h3>
                   
                   {/* KPI Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -288,7 +288,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
               {/* Tab 3: Lịch sử hoạt động */}
               {activeTab === 'history' && (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-gray-800 mb-4">Lịch sử báo cáo gần đây</h3>
+                  <h3 className="text-lg font-bold text-gray-800 mb-4">Lịch sử báo cáo gần đây (最近报告历史)</h3>
                   {recentHistory.length === 0 ? (
                     <div className="text-center py-8 text-gray-400 bg-gray-50 rounded border border-gray-200">
                       <p>Chưa có báo cáo nào cho cửa hàng này</p>

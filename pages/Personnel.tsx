@@ -151,13 +151,13 @@ export const Personnel: React.FC = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý Nhân Sự</h2>
+        <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý Nhân Sự (人事管理)</h2>
         <button
           onClick={() => { resetForm(); setShowForm(true); }}
           className="bg-brand-red text-white px-4 py-2 rounded shadow hover:bg-red-700 transition font-bold text-sm flex items-center gap-2"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-          Thêm Nhân Sự
+          Thêm Nhân Sự (添加人员)
         </button>
       </div>
 
@@ -172,7 +172,7 @@ export const Personnel: React.FC = () => {
                 : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
             }`}
           >
-            Danh sách Nhân sự
+            Danh sách Nhân sự (人员名单)
           </button>
           <button
             onClick={() => setActiveTab('salary')}
@@ -182,7 +182,7 @@ export const Personnel: React.FC = () => {
                 : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
             }`}
           >
-            Lương & KPIs theo tháng
+            Lương & KPIs theo tháng (月薪和KPI)
           </button>
         </div>
       </div>
@@ -192,7 +192,7 @@ export const Personnel: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70]">
           <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h3 className="text-lg font-bold uppercase text-gray-800">{isEditing ? 'Cập nhật thông tin' : 'Thêm nhân sự mới'}</h3>
+              <h3 className="text-lg font-bold uppercase text-gray-800">{isEditing ? 'Cập nhật thông tin (更新信息)' : 'Thêm nhân sự mới (添加新人员)'}</h3>
               <button onClick={resetForm} className="text-gray-500 hover:text-gray-700">✕</button>
             </div>
 
@@ -200,20 +200,20 @@ export const Personnel: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Basic Info */}
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Thông tin cơ bản</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Thông tin cơ bản (基本信息)</label>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Họ và tên <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700">Họ và tên (姓名) <span className="text-red-500">*</span></label>
                   <input required name="fullName" value={formData.fullName} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1 focus:ring-brand-red focus:border-brand-red" placeholder="Nguyễn Văn A" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
+                  <label className="block text-sm font-medium text-gray-700">Số điện thoại (电话号码)</label>
                   <input name="phoneNumber" value={formData.phoneNumber} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1" placeholder="09xxx..." />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Phòng ban</label>
+                  <label className="block text-sm font-medium text-gray-700">Phòng ban (部门)</label>
                   <select name="department" value={formData.department} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1 bg-white">
-                    <option value="">Chọn phòng ban</option>
+                    <option value="">Chọn phòng ban (选择部门)</option>
                     <option value="Live">Team Live</option>
                     <option value="Media">Team Media/Video</option>
                     <option value="Sale">Team Sale</option>
@@ -222,11 +222,11 @@ export const Personnel: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Vị trí chức danh</label>
-                  <input name="position" value={formData.position} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1" placeholder="Ví dụ: Host, Editor..." />
+                  <label className="block text-sm font-medium text-gray-700">Vị trí chức danh (职位)</label>
+                  <input name="position" value={formData.position} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1" placeholder="Ví dụ: Host, Editor... (例如: 主播, 编辑...)" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Lương cứng (VND)</label>
+                  <label className="block text-sm font-medium text-gray-700">Lương cứng (固定工资) (VND)</label>
                   <input 
                     type="number" 
                     name="baseSalary" 
@@ -241,7 +241,7 @@ export const Personnel: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Mục tiêu KPI tháng (VND)</label>
+                  <label className="block text-sm font-medium text-gray-700">Mục tiêu KPI tháng (月度KPI目标) (VND)</label>
                   <input 
                     type="number" 
                     name="monthlyKPITarget" 
@@ -258,21 +258,21 @@ export const Personnel: React.FC = () => {
 
                 {/* Account Info */}
                 <div className="col-span-2 mt-2">
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tài khoản đăng nhập</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tài khoản đăng nhập (登录账户)</label>
                   <div className="bg-blue-50 p-4 rounded border border-blue-100 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Email (Tên đăng nhập) <span className="text-red-500">*</span></label>
+                      <label className="block text-sm font-medium text-gray-700">Email (Tên đăng nhập) (用户名) <span className="text-red-500">*</span></label>
                       <input required type="email" name="email" value={formData.email || ''} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1" placeholder="email@phonglive.com" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Mật khẩu <span className="text-red-500">*</span></label>
-                      <input required type="text" name="password" value={formData.password || ''} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1 bg-white" placeholder="Nhập mật khẩu" />
+                      <label className="block text-sm font-medium text-gray-700">Mật khẩu (密码) <span className="text-red-500">*</span></label>
+                      <input required type="text" name="password" value={formData.password || ''} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1 bg-white" placeholder="Nhập mật khẩu (输入密码)" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Phân quyền</label>
+                      <label className="block text-sm font-medium text-gray-700">Phân quyền (权限)</label>
                       <select name="role" value={formData.role || 'user'} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1 bg-white">
-                        <option value="user">Nhân viên (User)</option>
-                        <option value="admin">Quản trị viên (Admin)</option>
+                        <option value="user">Nhân viên (员工) (User)</option>
+                        <option value="admin">Quản trị viên (管理员) (Admin)</option>
                       </select>
                     </div>
                   </div>
@@ -280,9 +280,9 @@ export const Personnel: React.FC = () => {
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
-                <button type="button" onClick={resetForm} className="px-4 py-2 border rounded text-gray-600 hover:bg-gray-50">Hủy</button>
+                <button type="button" onClick={resetForm} className="px-4 py-2 border rounded text-gray-600 hover:bg-gray-50">Hủy (取消)</button>
                 <button type="submit" className="px-6 py-2 bg-brand-red text-white rounded font-bold hover:bg-red-700">
-                  {isEditing ? 'Cập nhật' : 'Tạo mới'}
+                  {isEditing ? 'Cập nhật (更新)' : 'Tạo mới (新建)'}
                 </button>
               </div>
             </form>
@@ -297,11 +297,11 @@ export const Personnel: React.FC = () => {
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
               <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Xác nhận xóa?</h3>
-            <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa nhân sự này không? Hành động này không thể hoàn tác.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Xác nhận xóa? (确认删除?)</h3>
+            <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa nhân sự này không? Hành động này không thể hoàn tác. (您确定要删除此人员吗? 此操作无法撤销。)</p>
             <div className="flex justify-center gap-3">
-              <button onClick={() => setShowDeleteConfirm(null)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-gray-800">Hủy</button>
-              <button onClick={() => handleDelete(showDeleteConfirm)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Xóa</button>
+              <button onClick={() => setShowDeleteConfirm(null)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-gray-800">Hủy (取消)</button>
+              <button onClick={() => handleDelete(showDeleteConfirm)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Xóa (删除)</button>
             </div>
           </div>
         </div>
@@ -311,7 +311,7 @@ export const Personnel: React.FC = () => {
       {activeTab === 'list' && (
         <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
           {isLoading ? (
-            <div className="p-12 text-center text-gray-500">Đang tải danh sách nhân sự...</div>
+            <div className="p-12 text-center text-gray-500">Đang tải danh sách nhân sự... (正在加载人员列表...)</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
@@ -322,13 +322,13 @@ export const Personnel: React.FC = () => {
                     <th className="px-6 py-3 border-r">Phòng ban</th>
                     <th className="px-6 py-3 border-r">Vị trí</th>
                     <th className="px-6 py-3 border-r">SĐT</th>
-                    <th className="px-6 py-3 border-r">Lương cứng</th>
-                    <th className="px-6 py-3 text-center">Thao tác</th>
+                    <th className="px-6 py-3 border-r">Lương cứng (固定工资)</th>
+                    <th className="px-6 py-3 text-center">Thao tác (操作)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {personnelList.length === 0 ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-gray-400">Chưa có nhân sự nào</td></tr>
+                    <tr><td colSpan={7} className="py-8 text-center text-gray-400">Chưa có nhân sự nào (暂无人员)</td></tr>
                   ) : (
                     personnelList.map((person) => (
                       <tr key={person.id} className="border-b hover:bg-gray-50 group">
@@ -356,13 +356,13 @@ export const Personnel: React.FC = () => {
                               onClick={() => handleEdit(person)}
                               className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
                             >
-                              Sửa
-                            </button>
-                            <button
-                              onClick={() => person.id && setShowDeleteConfirm(person.id)}
-                              className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
-                            >
-                              Xóa
+                            Sửa (编辑)
+                          </button>
+                          <button
+                            onClick={() => person.id && setShowDeleteConfirm(person.id)}
+                            className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
+                          >
+                            Xóa (删除)
                             </button>
                           </div>
                         </td>
@@ -380,13 +380,13 @@ export const Personnel: React.FC = () => {
       {activeTab === 'salary' && (
         <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
           {isLoading ? (
-            <div className="p-12 text-center text-gray-500">Đang tải dữ liệu...</div>
+            <div className="p-12 text-center text-gray-500">Đang tải dữ liệu... (正在加载数据...)</div>
           ) : (
             <div className="overflow-x-auto">
               <div className="p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                 <div>
                   <h3 className="text-lg font-bold text-gray-800">
-                    Lương & KPIs theo tháng - {new Date(selectedMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
+                    Lương & KPIs theo tháng (月薪和KPI) - {new Date(selectedMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
                   </h3>
                   <p className="text-xs text-gray-500 mt-1">Doanh số được tính từ các báo cáo Live của nhân viên</p>
                 </div>
@@ -405,16 +405,16 @@ export const Personnel: React.FC = () => {
                   <tr>
                     <th className="px-6 py-3 border-r text-left">Họ và tên</th>
                     <th className="px-6 py-3 border-r text-left">Phòng ban</th>
-                    <th className="px-6 py-3 border-r text-right">Lương cứng</th>
-                    <th className="px-6 py-3 border-r text-right">Mục tiêu KPI</th>
-                    <th className="px-6 py-3 border-r text-right">Doanh số thực</th>
-                    <th className="px-6 py-3 border-r text-center">Tiến độ</th>
-                    <th className="px-6 py-3 text-center">Số báo cáo</th>
+                    <th className="px-6 py-3 border-r text-right">Lương cứng (固定工资)</th>
+                    <th className="px-6 py-3 border-r text-right">Mục tiêu KPI (KPI目标)</th>
+                    <th className="px-6 py-3 border-r text-right">Doanh số thực (实际营收)</th>
+                    <th className="px-6 py-3 border-r text-center">Tiến độ (进度)</th>
+                    <th className="px-6 py-3 text-center">Số báo cáo (报告数)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {salaryKPIData.length === 0 ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-gray-400">Chưa có dữ liệu</td></tr>
+                    <tr><td colSpan={7} className="py-8 text-center text-gray-400">Chưa có dữ liệu (暂无数据)</td></tr>
                   ) : (
                     salaryKPIData.map((item) => {
                       const { person, actualRevenue, kpiTarget, progressPercent, reportCount } = item;

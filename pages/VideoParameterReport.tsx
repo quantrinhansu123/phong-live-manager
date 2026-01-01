@@ -212,7 +212,7 @@ export const VideoParameterReport: React.FC = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý & Báo cáo Video</h2>
+        <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý & Báo cáo Video (视频管理和报告)</h2>
         <select
           className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-red bg-white shadow-sm"
           value={selectedStore}
@@ -411,7 +411,7 @@ export const VideoParameterReport: React.FC = () => {
       {activeTab === 'config' && (
         <div className="bg-white rounded shadow-sm border border-gray-200 flex flex-col">
           <div className="p-4 border-b border-gray-200 bg-gray-50">
-            <h3 className="text-lg font-bold text-gray-800">Cấu hình đẩy excel báo cáo video</h3>
+            <h3 className="text-lg font-bold text-gray-800">Cấu hình đẩy excel báo cáo video (视频报告Excel推送配置)</h3>
           </div>
           <div className="overflow-x-auto flex-1">
             <table className="w-full text-sm text-left">

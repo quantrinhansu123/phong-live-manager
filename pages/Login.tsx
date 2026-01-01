@@ -45,7 +45,7 @@ export const Login: React.FC = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
             <div className="bg-white p-8 rounded shadow-md w-full max-w-sm">
-                <h2 className="text-2xl font-bold text-center text-gray-800 mb-6 uppercase">Đăng nhập hệ thống</h2>
+                <h2 className="text-2xl font-bold text-center text-gray-800 mb-6 uppercase">Đăng nhập hệ thống (系统登录)</h2>
 
                 {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded mb-4 text-sm text-center">
@@ -56,7 +56,7 @@ export const Login: React.FC = () => {
                 <form onSubmit={handleLogin} className="space-y-4">
                     <div>
                         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                            Email đăng nhập
+                            Email đăng nhập (登录邮箱)
                         </label>
                         <input
                             type="email"
@@ -70,7 +70,7 @@ export const Login: React.FC = () => {
                     </div>
                     <div>
                         <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                            Mật khẩu
+                            Mật khẩu (密码)
                         </label>
                         <input
                             type="password"
@@ -87,7 +87,7 @@ export const Login: React.FC = () => {
                         disabled={loading}
                         className={`w-full bg-brand-red text-white font-bold py-2 px-4 rounded hover:bg-red-700 transition duration-200 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
-                        {loading ? 'Đang kiểm tra...' : 'Vào hệ thống'}
+                        {loading ? 'Đang kiểm tra... (检查中...)' : 'Vào hệ thống (进入系统)'}
                     </button>
                 </form>
 
