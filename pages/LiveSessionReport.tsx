@@ -17,6 +17,19 @@ export const LiveSessionReport: React.FC = () => {
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const [dateFrom, setDateFrom] = useState<string>(firstDayOfMonth.toISOString().split('T')[0]);
   const [dateTo, setDateTo] = useState<string>(today.toISOString().split('T')[0]);
+  
+  // Weekly report filter
+  const getWeekStart = (date: Date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    return new Date(d.setDate(diff));
+  };
+  const weekStart = getWeekStart(today);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const [weekStartDate, setWeekStartDate] = useState<string>(weekStart.toISOString().split('T')[0]);
+  const [weekEndDate, setWeekEndDate] = useState<string>(weekEnd.toISOString().split('T')[0]);
 
   // Fetch data on mount
   const loadData = async () => {
@@ -147,6 +160,65 @@ export const LiveSessionReport: React.FC = () => {
     })).sort((a, b) => b.totalGMV - a.totalGMV);
   }, [reports, personnelList, dateFrom, dateTo]);
 
+  // Weekly Report by Host
+  const weeklyReportData = useMemo(() => {
+    // Get all unique hosts from reports
+    const allHosts = Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).sort();
+    
+    // Filter reports by week date range
+    const weekReports = reports.filter(report => {
+      const reportDate = new Date(report.date);
+      const fromDate = new Date(weekStartDate);
+      const toDate = new Date(weekEndDate);
+      toDate.setHours(23, 59, 59, 999);
+      return reportDate >= fromDate && reportDate <= toDate;
+    });
+
+    // Get all dates in the week
+    const dates: string[] = [];
+    const currentDate = new Date(weekStartDate);
+    const endDate = new Date(weekEndDate);
+    while (currentDate <= endDate) {
+      dates.push(currentDate.toISOString().split('T')[0]);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Build data structure: date -> host -> revenue
+    const dateHostMap: Record<string, Record<string, number>> = {};
+    dates.forEach(date => {
+      dateHostMap[date] = {};
+      allHosts.forEach(host => {
+        dateHostMap[date][host] = 0;
+      });
+    });
+
+    // Fill in revenue data
+    weekReports.forEach(report => {
+      const date = report.date;
+      const host = report.hostName;
+      const gmv = Number(report.gmv) || 0;
+      if (dateHostMap[date] && host) {
+        dateHostMap[date][host] = (dateHostMap[date][host] || 0) + gmv;
+      }
+    });
+
+    // Calculate totals
+    const totals: Record<string, number> = {};
+    allHosts.forEach(host => {
+      totals[host] = dates.reduce((sum, date) => sum + (dateHostMap[date][host] || 0), 0);
+    });
+    const grandTotal = Object.values(totals).reduce((sum, val) => sum + val, 0);
+
+    return {
+      dates,
+      hosts: allHosts,
+      dateHostMap,
+      totals,
+      grandTotal,
+      weekRange: `${new Date(weekStartDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric' })} - ${new Date(weekEndDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric' })}`
+    };
+  }, [reports, weekStartDate, weekEndDate]);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
       <LiveReportModal
@@ -219,6 +291,97 @@ export const LiveSessionReport: React.FC = () => {
                 <Line yAxisId="left" type="monotone" dataKey="profit" name="Lợi nhuận tạm tính" stroke="#10b981" strokeWidth={2} />
               </ComposedChart>
             </ResponsiveContainer>
+          </div>
+
+          {/* Weekly Report by Host */}
+          <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <h3 className="text-lg font-bold text-gray-800">Báo Cáo Theo Tuần - Tổng Doanh Thu Theo Host</h3>
+              <div className="flex gap-2 items-center flex-wrap">
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Từ ngày:</label>
+                <input
+                  type="date"
+                  value={weekStartDate}
+                  onChange={(e) => setWeekStartDate(e.target.value)}
+                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-red bg-white shadow-sm"
+                />
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Đến ngày:</label>
+                <input
+                  type="date"
+                  value={weekEndDate}
+                  onChange={(e) => setWeekEndDate(e.target.value)}
+                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-red bg-white shadow-sm"
+                />
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 border-b">
+                    <th className="px-4 py-3 border-r text-left font-bold text-gray-700 sticky left-0 bg-gray-100 z-10 min-w-[120px]">
+                      Ngày
+                    </th>
+                    {weeklyReportData.hosts.map(host => (
+                      <th key={host} className="px-4 py-3 border-r text-center font-bold text-gray-700 min-w-[140px]">
+                        {host}
+                      </th>
+                    ))}
+                    <th className="px-4 py-3 text-center font-bold text-gray-700 bg-blue-50 min-w-[140px]">
+                      TỔNG DOANH THU TUẦN
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {weeklyReportData.dates.map(date => {
+                    const dateObj = new Date(date);
+                    const dateStr = dateObj.toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric' });
+                    const dayTotal = weeklyReportData.hosts.reduce((sum, host) => sum + (weeklyReportData.dateHostMap[date][host] || 0), 0);
+                    return (
+                      <tr key={date} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3 border-r font-medium text-gray-800 sticky left-0 bg-white z-10">
+                          {dateStr}
+                        </td>
+                        {weeklyReportData.hosts.map(host => {
+                          const revenue = weeklyReportData.dateHostMap[date][host] || 0;
+                          return (
+                            <td key={host} className="px-4 py-3 border-r text-right">
+                              {revenue > 0 ? (
+                                <span className="font-medium text-gray-800">{formatCurrency(revenue)}</span>
+                              ) : (
+                                <span className="text-gray-400">x</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 py-3 text-right font-bold text-blue-600 bg-blue-50">
+                          {dayTotal > 0 ? formatCurrency(dayTotal) : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="border-t-2 border-gray-400 bg-gray-100 font-bold">
+                    <td className="px-4 py-3 border-r sticky left-0 bg-gray-100 z-10">
+                      TOTAL
+                    </td>
+                    {weeklyReportData.hosts.map(host => {
+                      const total = weeklyReportData.totals[host] || 0;
+                      return (
+                        <td key={host} className="px-4 py-3 border-r text-right">
+                          {total > 0 ? (
+                            <span className="text-gray-800">{formatCurrency(total)}</span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td className="px-4 py-3 text-right text-blue-700 bg-blue-100">
+                      {formatCurrency(weeklyReportData.grandTotal)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Personnel Summary Table */}
