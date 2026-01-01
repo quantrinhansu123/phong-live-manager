@@ -351,18 +351,27 @@ export const Personnel: React.FC = () => {
                           {person.baseSalary ? formatCurrency(person.baseSalary) : '-'}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <div className="flex justify-center gap-2">
+                          <div className="flex justify-center gap-1">
+                            <button
+                              onClick={() => {
+                                // Xem chi tiết nhân sự
+                                alert(`Thông tin nhân sự:\nHọ tên: ${person.fullName}\nEmail: ${person.email || '-'}\nPhòng ban: ${person.department || '-'}\nVị trí: ${person.position || '-'}\nSĐT: ${person.phoneNumber || '-'}\nLương cứng: ${person.baseSalary ? formatCurrency(person.baseSalary) : '-'}`);
+                              }}
+                              className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
+                            >
+                              Xem (查看)
+                            </button>
                             <button
                               onClick={() => handleEdit(person)}
                               className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
                             >
-                            Sửa (编辑)
-                          </button>
-                          <button
-                            onClick={() => person.id && setShowDeleteConfirm(person.id)}
-                            className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
-                          >
-                            Xóa (删除)
+                              Sửa (编辑)
+                            </button>
+                            <button
+                              onClick={() => person.id && setShowDeleteConfirm(person.id)}
+                              className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
+                            >
+                              Xóa (删除)
                             </button>
                           </div>
                         </td>
@@ -409,12 +418,13 @@ export const Personnel: React.FC = () => {
                     <th className="px-6 py-3 border-r text-right">Mục tiêu KPI (KPI目标)</th>
                     <th className="px-6 py-3 border-r text-right">Doanh số thực (实际营收)</th>
                     <th className="px-6 py-3 border-r text-center">Tiến độ (进度)</th>
-                    <th className="px-6 py-3 text-center">Số báo cáo (报告数)</th>
+                    <th className="px-6 py-3 border-r text-center">Số báo cáo (报告数)</th>
+                    <th className="px-6 py-3 text-center">Thao tác (操作)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {salaryKPIData.length === 0 ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-gray-400">Chưa có dữ liệu (暂无数据)</td></tr>
+                    <tr><td colSpan={8} className="py-8 text-center text-gray-400">Chưa có dữ liệu (暂无数据)</td></tr>
                   ) : (
                     salaryKPIData.map((item) => {
                       const { person, actualRevenue, kpiTarget, progressPercent, reportCount } = item;
@@ -469,8 +479,16 @@ export const Personnel: React.FC = () => {
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-center font-medium text-gray-600">
+                          <td className="px-6 py-4 border-r text-center font-medium text-gray-600">
                             {reportCount}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              onClick={() => handleEdit(person)}
+                              className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
+                            >
+                              Xem (查看)
+                            </button>
                           </td>
                         </tr>
                       );

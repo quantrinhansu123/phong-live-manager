@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MOCK_STORES, fetchLiveReports, createLiveReport, fetchPersonnel } from '../services/dataService';
+import { MOCK_STORES, fetchLiveReports, createLiveReport, updateLiveReport, deleteLiveReport, fetchPersonnel } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line } from 'recharts';
 import { LiveReportModal } from '../components/LiveReportModal';
 import { LiveReport, Personnel } from '../types';
@@ -11,6 +11,10 @@ export const LiveSessionReport: React.FC = () => {
   const [personnelList, setPersonnelList] = useState<Personnel[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedReport, setSelectedReport] = useState<LiveReport | null>(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   
   // Date range filter for personnel summary
   const today = new Date();
@@ -50,6 +54,29 @@ export const LiveSessionReport: React.FC = () => {
   const handleCreateReport = async (newReport: Omit<LiveReport, 'id'>) => {
     await createLiveReport(newReport);
     await loadData(); // Reload data after creation
+  };
+
+  const handleUpdateReport = async (id: string, updatedReport: Partial<LiveReport>) => {
+    await updateLiveReport(id, updatedReport);
+    await loadData();
+    setIsEditModalOpen(false);
+    setSelectedReport(null);
+  };
+
+  const handleDeleteReport = async (id: string) => {
+    await deleteLiveReport(id);
+    await loadData();
+    setReportToDelete(null);
+  };
+
+  const handleViewReport = (report: LiveReport) => {
+    setSelectedReport(report);
+    setIsViewModalOpen(true);
+  };
+
+  const handleEditReport = (report: LiveReport) => {
+    setSelectedReport(report);
+    setIsEditModalOpen(true);
   };
 
   // Filter Data
@@ -226,6 +253,246 @@ export const LiveSessionReport: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleCreateReport}
       />
+      <LiveReportModal
+        isOpen={isEditModalOpen}
+        onClose={() => { setIsEditModalOpen(false); setSelectedReport(null); }}
+        onSubmit={async (data) => {
+          if (selectedReport?.id) {
+            await handleUpdateReport(selectedReport.id, data);
+          }
+        }}
+        initialData={selectedReport || undefined}
+        isEdit={true}
+      />
+
+      {/* View Report Modal */}
+      {isViewModalOpen && selectedReport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] overflow-y-auto p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-brand-red to-red-600 p-6 text-white">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-bold uppercase mb-2">Chi tiết Báo Cáo Live (直播报告详情)</h2>
+                  <p className="text-red-100 text-sm">ID: {selectedReport.id || 'N/A'}</p>
+                </div>
+                <button 
+                  onClick={() => { setIsViewModalOpen(false); setSelectedReport(null); }} 
+                  className="text-white hover:text-red-200 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Section 1: Thông tin cơ bản */}
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Thông tin cơ bản (基本信息)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Ngày (日期)</p>
+                    <p className="text-lg font-bold text-gray-800">{selectedReport.date}</p>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Kênh Live (直播频道)</p>
+                    <p className="text-lg font-bold text-gray-800">{MOCK_STORES.find(s => s.id === selectedReport.channelId)?.name || 'Unknown'}</p>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Host (主播)</p>
+                    <p className="text-lg font-bold text-gray-800">{selectedReport.hostName}</p>
+                  </div>
+                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Thời gian (时间)</p>
+                    <p className="text-lg font-bold text-gray-800">{selectedReport.startTime} - {selectedReport.endTime}</p>
+                  </div>
+                  <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Thời lượng (时长)</p>
+                    <p className="text-lg font-bold text-gray-800">{selectedReport.duration}</p>
+                  </div>
+                  <div className="bg-pink-50 p-4 rounded-lg border border-pink-200">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Người báo cáo (报告人)</p>
+                    <p className="text-lg font-bold text-gray-800">{selectedReport.reporter || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Tài chính */}
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Tài chính & Hiệu quả (财务与效果)
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-lg border-2 border-blue-300">
+                    <p className="text-xs text-blue-700 uppercase font-bold mb-2">GMV (交易额)</p>
+                    <p className="text-2xl font-bold text-blue-800">{formatCurrency(Number(selectedReport.gmv))}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 p-5 rounded-lg border-2 border-red-300">
+                    <p className="text-xs text-red-700 uppercase font-bold mb-2">Chi phí QC (广告费)</p>
+                    <p className="text-2xl font-bold text-red-800">{formatCurrency(Number(selectedReport.adCost))}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-lg border-2 border-green-300">
+                    <p className="text-xs text-green-700 uppercase font-bold mb-2">Lợi nhuận (利润)</p>
+                    <p className="text-2xl font-bold text-green-800">{formatCurrency(Number(selectedReport.gmv) - Number(selectedReport.adCost))}</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p className="text-xs text-gray-600 uppercase font-bold mb-1">Tổng GMV (总交易额)</p>
+                    <p className="text-lg font-bold text-gray-800">{formatCurrency(Number(selectedReport.totalGmv))}</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p className="text-xs text-gray-600 uppercase font-bold mb-1">ROI (%)</p>
+                    <p className="text-lg font-bold text-gray-800">
+                      {Number(selectedReport.adCost) > 0 
+                        ? formatPercent(((Number(selectedReport.gmv) - Number(selectedReport.adCost)) / Number(selectedReport.adCost)) * 100)
+                        : '0%'}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <p className="text-xs text-gray-600 uppercase font-bold mb-1">GPM (直播千次金额)</p>
+                    <p className="text-lg font-bold text-gray-800">{selectedReport.gpm ? formatCurrency(Number(selectedReport.gpm)) : '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Chỉ số chi tiết */}
+              {(selectedReport.orders || selectedReport.viewers || selectedReport.conversionRate) && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Chỉ số chi tiết (详细指标)
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {selectedReport.orders !== undefined && selectedReport.orders !== null && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">Số lượt bán (订单数)</p>
+                        <p className="text-xl font-bold text-gray-800">{selectedReport.orders || 0}</p>
+                      </div>
+                    )}
+                    {selectedReport.averagePrice && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">Giá TB (平均价格)</p>
+                        <p className="text-xl font-bold text-gray-800">{formatCurrency(Number(selectedReport.averagePrice))}</p>
+                      </div>
+                    )}
+                    {selectedReport.conversionRate && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">Tỉ lệ chuyển đổi (转化率 %)</p>
+                        <p className="text-xl font-bold text-gray-800">{Number(selectedReport.conversionRate).toFixed(2)}%</p>
+                      </div>
+                    )}
+                    {selectedReport.productClicks && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">Click SP (产品点击次数)</p>
+                        <p className="text-xl font-bold text-gray-800">{selectedReport.productClicks}</p>
+                      </div>
+                    )}
+                    {selectedReport.productClickRate && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">Tỉ lệ Click SP (点击率 %)</p>
+                        <p className="text-xl font-bold text-gray-800">{Number(selectedReport.productClickRate).toFixed(2)}%</p>
+                      </div>
+                    )}
+                    {selectedReport.ctr && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">CTR vào phòng (进房率 %)</p>
+                        <p className="text-xl font-bold text-gray-800">{Number(selectedReport.ctr).toFixed(2)}%</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Section 4: Lượng xem & Tương tác */}
+              {(selectedReport.viewers || selectedReport.totalViews || selectedReport.newFollowers) && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 pb-2 border-b border-gray-200 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Người xem & Tương tác (观看与互动)
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {selectedReport.totalViews !== undefined && selectedReport.totalViews !== null && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">Tổng lượt xem (直播观看次数)</p>
+                        <p className="text-xl font-bold text-gray-800">{(selectedReport.totalViews || 0).toLocaleString()}</p>
+                      </div>
+                    )}
+                    {selectedReport.viewers !== undefined && selectedReport.viewers !== null && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">Người xem (场观人数)</p>
+                        <p className="text-xl font-bold text-gray-800">{(selectedReport.viewers || 0).toLocaleString()}</p>
+                      </div>
+                    )}
+                    {selectedReport.avgWatchTime && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">TG xem TB (平均观看时长)</p>
+                        <p className="text-xl font-bold text-gray-800">{selectedReport.avgWatchTime}</p>
+                      </div>
+                    )}
+                    {selectedReport.newFollowers !== undefined && selectedReport.newFollowers !== null && (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                        <p className="text-xs text-gray-500 uppercase font-bold mb-1">FL mới (关注人数)</p>
+                        <p className="text-xl font-bold text-gray-800">{(selectedReport.newFollowers || 0).toLocaleString()}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-200 bg-gray-50 p-4 flex justify-end gap-3">
+              <button 
+                onClick={() => { setIsViewModalOpen(false); setSelectedReport(null); }} 
+                className="px-6 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium transition-colors"
+              >
+                Đóng (关闭)
+              </button>
+              <button
+                onClick={() => {
+                  setIsViewModalOpen(false);
+                  handleEditReport(selectedReport);
+                }}
+                className="px-6 py-2 bg-brand-red text-white rounded font-bold hover:bg-red-700 transition-colors"
+              >
+                Sửa (编辑)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {reportToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80]">
+          <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+              <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Xác nhận xóa? (确认删除?)</h3>
+            <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa báo cáo này không? Hành động này không thể hoàn tác. (您确定要删除此报告吗? 此操作无法撤销。)</p>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => setReportToDelete(null)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-gray-800">Hủy (取消)</button>
+              <button onClick={() => handleDeleteReport(reportToDelete)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Xóa (删除)</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header & Filter */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -423,12 +690,13 @@ export const LiveSessionReport: React.FC = () => {
                     <th className="px-6 py-3 border-r text-right">ROI TB (平均ROI)</th>
                     <th className="px-6 py-3 border-r text-center">Số báo cáo (报告数)</th>
                     <th className="px-6 py-3 text-right">Lợi nhuận</th>
+                    <th className="px-6 py-3 text-center">Thao tác (操作)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {personnelSummary.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-400">
+                      <td colSpan={8} className="py-8 text-center text-gray-400">
                         Chưa có dữ liệu trong khoảng thời gian này (此时间段暂无数据)
                       </td>
                     </tr>
@@ -469,6 +737,24 @@ export const LiveSessionReport: React.FC = () => {
                           <td className="px-6 py-4 text-right font-bold text-green-600">
                             {formatCurrency(profit)}
                           </td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              onClick={() => {
+                                // Xem chi tiết nhân viên - có thể mở modal hoặc điều hướng
+                                const personReports = reports.filter(r => {
+                                  if (!r.reporter) return false;
+                                  const reporterName = r.reporter.toLowerCase();
+                                  const personName = item.person.fullName.toLowerCase();
+                                  return reporterName.includes(personName) || personName.includes(reporterName);
+                                });
+                                // Có thể tạo modal xem chi tiết hoặc filter bảng
+                                alert(`Xem chi tiết ${item.person.fullName} - ${personReports.length} báo cáo`);
+                              }}
+                              className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
+                            >
+                              Xem (查看)
+                            </button>
+                          </td>
                         </tr>
                       );
                     })
@@ -494,12 +780,13 @@ export const LiveSessionReport: React.FC = () => {
                     <th className="px-4 py-3 border-r text-blue-700 whitespace-nowrap">GMV</th>
                     <th className="px-4 py-3 border-r text-red-700 whitespace-nowrap">CPQC</th>
                     <th className="px-4 py-3 border-r whitespace-nowrap">ROI (%)</th>
-                    <th className="px-4 py-3 whitespace-nowrap">Đánh giá</th>
+                    <th className="px-4 py-3 border-r whitespace-nowrap">Đánh giá</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Thao tác (操作)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredData.length === 0 ? (
-                    <tr><td colSpan={8} className="py-8 text-gray-400">Chưa có dữ liệu (暂无数据)</td></tr>
+                    <tr><td colSpan={9} className="py-8 text-gray-400">Chưa có dữ liệu (暂无数据)</td></tr>
                   ) : (
                     filteredData.map((row) => {
                       const gmv = Number(row.gmv);
@@ -518,10 +805,35 @@ export const LiveSessionReport: React.FC = () => {
                           <td className="px-4 py-3 border-r font-bold text-blue-600">{formatCurrency(gmv)}</td>
                           <td className="px-4 py-3 border-r font-bold text-red-600">{formatCurrency(ad)}</td>
                           <td className="px-4 py-3 border-r font-medium">{roiVal.toFixed(1)}%</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 border-r">
                             <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(roiVal)}`}>
                               {roiVal >= 400 ? 'TỐT' : roiVal >= 200 ? 'KHÁ' : 'CẦN TỐI ƯU'}
                             </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-center gap-1">
+                              <button
+                                onClick={() => handleViewReport(row)}
+                                className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
+                                title="Xem chi tiết"
+                              >
+                                Xem (查看)
+                              </button>
+                              <button
+                                onClick={() => handleEditReport(row)}
+                                className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
+                                title="Sửa"
+                              >
+                                Sửa (编辑)
+                              </button>
+                              <button
+                                onClick={() => row.id && setReportToDelete(row.id)}
+                                className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
+                                title="Xóa"
+                              >
+                                Xóa (删除)
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );

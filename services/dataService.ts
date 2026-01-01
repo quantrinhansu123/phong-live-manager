@@ -49,6 +49,52 @@ export const createLiveReport = async (report: Omit<LiveReport, 'id'>) => {
   }
 };
 
+export const updateLiveReport = async (id: string, report: Partial<LiveReport>) => {
+  if (id.startsWith('local_')) {
+    const localReports = JSON.parse(localStorage.getItem('local_live_reports') || '[]');
+    const index = localReports.findIndex((r: LiveReport) => r.id === id);
+    if (index !== -1) {
+      localReports[index] = { ...localReports[index], ...report };
+      localStorage.setItem('local_live_reports', JSON.stringify(localReports));
+      return localReports[index];
+    }
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${FIREBASE_URL}/live_reports/${id}.json`, {
+      method: 'PATCH',
+      body: JSON.stringify(report),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) throw new Error('Failed to update live report');
+    return await response.json();
+  } catch (error) {
+    console.error("Update failed", error);
+    throw error;
+  }
+};
+
+export const deleteLiveReport = async (id: string) => {
+  if (id.startsWith('local_')) {
+    const localReports = JSON.parse(localStorage.getItem('local_live_reports') || '[]');
+    const filtered = localReports.filter((r: LiveReport) => r.id !== id);
+    localStorage.setItem('local_live_reports', JSON.stringify(filtered));
+    return true;
+  }
+
+  try {
+    const response = await fetch(`${FIREBASE_URL}/live_reports/${id}.json`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete live report');
+    return true;
+  } catch (error) {
+    console.error("Delete failed", error);
+    throw error;
+  }
+};
+
 // --- PERSONNEL ---
 
 export const fetchPersonnel = async (): Promise<Personnel[]> => {

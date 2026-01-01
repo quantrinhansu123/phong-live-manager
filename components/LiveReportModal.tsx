@@ -6,10 +6,12 @@ interface LiveReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: Omit<LiveReport, 'id'>) => Promise<void>;
+  initialData?: LiveReport;
+  isEdit?: boolean;
 }
 
-export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClose, onSubmit }) => {
-  const [formData, setFormData] = useState<Omit<LiveReport, 'id'>>({
+export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClose, onSubmit, initialData, isEdit = false }) => {
+  const defaultFormData: Omit<LiveReport, 'id'> = {
     date: new Date().toISOString().split('T')[0],
     channelId: MOCK_STORES[1]?.id || '', // Default to first store
     startTime: '08:00',
@@ -32,17 +34,69 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
     productClicks: 0,
     newFollowers: 0,
     reporter: localStorage.getItem('currentUser') || ''
-  });
+  };
+
+  const [formData, setFormData] = useState<Omit<LiveReport, 'id'>>(initialData ? {
+    date: initialData.date,
+    channelId: initialData.channelId,
+    startTime: initialData.startTime,
+    endTime: initialData.endTime,
+    hostName: initialData.hostName,
+    duration: initialData.duration,
+    gmv: initialData.gmv,
+    totalGmv: initialData.totalGmv,
+    adCost: initialData.adCost,
+    conversionRate: initialData.conversionRate || 0,
+    averagePrice: initialData.averagePrice || 0,
+    productClickRate: initialData.productClickRate || 0,
+    ctr: initialData.ctr || 0,
+    gpm: initialData.gpm || 0,
+    orders: initialData.orders || 0,
+    viewers: initialData.viewers || 0,
+    totalViews: initialData.totalViews || 0,
+    avgWatchTime: initialData.avgWatchTime || '',
+    productClicks: initialData.productClicks || 0,
+    newFollowers: initialData.newFollowers || 0,
+    reporter: initialData.reporter || localStorage.getItem('currentUser') || ''
+  } : defaultFormData);
 
   const [loading, setLoading] = useState(false);
 
   // Auto calculate duration when times change
   useEffect(() => {
     if (isOpen) {
-      // Update reporter in case user changed
-      setFormData(prev => ({ ...prev, reporter: localStorage.getItem('currentUser') || '' }));
+      if (initialData && isEdit) {
+        // Load initial data for edit
+        setFormData({
+          date: initialData.date,
+          channelId: initialData.channelId,
+          startTime: initialData.startTime,
+          endTime: initialData.endTime,
+          hostName: initialData.hostName,
+          duration: initialData.duration,
+          gmv: initialData.gmv,
+          totalGmv: initialData.totalGmv,
+          adCost: initialData.adCost,
+          conversionRate: initialData.conversionRate || 0,
+          averagePrice: initialData.averagePrice || 0,
+          productClickRate: initialData.productClickRate || 0,
+          ctr: initialData.ctr || 0,
+          gpm: initialData.gpm || 0,
+          orders: initialData.orders || 0,
+          viewers: initialData.viewers || 0,
+          totalViews: initialData.totalViews || 0,
+          avgWatchTime: initialData.avgWatchTime || '',
+          productClicks: initialData.productClicks || 0,
+          newFollowers: initialData.newFollowers || 0,
+          reporter: initialData.reporter || localStorage.getItem('currentUser') || ''
+        });
+      } else {
+        // Reset to default for new report
+        setFormData(defaultFormData);
+        setFormData(prev => ({ ...prev, reporter: localStorage.getItem('currentUser') || '' }));
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialData, isEdit]);
 
   useEffect(() => {
     if (formData.startTime && formData.endTime) {
@@ -99,7 +153,9 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
-        <h2 className="text-xl font-bold text-gray-800 mb-6 uppercase border-b pb-2">Nhập Báo Cáo Live (输入直播报告)</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-6 uppercase border-b pb-2">
+          {isEdit ? 'Cập nhật Báo Cáo Live (更新直播报告)' : 'Nhập Báo Cáo Live (输入直播报告)'}
+        </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
 
