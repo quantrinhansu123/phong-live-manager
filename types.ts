@@ -151,7 +151,7 @@ export interface Partner {
   id?: string;
   name: string; // Tên đối tác
   code?: string; // Mã đối tác (tự động tạo)
-  type: 'Supplier' | 'Service' | 'Platform' | 'Other'; // Loại đối tác
+  type: 'Supplier' | 'Service' | 'Platform' | 'Other' | '代运营' | '合伙'; // Loại đối tác
   contactPerson: string; // Người liên hệ
   phoneNumber: string; // Số điện thoại
   email?: string; // Email (dùng làm tài khoản)
@@ -162,4 +162,11 @@ export interface Partner {
   status: 'Active' | 'Inactive'; // Trạng thái
   createdAt?: string; // Ngày tạo
   updatedAt?: string; // Ngày cập nhật
+}
+
+export type UserRole = 'admin' | 'partner' | 'employee'; // Admin, Đối tác, Nhân viên
+
+export interface MenuPermission {
+  menuId: string; // ID của menu item
+  allowedRoles: UserRole[]; // Danh sách role được phép truy cập
 }

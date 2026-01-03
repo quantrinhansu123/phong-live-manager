@@ -1,169 +1,308 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { MOCK_VIDEO_METRICS, MOCK_STORES, fetchVideoMetrics } from '../services/dataService';
-import { VideoMetric } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { MOCK_VIDEO_METRICS, MOCK_STORES, fetchVideoMetrics, fetchStores, createVideoMetric, updateVideoMetric, deleteVideoMetric } from '../services/dataService';
+import { VideoMetric, Store } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import * as XLSX from 'xlsx';
+import { FilterBar, FilterField } from '../components/FilterBar';
+import { exportToExcel, importFromExcel } from '../utils/excelUtils';
+import { formatCurrency, parseCurrency, parsePercentage, formatPercentage, formatCurrencyForExcel } from '../utils/formatUtils';
 import { VideoEditModal } from '../components/VideoEditModal';
 
 export const VideoParameterReport: React.FC = () => {
-  const [selectedStore, setSelectedStore] = useState<string>('all');
   const [videos, setVideos] = useState<VideoMetric[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [stores, setStores] = useState<Store[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<VideoMetric | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
+
+  // Filter states
+  const [searchText, setSearchText] = useState('');
+  const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const [dateFrom, setDateFrom] = useState<string>(firstDayOfMonth.toISOString().split('T')[0]);
+  const [dateTo, setDateTo] = useState<string>(today.toISOString().split('T')[0]);
 
   useEffect(() => {
-    const loadData = async () => {
-      const data = await fetchVideoMetrics();
-      // Fallback to mock data if DB is empty (likely due to invalid connection/permissions in this demo)
-      if (data.length === 0) {
-        console.warn("Using Mock Data because DB returned empty");
-        setVideos(MOCK_VIDEO_METRICS);
-      } else {
-        setVideos(data);
-      }
-    };
     loadData();
   }, []);
 
-  const filteredVideos = useMemo(() => {
-    return videos.filter(v => selectedStore === 'all' || v.storeId === selectedStore);
-  }, [selectedStore, videos]);
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [videoData, storeData] = await Promise.all([
+        fetchVideoMetrics(),
+        fetchStores()
+      ]);
+      // Fallback to mock data if DB is empty
+      if (videoData.length === 0) {
+        console.warn("Using Mock Data because DB returned empty");
+        setVideos(MOCK_VIDEO_METRICS);
+      } else {
+        setVideos(videoData);
+      }
+      setStores(storeData.length > 0 ? storeData : MOCK_STORES);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setVideos(MOCK_VIDEO_METRICS);
+      setStores(MOCK_STORES);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const handleDownloadExcel = () => {
-    if (selectedStore === 'all') {
-      alert('Vui lòng chọn cửa hàng trước khi tải xuống');
-      return;
+  const filteredVideos = useMemo(() => {
+    let filtered = videos;
+
+    // Filter by date range
+    filtered = filtered.filter(v => {
+      const videoDate = new Date(v.uploadDate);
+      const fromDate = new Date(dateFrom);
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      return videoDate >= fromDate && videoDate <= toDate;
+    });
+
+    // Filter by store
+    if (selectedFilters.stores && selectedFilters.stores.length > 0) {
+      filtered = filtered.filter(v => selectedFilters.stores.includes(v.storeId));
     }
 
-    const store = MOCK_STORES.find(s => s.id === selectedStore);
-    const storeVideos = filteredVideos;
+    // Filter by platform
+    if (selectedFilters.platforms && selectedFilters.platforms.length > 0) {
+      filtered = filtered.filter(v => selectedFilters.platforms.includes(v.platform));
+    }
 
-    // Create workbook with new columns
-    const excelData = storeVideos.map(video => ({
-      '视频名称': video.title,
-      '发布时间': video.uploadDate,
-      '时长': '5:30',
-      'GMV': video.sales,
-      '直接 GMV': Math.floor(video.sales * 0.6),
-      '观看人次': video.views,
-      '成交件数': Math.floor(video.sales / 10000),
-      '点击率': '2.5%',
-      '完播率': '85%',
-      '新增粉丝数': Math.floor(video.views / 50),
-      '商品 ID': `PROD${video.id}`
-    }));
+    // Filter by person in charge
+    if (selectedFilters.persons && selectedFilters.persons.length > 0) {
+      filtered = filtered.filter(v => selectedFilters.persons.includes(v.personInCharge));
+    }
 
-    const ws = XLSX.utils.json_to_sheet(excelData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Video');
-    
-    // Auto-size columns
-    ws['!cols'] = [
-      { wch: 25 },
-      { wch: 12 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 14 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 10 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 12 }
-    ];
+    // Search filter
+    if (searchText.trim()) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(v => {
+        const storeName = stores.find(s => s.id === v.storeId)?.name || '';
+        return (
+          v.title.toLowerCase().includes(searchLower) ||
+          v.platform.toLowerCase().includes(searchLower) ||
+          v.personInCharge.toLowerCase().includes(searchLower) ||
+          v.uploadDate.includes(searchLower) ||
+          storeName.toLowerCase().includes(searchLower) ||
+          v.views.toString().includes(searchLower) ||
+          v.sales.toString().includes(searchLower)
+        );
+      });
+    }
 
-    XLSX.writeFile(wb, `video_report_${store?.name}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    return filtered;
+  }, [videos, selectedFilters, searchText, dateFrom, dateTo, stores]);
+
+  const handleExportExcel = () => {
+    const exportData = filteredVideos.map(video => {
+      const storeName = stores.find(s => s.id === video.storeId)?.name || '';
+      const directGmv = Math.floor(video.sales * 0.6);
+      const orders = Math.floor(video.sales / 10000);
+      const clickRate = 2.5; // Mock data, có thể lưu trong database sau
+      const watchRate = 85; // Mock data
+      const newFollowers = Math.floor(video.views / 50);
+      
+      return {
+        '视频名称': video.title,
+        '发布时间': video.uploadDate,
+        '时长': '30s', // Mock data, có thể lưu trong database sau
+        'GMV': formatCurrencyForExcel(video.sales),
+        '直接 GMV': formatCurrencyForExcel(directGmv),
+        '观看人次': video.views,
+        '成交件数': orders,
+        '点击率': formatPercentage(clickRate),
+        '完播率': formatPercentage(watchRate),
+        '新增粉丝数': newFollowers,
+        '商品 ID': video.id,
+        'CỬA HÀNG \n商店': storeName,
+        'NGƯỜI PHỤ TRÁCH\n负责人 ': video.personInCharge,
+        'HOST \n主播配合': '' // Có thể thêm field này vào database sau
+      };
+    });
+    exportToExcel(exportData, `video-report-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleDownloadTemplate = () => {
-    const store = MOCK_STORES.find(s => s.id === selectedStore);
-    
-    // Create template data with correct column headers
+    // Tạo template với dữ liệu mẫu theo đúng format từ hình ảnh
+    const today = new Date().toISOString().split('T')[0];
     const templateData = [
       {
-        '视频名称': 'Ví dụ: Video sale mùa hè',
-        '发布时间': new Date().toISOString().split('T')[0],
-        '时长': '5:30',
-        'GMV': 500000,
-        '直接 GMV': 300000,
-        '观看人次': 5000,
-        '成交件数': 50,
-        '点击率': '2.5%',
-        '完播率': '85%',
-        '新增粉丝数': 150,
-        '商品 ID': 'PROD001'
+        '视频名称': 'Nhà nay có nước giặt mới chị em ơi #aokemeng #nuocgiat #xuhuongtiktok',
+        '发布时间': `${today} 12:49`,
+        '时长': '37s',
+        'GMV': '0₫',
+        '直接 GMV': '0₫',
+        '观看人次': 19,
+        '成交件数': 0,
+        '点击率': '10.53%',
+        '完播率': '5.26%',
+        '新增粉丝数': 0,
+        '商品 ID': '1733111651498559203',
+        'CỬA HÀNG \n商店': stores.length > 0 ? stores[0].name : '',
+        'NGƯỜI PHỤ TRÁCH\n负责人 ': 'Nhân viên',
+        'HOST \n主播配合': ''
+      },
+      {
+        '视频名称': 'Nước giặt tưởng đâu nước hoa k á mấy bà #aokemeng #nuocgiat',
+        '发布时间': `${today} 11:47`,
+        '时长': '28s',
+        'GMV': '0₫',
+        '直接 GMV': '0₫',
+        '观看人次': 23,
+        '成交件数': 0,
+        '点击率': '0.00%',
+        '完播率': '4.35%',
+        '新增粉丝数': 0,
+        '商品 ID': '1733111651498559203',
+        'CỬA HÀNG \n商店': stores.length > 0 ? stores[0].name : '',
+        'NGƯỜI PHỤ TRÁCH\n负责人 ': 'Nhân viên',
+        'HOST \n主播配合': ''
+      },
+      {
+        '视频名称': 'Nước giặt 5in1 thì khỏi bàn về độ tiện lợi mấy bà ơi #aokemeng #nuocgiat #xuhuongtiktok',
+        '发布时间': `${today} 11:18`,
+        '时长': '32s',
+        'GMV': '0₫',
+        '直接 GMV': '0₫',
+        '观看人次': 71,
+        '成交件数': 0,
+        '点击率': '2.82%',
+        '完播率': '1.41%',
+        '新增粉丝数': 0,
+        '商品 ID': '1733111651498559203',
+        'CỬA HÀNG \n商店': stores.length > 0 ? stores[0].name : '',
+        'NGƯỜI PHỤ TRÁCH\n负责人 ': 'Nhân viên',
+        'HOST \n主播配合': ''
+      },
+      {
+        '视频名称': 'Cứu tinh cho chị em giặt tay nè #aokemeng #nuocgiat #xuhuongtiktok',
+        '发布时间': `${today} 11:16`,
+        '时长': '20s',
+        'GMV': '0₫',
+        '直接 GMV': '0₫',
+        '观看人次': 92,
+        '成交件数': 0,
+        '点击率': '2.17%',
+        '完播率': '2.17%',
+        '新增粉丝数': 0,
+        '商品 ID': '1733111651498559203',
+        'CỬA HÀNG \n商店': stores.length > 0 ? stores[0].name : '',
+        'NGƯỜI PHỤ TRÁCH\n负责人 ': 'Nhân viên',
+        'HOST \n主播配合': ''
+      },
+      {
+        '视频名称': 'Mấy bà ơi vào đây mà xem #aokemeng #nuocgiat #xuhuongtiktok',
+        '发布时间': `${today} 09:10`,
+        '时长': '21s',
+        'GMV': '0₫',
+        '直接 GMV': '0₫',
+        '观看人次': 103,
+        '成交件数': 0,
+        '点击率': '3.88%',
+        '完播率': '2.91%',
+        '新增粉丝数': 0,
+        '商品 ID': '1731978720453363427',
+        'CỬA HÀNG \n商店': stores.length > 0 ? stores[0].name : '',
+        'NGƯỜI PHỤ TRÁCH\n负责人 ': 'Nhân viên',
+        'HOST \n主播配合': ''
       }
     ];
-
-    const ws = XLSX.utils.json_to_sheet(templateData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Video');
-    
-    // Auto-size columns
-    ws['!cols'] = [
-      { wch: 25 },
-      { wch: 12 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 14 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 10 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 12 }
-    ];
-
-    XLSX.writeFile(wb, `template_video_${store?.name || 'phong-live'}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    exportToExcel(templateData, `template-video-${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const handleUploadExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (selectedStore === 'all') {
-      alert('Vui lòng chọn cửa hàng trước khi tải lên');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
-        const workbook = XLSX.read(data, { type: 'binary' });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-        // Map Excel columns to VideoMetric
-        const newVideos = jsonData.map((row: any, index: number) => ({
-          id: `temp-${Date.now()}-${index}`,
-          storeId: selectedStore,
-          title: row['视频名称'] || '',
-          platform: 'TikTok',
-          uploadDate: row['发布时间'] || new Date().toISOString().split('T')[0],
-          personInCharge: 'Nhân viên',
-          views: parseInt(row['观看人次'] || '0'),
-          sales: parseInt(row['GMV'] || '0'),
-          revenue: parseInt(row['GMV'] || '0'),
-          owner: 'Nhân viên',
-          date: row['发布时间'] || new Date().toISOString().split('T')[0]
-        }));
-
-        // Add new videos to existing list
-        setVideos([...videos, ...newVideos]);
-        alert(`Tải lên thành công! ${newVideos.length} video đã được thêm.`);
-        
-        // Reset file input
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-      } catch (error) {
-        console.error('Error reading Excel:', error);
-        alert('Lỗi khi đọc file Excel. Vui lòng kiểm tra định dạng.');
+  const handleImportExcel = async (file: File) => {
+    try {
+      console.log('Starting import, file:', file.name, file.type, file.size);
+      const data = await importFromExcel(file);
+      console.log('Imported data:', data);
+      
+      if (!data || data.length === 0) {
+        alert('File Excel trống hoặc không có dữ liệu hợp lệ. (Excel文件为空或没有有效数据)');
+        return;
       }
-    };
-    reader.readAsBinaryString(file);
+      
+      // Map Excel columns to VideoMetric - hỗ trợ nhiều format tên cột
+      const newVideosData = data.map((row: any) => {
+        // Tìm store name từ nhiều format khác nhau
+        const storeName = row['CỬA HÀNG \n商店'] || row['CỬA HÀNG'] || row['商店'] || row['店铺 (Cửa hàng)'] || row['店铺'] || row['Cửa hàng'] || '';
+        const store = storeName ? stores.find(s => s.name === storeName) : null;
+        
+        // Parse uploadDate - có thể có format khác nhau
+        let uploadDate = row['发布时间'] || row['发布时间 (Ngày đăng)'] || row['Ngày đăng'] || '';
+        // Nếu có format "2026-01-02 12:49", chỉ lấy phần ngày
+        if (uploadDate && uploadDate.includes(' ')) {
+          uploadDate = uploadDate.split(' ')[0];
+        }
+        // Nếu không có date, dùng ngày hiện tại
+        if (!uploadDate) {
+          uploadDate = new Date().toISOString().split('T')[0];
+        }
+        
+        // Parse person in charge
+        const personInCharge = row['NGƯỜI PHỤ TRÁCH\n负责人 '] || row['NGƯỜI PHỤ TRÁCH'] || row['负责人'] || row['负责人 (Người phụ trách)'] || row['Người phụ trách'] || 'Nhân viên';
+        
+        // Parse GMV từ format "0₫" hoặc "300.010₫"
+        const gmvStr = row['GMV'] || row['GMV (交易额)'] || row['交易额'] || '0';
+        const sales = parseCurrency(gmvStr);
+        
+        // Parse views
+        const views = parseInt(row['观看人次'] || row['观看人次 (Lượt xem)'] || row['Lượt xem'] || '0') || 0;
+        
+        // Parse title
+        const title = row['视频名称'] || row['视频名称 (Tên video)'] || row['Tên video'] || '';
+        
+        // Default platform là TikTok
+        const platform = 'TikTok' as 'TikTok' | 'Facebook' | 'Shopee';
+        
+        return {
+          storeId: store?.id || stores[0]?.id || 'all',
+          title: title,
+          platform: platform,
+          uploadDate: uploadDate,
+          personInCharge: personInCharge,
+          views: views,
+          sales: sales,
+        };
+      }).filter(v => v.title && v.title.trim() !== ''); // Loại bỏ các dòng không có title
+
+      console.log('Processed videos data:', newVideosData);
+      
+      if (newVideosData.length === 0) {
+        alert('Không tìm thấy dữ liệu video hợp lệ trong file Excel. Vui lòng kiểm tra lại định dạng file. (未在Excel文件中找到有效的视频数据。请检查文件格式。)');
+        return;
+      }
+
+      // Save each video to database
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const videoData of newVideosData) {
+        try {
+          await createVideoMetric(videoData);
+          successCount++;
+        } catch (error) {
+          console.error('Error saving video:', error);
+          errorCount++;
+        }
+      }
+
+      // Reload data from database
+      await loadData();
+
+      if (errorCount > 0) {
+        alert(`Đã import ${successCount} video thành công, ${errorCount} video lỗi. (已成功导入${successCount}个视频，${errorCount}个视频出错)`);
+      } else {
+        alert(`Đã import ${successCount} video từ Excel thành công. (已从Excel成功导入${successCount}个视频)`);
+      }
+    } catch (error) {
+      console.error('Error importing Excel:', error);
+      alert('Lỗi khi import Excel (导入Excel时出错): ' + (error as Error).message);
+    }
   };
 
   // KPI Calculation
@@ -218,30 +357,106 @@ export const VideoParameterReport: React.FC = () => {
   };
 
   // Handle Delete Video
-  const handleDeleteVideo = (videoId: string) => {
+  const handleDeleteVideo = async (videoId: string) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa video này? (确定要删除这个视频吗?)')) {
-      setVideos(videos.filter(v => v.id !== videoId));
-      alert('Đã xóa video thành công! (视频已删除!)');
+      try {
+        await deleteVideoMetric(videoId);
+        await loadData();
+        alert('Đã xóa video thành công! (视频已删除!)');
+      } catch (error) {
+        console.error('Error deleting video:', error);
+        alert('Lỗi khi xóa video (删除视频时出错): ' + (error as Error).message);
+      }
+    }
+  };
+
+  // Handle Select/Deselect Video
+  const handleToggleVideoSelect = (videoId: string) => {
+    setSelectedVideoIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(videoId)) {
+        newSet.delete(videoId);
+      } else {
+        newSet.add(videoId);
+      }
+      return newSet;
+    });
+  };
+
+  // Handle Select All / Deselect All
+  const handleToggleSelectAll = () => {
+    if (selectedVideoIds.size === filteredVideos.length) {
+      // Deselect all
+      setSelectedVideoIds(new Set());
+    } else {
+      // Select all
+      setSelectedVideoIds(new Set(filteredVideos.map(v => v.id)));
+    }
+  };
+
+  // Handle Batch Delete
+  const handleBatchDelete = async () => {
+    if (selectedVideoIds.size === 0) {
+      alert('Vui lòng chọn ít nhất một video để xóa. (请至少选择一个视频删除)');
+      return;
+    }
+
+    const confirmMessage = `Bạn có chắc chắn muốn xóa ${selectedVideoIds.size} video đã chọn? Hành động này không thể hoàn tác. (您确定要删除${selectedVideoIds.size}个已选择的视频吗? 此操作无法撤销。)`;
+    if (window.confirm(confirmMessage)) {
+      try {
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const videoId of selectedVideoIds) {
+          try {
+            await deleteVideoMetric(videoId);
+            successCount++;
+          } catch (error) {
+            console.error('Error deleting video:', error);
+            errorCount++;
+          }
+        }
+
+        // Clear selection
+        setSelectedVideoIds(new Set());
+
+        // Reload data
+        await loadData();
+
+        if (errorCount > 0) {
+          alert(`Đã xóa ${successCount} video thành công, ${errorCount} video lỗi. (已成功删除${successCount}个视频，${errorCount}个视频出错)`);
+        } else {
+          alert(`Đã xóa ${successCount} video thành công! (已成功删除${successCount}个视频!)`);
+        }
+      } catch (error) {
+        console.error('Error in batch delete:', error);
+        alert('Lỗi khi xóa hàng loạt (批量删除时出错): ' + (error as Error).message);
+      }
     }
   };
 
   // Handle Save Video (Edit or Add)
   const handleSaveVideo = async (videoData: VideoMetric) => {
-    if (editingVideo) {
-      // Update existing video
-      setVideos(videos.map(v => v.id === videoData.id ? videoData : v));
-      alert('Đã cập nhật video thành công! (视频已更新!)');
-    } else {
-      // Add new video
-      const newVideo: VideoMetric = {
-        ...videoData,
-        id: `video-${Date.now()}`
-      };
-      setVideos([...videos, newVideo]);
-      alert('Đã thêm video thành công! (视频已添加!)');
+    try {
+      if (editingVideo && videoData.id) {
+        // Update existing video
+        const { id, ...updateData } = videoData;
+        await updateVideoMetric(id, updateData);
+        await loadData();
+        alert('Đã cập nhật video thành công! (视频已更新!)');
+      } else {
+        // Add new video
+        const { id, ...createData } = videoData;
+        await createVideoMetric(createData);
+        await loadData();
+        alert('Đã thêm video thành công! (视频已添加!)');
+      }
+      setIsEditModalOpen(false);
+      setEditingVideo(undefined);
+    } catch (error) {
+      console.error('Error saving video:', error);
+      alert('Lỗi khi lưu video (保存视频时出错): ' + (error as Error).message);
     }
-    setIsEditModalOpen(false);
-    setEditingVideo(undefined);
   };
 
   // Handle Add New Video
@@ -254,16 +469,58 @@ export const VideoParameterReport: React.FC = () => {
     <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý & Báo cáo Video (视频管理和报告)</h2>
-        <select
-          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
-          value={selectedStore}
-          onChange={(e) => setSelectedStore(e.target.value)}
-        >
-          {MOCK_STORES.map(store => (
-            <option key={store.id} value={store.id}>{store.name}</option>
-          ))}
-        </select>
       </div>
+
+      {/* FilterBar */}
+      <FilterBar
+        onSearch={setSearchText}
+        onExportExcel={handleExportExcel}
+        onImportExcel={handleImportExcel}
+        onReset={() => {
+          setSearchText('');
+          setSelectedFilters({});
+          const today = new Date();
+          const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+          setDateFrom(firstDayOfMonth.toISOString().split('T')[0]);
+          setDateTo(today.toISOString().split('T')[0]);
+        }}
+        selectedFilters={selectedFilters}
+        onFilterChange={(field, values) => {
+          setSelectedFilters(prev => ({ ...prev, [field]: values }));
+        }}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateFromChange={setDateFrom}
+        onDateToChange={setDateTo}
+        onQuickDateSelect={(from, to) => {
+          setDateFrom(from);
+          setDateTo(to);
+        }}
+        filterFields={[
+          {
+            key: 'stores',
+            label: 'Cửa hàng (店铺)',
+            type: 'select',
+            options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
+          },
+          {
+            key: 'platforms',
+            label: 'Nền tảng (平台)',
+            type: 'select',
+            options: [
+              { value: 'TikTok', label: 'TikTok' },
+              { value: 'Facebook', label: 'Facebook' },
+              { value: 'Shopee', label: 'Shopee' }
+            ]
+          },
+          {
+            key: 'persons',
+            label: 'Người phụ trách (负责人)',
+            type: 'select',
+            options: Array.from(new Set(videos.map(v => v.personInCharge).filter(Boolean))).map(person => ({ value: person, label: person }))
+          }
+        ]}
+      />
 
       {/* KPI Section */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -341,119 +598,163 @@ export const VideoParameterReport: React.FC = () => {
         </div>
       </div>
 
-      {/* Excel Upload Section */}
-      <div className="bg-white p-6 rounded shadow-sm border border-gray-200">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">Excel 数据管理</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button 
-            onClick={handleDownloadTemplate}
-            disabled={selectedStore === 'all'}
-            className="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition shadow disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          >
-            📥 下载Excel模板
-          </button>
-          
-          <div className="relative">
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={handleUploadExcel}
-              ref={fileInputRef}
-              disabled={selectedStore === 'all'}
-              className="hidden"
-              id="excel-upload"
-            />
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={selectedStore === 'all'}
-              className="w-full bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700 transition shadow disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            >
-              📤 上传Excel数据
-            </button>
-          </div>
-
-          <button 
-            onClick={handleDownloadExcel}
-            disabled={selectedStore === 'all'}
-            className="bg-gray-900 text-white px-6 py-3 rounded hover:bg-gray-800 transition shadow disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          >
-            ⬇️ 导出当前数据
-          </button>
-        </div>
-        
-        <p className="text-xs text-gray-500 text-center mt-3">
-          {selectedStore === 'all' ? '请先选择门店' : `当前门店: ${MOCK_STORES.find(s => s.id === selectedStore)?.name}`}
-        </p>
-      </div>
-
       {/* Video List */}
       <div>
         <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
           <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="text-lg font-bold text-gray-800">Danh sách Video & Đánh giá (视频列表和评估)</h3>
-            <button
-              onClick={handleAddVideo}
-              className="bg-brand-navy text-white px-4 py-2 rounded hover:bg-brand-darkNavy transition shadow font-medium"
-            >
-              + Thêm Video (添加视频)
-            </button>
+            <div className="flex items-center gap-4">
+              <h3 className="text-lg font-bold text-gray-800">Danh sách Video & Đánh giá (视频列表和评估) ({filteredVideos.length} bản ghi (条记录))</h3>
+              {selectedVideoIds.size > 0 && (
+                <span className="text-sm text-blue-600 font-medium">
+                  Đã chọn: {selectedVideoIds.size} video (已选择: {selectedVideoIds.size} 个视频)
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleExportExcel}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition shadow font-medium flex items-center gap-2"
+                title="Tải xuống Excel danh sách video (下载视频列表Excel)"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Tải Excel (下载Excel)
+              </button>
+              <label className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition shadow font-medium flex items-center gap-2 cursor-pointer" title="Tải lên Excel danh sách video (上传视频列表Excel)">
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        await handleImportExcel(file);
+                      } catch (error) {
+                        console.error('Import error:', error);
+                        alert('Lỗi khi import Excel (导入Excel时出错): ' + (error as Error).message);
+                      }
+                    }
+                    // Reset input để có thể chọn lại file cùng tên
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Tải lên Excel (上传Excel)
+              </label>
+              <button
+                onClick={handleDownloadTemplate}
+                className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition shadow font-medium flex items-center gap-2"
+                title="Tải mẫu Excel chuẩn (下载标准Excel模板)"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Tải mẫu Excel (下载Excel模板)
+              </button>
+              {selectedVideoIds.size > 0 && (
+                <button
+                  onClick={handleBatchDelete}
+                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition shadow font-medium"
+                >
+                  Xóa đã chọn ({selectedVideoIds.size}) (删除已选择 ({selectedVideoIds.size}))
+                </button>
+              )}
+              <button
+                onClick={handleAddVideo}
+                className="bg-brand-navy text-white px-4 py-2 rounded hover:bg-brand-darkNavy transition shadow font-medium"
+              >
+                + Thêm Video (添加视频)
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-white uppercase bg-brand-navy border-b">
-                <tr>
-                  <th className="px-4 py-3">视频名称</th>
-                  <th className="px-4 py-3">发布时间</th>
-                  <th className="px-4 py-3">时长</th>
-                  <th className="px-4 py-3 text-right">GMV</th>
-                  <th className="px-4 py-3 text-right">直接 GMV</th>
-                  <th className="px-4 py-3 text-right">观看人次</th>
-                  <th className="px-4 py-3 text-right">成交件数</th>
-                  <th className="px-4 py-3 text-right">点击率</th>
-                  <th className="px-4 py-3 text-right">完播率</th>
-                  <th className="px-4 py-3 text-right">新增粉丝数</th>
-                  <th className="px-4 py-3">商品 ID</th>
-                  <th className="px-4 py-3 text-center">Hành động (操作)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredVideos.map((video) => {
-                  // Evaluation Logic: > 10k views is Green
-                  const isGoodPerformance = video.views > 10000;
-                  return (
-                    <tr key={video.id} className={`border-b hover:bg-gray-50 ${isGoodPerformance ? 'bg-green-50' : ''}`}>
-                      <td className="px-4 py-4 font-medium text-gray-900">{video.title}</td>
-                      <td className="px-4 py-4 text-gray-600">{video.uploadDate}</td>
-                      <td className="px-4 py-4 text-gray-600">5:30</td>
-                      <td className="px-4 py-4 text-right font-bold text-green-600">{new Intl.NumberFormat('vi-VN').format(video.sales)}</td>
-                      <td className="px-4 py-4 text-right text-gray-600">{new Intl.NumberFormat('vi-VN').format(Math.floor(video.sales * 0.6))}</td>
-                      <td className="px-4 py-4 text-right font-semibold">{new Intl.NumberFormat('vi-VN').format(video.views)}</td>
-                      <td className="px-4 py-4 text-right">{Math.floor(video.sales / 10000)}</td>
-                      <td className="px-4 py-4 text-right">2.5%</td>
-                      <td className="px-4 py-4 text-right">85%</td>
-                      <td className="px-4 py-4 text-right">{Math.floor(video.views / 50)}</td>
-                      <td className="px-4 py-4 text-gray-600">PROD{video.id}</td>
-                      <td className="px-4 py-4">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => handleEditVideo(video)}
-                            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-xs font-medium"
-                          >
-                            Sửa (编辑)
-                          </button>
-                          <button
-                            onClick={() => handleDeleteVideo(video.id)}
-                            className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition text-xs font-medium"
-                          >
-                            Xóa (删除)
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            {isLoading ? (
+              <div className="p-8 text-center text-gray-500">Đang tải dữ liệu... (正在加载数据...)</div>
+            ) : filteredVideos.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">Chưa có video nào (暂无视频)</div>
+            ) : (
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-white uppercase bg-brand-navy border-b">
+                  <tr>
+                    <th className="px-4 py-3 w-12">
+                      <input
+                        type="checkbox"
+                        checked={filteredVideos.length > 0 && selectedVideoIds.size === filteredVideos.length}
+                        onChange={handleToggleSelectAll}
+                        className="w-4 h-4 text-brand-navy bg-gray-100 border-gray-300 rounded focus:ring-brand-navy"
+                      />
+                    </th>
+                    <th className="px-4 py-3">视频名称 (Tên video)</th>
+                    <th className="px-4 py-3">发布时间 (Ngày đăng)</th>
+                    <th className="px-4 py-3">平台 (Nền tảng)</th>
+                    <th className="px-4 py-3">店铺 (Cửa hàng)</th>
+                    <th className="px-4 py-3">负责人 (Người phụ trách)</th>
+                    <th className="px-4 py-3 text-right">GMV (交易额)</th>
+                    <th className="px-4 py-3 text-right">直接 GMV (GMV trực tiếp)</th>
+                    <th className="px-4 py-3 text-right">观看人次 (Lượt xem)</th>
+                    <th className="px-4 py-3 text-right">成交件数 (Số đơn hàng)</th>
+                    <th className="px-4 py-3 text-right">点击率 (Tỉ lệ click)</th>
+                    <th className="px-4 py-3 text-right">完播率 (Tỉ lệ xem hết)</th>
+                    <th className="px-4 py-3 text-right">新增粉丝数 (Số fan mới)</th>
+                    <th className="px-4 py-3">商品 ID (Mã sản phẩm)</th>
+                    <th className="px-4 py-3 text-center">Hành động (操作)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredVideos.map((video) => {
+                    const storeName = stores.find(s => s.id === video.storeId)?.name || '';
+                    // Evaluation Logic: > 10k views is Green
+                    const isGoodPerformance = video.views > 10000;
+                    const isSelected = selectedVideoIds.has(video.id);
+                    return (
+                      <tr key={video.id} className={`border-b hover:bg-gray-50 ${isGoodPerformance ? 'bg-green-50' : ''} ${isSelected ? 'bg-blue-50' : ''}`}>
+                        <td className="px-4 py-4">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleVideoSelect(video.id)}
+                            className="w-4 h-4 text-brand-navy bg-gray-100 border-gray-300 rounded focus:ring-brand-navy"
+                          />
+                        </td>
+                        <td className="px-4 py-4 font-medium text-gray-900">{video.title}</td>
+                        <td className="px-4 py-4 text-gray-600">{video.uploadDate}</td>
+                        <td className="px-4 py-4 text-gray-600">{video.platform}</td>
+                        <td className="px-4 py-4 text-gray-600">{storeName}</td>
+                        <td className="px-4 py-4 text-gray-600">{video.personInCharge}</td>
+                        <td className="px-4 py-4 text-right font-bold text-green-600">{formatCurrency(video.sales)}</td>
+                        <td className="px-4 py-4 text-right text-gray-600">{formatCurrency(Math.floor(video.sales * 0.6))}</td>
+                        <td className="px-4 py-4 text-right font-semibold">{new Intl.NumberFormat('vi-VN').format(video.views)}</td>
+                        <td className="px-4 py-4 text-right">{Math.floor(video.sales / 10000)}</td>
+                        <td className="px-4 py-4 text-right">2.5%</td>
+                        <td className="px-4 py-4 text-right">85%</td>
+                        <td className="px-4 py-4 text-right">{Math.floor(video.views / 50)}</td>
+                        <td className="px-4 py-4 text-gray-600">PROD{video.id}</td>
+                        <td className="px-4 py-4">
+                          <div className="flex justify-center gap-2">
+                            <button
+                              onClick={() => handleEditVideo(video)}
+                              className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-xs font-medium"
+                            >
+                              Sửa (编辑)
+                            </button>
+                            <button
+                              onClick={() => handleDeleteVideo(video.id)}
+                              className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition text-xs font-medium"
+                            >
+                              Xóa (删除)
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>

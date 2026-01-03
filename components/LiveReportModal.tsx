@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MOCK_STORES, fetchStores } from '../services/dataService';
-import { LiveReport } from '../types';
+import { MOCK_STORES, fetchStores, fetchPersonnel } from '../services/dataService';
+import { LiveReport, Personnel } from '../types';
 
 interface LiveReportModalProps {
   isOpen: boolean;
@@ -8,10 +8,12 @@ interface LiveReportModalProps {
   onSubmit: (data: Omit<LiveReport, 'id'>) => Promise<void>;
   initialData?: LiveReport;
   isEdit?: boolean;
+  reports?: LiveReport[]; // Optional: kept for backward compatibility, but not used for host list
 }
 
-export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClose, onSubmit, initialData, isEdit = false }) => {
+export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClose, onSubmit, initialData, isEdit = false, reports: propReports }) => {
   const [stores, setStores] = React.useState(MOCK_STORES);
+  const [personnel, setPersonnel] = React.useState<Personnel[]>([]);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -20,8 +22,24 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
       }).catch(() => {
         setStores(MOCK_STORES);
       });
+      
+      // Load personnel để lấy danh sách host
+      fetchPersonnel().then(data => {
+        setPersonnel(data);
+      }).catch(() => {
+        setPersonnel([]);
+      });
     }
   }, [isOpen]);
+  
+  // Get host names from personnel (Họ và tên)
+  const availableHosts = React.useMemo(() => {
+    const hostNames = personnel
+      .map(person => person.fullName)
+      .filter(name => name && name.trim())
+      .sort();
+    return hostNames;
+  }, [personnel]);
 
   const defaultFormData: Omit<LiveReport, 'id'> = {
     date: new Date().toISOString().split('T')[0],
@@ -75,18 +93,24 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
       } : defaultFormData);
 
   const [loading, setLoading] = useState(false);
+  const [showCustomHostInput, setShowCustomHostInput] = useState(false);
+  const [customHostName, setCustomHostName] = useState('');
 
   // Auto calculate duration when times change
   useEffect(() => {
     if (isOpen) {
       if (initialData && isEdit) {
         // Load initial data for edit
+        const currentHostName = initialData.hostName || '';
+        // Check if hostName exists in availableHosts
+        const hostExists = availableHosts.includes(currentHostName);
+        
         setFormData({
           date: initialData.date,
           channelId: initialData.channelId,
           startTime: initialData.startTime,
           endTime: initialData.endTime,
-          hostName: initialData.hostName,
+          hostName: currentHostName,
           duration: initialData.duration,
           gmv: initialData.gmv,
           totalGmv: initialData.totalGmv,
@@ -105,13 +129,25 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
           reporter: initialData.reporter || localStorage.getItem('currentUser') || '',
           shift: initialData.shift
         });
+        
+        // If host doesn't exist in list, show custom input
+        if (currentHostName && !hostExists) {
+          setShowCustomHostInput(true);
+          setCustomHostName(currentHostName);
+        } else {
+          setShowCustomHostInput(false);
+          setCustomHostName('');
+        }
       } else {
         // Reset to default for new report
         setFormData(defaultFormData);
         setFormData(prev => ({ ...prev, reporter: localStorage.getItem('currentUser') || '' }));
+        // Reset custom host input
+        setShowCustomHostInput(false);
+        setCustomHostName('');
       }
     }
-  }, [isOpen, initialData, isEdit]);
+  }, [isOpen, initialData, isEdit, availableHosts]);
 
   useEffect(() => {
     if (formData.startTime && formData.endTime) {
@@ -122,7 +158,15 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
 
       const hours = Math.floor(diff / 60);
       const minutes = diff % 60;
-      setFormData(prev => ({ ...prev, duration: `${hours}h ${minutes}m` }));
+      
+      // Format duration: "Xh Ym" or "Ym" if hours = 0
+      const durationStr = hours > 0 
+        ? `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}` 
+        : `${minutes}m`;
+      
+      setFormData(prev => ({ ...prev, duration: durationStr }));
+    } else if (!formData.startTime || !formData.endTime) {
+      setFormData(prev => ({ ...prev, duration: '' }));
     }
   }, [formData.startTime, formData.endTime]);
 
@@ -200,7 +244,56 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Host (主播)</label>
-                <input required type="text" name="hostName" value={formData.hostName} onChange={handleChange} placeholder="Tên Host (主播名称)" className="w-full border rounded px-3 py-2" />
+                {!showCustomHostInput ? (
+                  <select 
+                    required
+                    name="hostName" 
+                    value={formData.hostName} 
+                    onChange={(e) => {
+                      if (e.target.value === '__CUSTOM__') {
+                        setShowCustomHostInput(true);
+                        setCustomHostName('');
+                      } else {
+                        handleChange(e);
+                      }
+                    }}
+                    className="w-full border rounded px-3 py-2 bg-white"
+                  >
+                    <option value="">-- Chọn Host (选择主播) --</option>
+                    {availableHosts.map((host, index) => (
+                      <option key={index} value={host}>{host}</option>
+                    ))}
+                    <option value="__CUSTOM__">+ Nhập Host mới (输入新主播)</option>
+                  </select>
+                ) : (
+                  <div className="flex gap-2">
+                    <input 
+                      required 
+                      type="text" 
+                      name="hostName" 
+                      value={customHostName} 
+                      onChange={(e) => {
+                        setCustomHostName(e.target.value);
+                        handleChange({ target: { name: 'hostName', value: e.target.value } } as any);
+                      }}
+                      placeholder="Nhập tên Host mới (输入新主播名称)" 
+                      className="flex-1 border rounded px-3 py-2" 
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomHostInput(false);
+                        setCustomHostName('');
+                        setFormData(prev => ({ ...prev, hostName: '' }));
+                      }}
+                      className="px-3 py-2 border rounded text-gray-600 hover:bg-gray-50"
+                      title="Hủy (取消)"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Ca (班次)</label>

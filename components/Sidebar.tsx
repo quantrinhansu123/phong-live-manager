@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ReportType } from '../types';
+import { getCurrentUserRole, canAccessMenu, isAdmin } from '../utils/permissionUtils';
+import { MenuPermissionModal } from './MenuPermissionModal';
 
 const MENU_ITEMS = [
   { id: ReportType.DASHBOARD, label: 'Dashboard (仪表板)', path: '/' },
@@ -16,30 +18,64 @@ const MENU_ITEMS = [
 ];
 
 export const Sidebar: React.FC = () => {
+  const [permissionMenuId, setPermissionMenuId] = useState<string | null>(null);
+  const userRole = getCurrentUserRole();
+  const admin = isAdmin();
+
+  // Filter menu items dựa trên quyền
+  const visibleMenuItems = useMemo(() => {
+    return MENU_ITEMS.filter(item => canAccessMenu(item.id, userRole));
+  }, [userRole]);
+
+  const handlePermissionClick = (e: React.MouseEvent, menuId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPermissionMenuId(menuId);
+  };
+
   return (
     <aside className="w-64 bg-white border-r border-gray-200 h-screen flex flex-col fixed left-0 top-0 z-50">
       <div className="h-16 flex items-center justify-center border-b border-brand-navy bg-brand-navy">
-        <h1 className="text-white font-bold text-xl uppercase tracking-wider">Quản Lý Phòng Live (直播管理室)</h1>
+        <h1 className="text-white font-bold text-xl uppercase tracking-wider">Quản Lý Phòng Live (直播间和短视频的数据)</h1>
       </div>
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1">
-          {MENU_ITEMS.map((item) => (
-            <li key={item.id}>
+          {visibleMenuItems.map((item) => (
+            <li key={item.id} className="group relative">
               <NavLink
                 to={item.path}
-                  className={({ isActive }) =>
-                  `flex items-center px-6 py-3 text-sm font-medium transition-colors ${isActive
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors ${isActive
                     ? 'bg-blue-50 text-brand-navy border-r-4 border-brand-navy'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`
                 }
               >
-                {item.label}
+                <span>{item.label}</span>
+                {admin && (
+                  <button
+                    onClick={(e) => handlePermissionClick(e, item.id)}
+                    className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
+                    title="Phân quyền (权限设置)"
+                  >
+                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                  </button>
+                )}
               </NavLink>
             </li>
           ))}
         </ul>
       </nav>
+      {permissionMenuId && (
+        <MenuPermissionModal
+          isOpen={!!permissionMenuId}
+          onClose={() => setPermissionMenuId(null)}
+          menuId={permissionMenuId}
+          menuLabel={MENU_ITEMS.find(m => m.id === permissionMenuId)?.label || ''}
+        />
+      )}
       <div className="p-4 border-t border-gray-200 bg-gray-50">
         <div className="mb-2">
           <p className="text-xs text-gray-500 font-bold uppercase">Người dùng (用户)</p>
@@ -48,6 +84,8 @@ export const Sidebar: React.FC = () => {
         <button
           onClick={() => {
             localStorage.removeItem('currentUser');
+            localStorage.removeItem('currentUserId');
+            localStorage.removeItem('currentUserRole');
             window.location.reload();
           }}
           className="w-full text-xs text-brand-navy hover:text-blue-800 font-medium py-1 text-left"
@@ -55,7 +93,7 @@ export const Sidebar: React.FC = () => {
           Đăng xuất (登出)
         </button>
         <div className="text-xs text-gray-400 text-center mt-2 pt-2 border-t border-gray-200">
-          © 2025 Quản Lý Phòng Live (直播管理室)
+          © 2025 Quản Lý Phòng Live (直播间和短视频的数据)
         </div>
       </div>
     </aside>

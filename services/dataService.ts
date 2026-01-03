@@ -246,6 +246,34 @@ export const createVideoMetric = async (metric: Omit<VideoMetric, 'id'>) => {
   }
 };
 
+export const updateVideoMetric = async (id: string, metric: Partial<VideoMetric>) => {
+  try {
+    const response = await fetch(`${FIREBASE_URL}/video_metrics/${id}.json`, {
+      method: 'PATCH',
+      body: JSON.stringify(metric),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) throw new Error('Failed to update video metric');
+    return await response.json();
+  } catch (error) {
+    console.error("Update failed", error);
+    throw error;
+  }
+};
+
+export const deleteVideoMetric = async (id: string) => {
+  try {
+    const response = await fetch(`${FIREBASE_URL}/video_metrics/${id}.json`, {
+      method: 'DELETE'
+    });
+    if (!response.ok) throw new Error('Failed to delete video metric');
+    return true;
+  } catch (error) {
+    console.error("Delete failed", error);
+    throw error;
+  }
+};
+
 // --- MOCK DATA ---
 
 

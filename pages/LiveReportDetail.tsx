@@ -165,6 +165,7 @@ export const LiveReportDetail: React.FC = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateReport}
+        reports={reports}
       />
       <LiveReportModal
         isOpen={isEditModalOpen}
@@ -176,6 +177,7 @@ export const LiveReportDetail: React.FC = () => {
         }}
         initialData={selectedReport || undefined}
         isEdit={true}
+        reports={reports}
       />
 
       {/* View Report Modal */}

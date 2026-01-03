@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchPartners, createPartner, updatePartner, deletePartner, fetchStores, createStore } from '../services/dataService';
+import { fetchPartners, createPartner, updatePartner, deletePartner, fetchStores, createStore, updateStore } from '../services/dataService';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { Partner, Store } from '../types';
@@ -87,28 +87,51 @@ export const PartnerManagement: React.FC = () => {
   };
 
   const handleUpdatePartner = async (id: string, partner: Partial<Omit<Partner, 'id' | 'code'>>) => {
-    // Lấy thông tin đối tác hiện tại để so sánh
-    const currentPartner = partners.find(p => p.id === id);
-    const oldStoreIds = currentPartner?.storeIds || [];
-    const newStoreIds = partner.storeIds || [];
-    
-    await updatePartner(id, partner);
-    
-    // Xóa partnerId từ các cửa hàng không còn được liên kết
-    const removedStoreIds = oldStoreIds.filter(sid => !newStoreIds.includes(sid));
-    for (const storeId of removedStoreIds) {
-      await updateStore(storeId, { partnerId: undefined });
+    try {
+      if (!id) {
+        throw new Error('ID đối tác không hợp lệ (无效的合作伙伴ID)');
+      }
+
+      // Lấy thông tin đối tác hiện tại để so sánh
+      const currentPartner = partners.find(p => p.id === id);
+      if (!currentPartner) {
+        throw new Error('Không tìm thấy đối tác để cập nhật (找不到要更新的合作伙伴)');
+      }
+
+      const oldStoreIds = currentPartner?.storeIds || [];
+      const newStoreIds = partner.storeIds || [];
+      
+      await updatePartner(id, partner);
+      
+      // Xóa partnerId từ các cửa hàng không còn được liên kết
+      const removedStoreIds = oldStoreIds.filter(sid => !newStoreIds.includes(sid));
+      for (const storeId of removedStoreIds) {
+        try {
+          await updateStore(storeId, { partnerId: undefined });
+        } catch (error) {
+          console.error(`Error removing partnerId from store ${storeId}:`, error);
+        }
+      }
+      
+      // Thêm partnerId cho các cửa hàng mới được liên kết
+      const addedStoreIds = newStoreIds.filter(sid => !oldStoreIds.includes(sid));
+      for (const storeId of addedStoreIds) {
+        try {
+          await updateStore(storeId, { partnerId: id });
+        } catch (error) {
+          console.error(`Error adding partnerId to store ${storeId}:`, error);
+        }
+      }
+      
+      await loadData();
+      setEditingPartner(null);
+      alert('Đã cập nhật đối tác thành công! (已成功更新合作伙伴!)');
+    } catch (error) {
+      console.error('Error updating partner:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi khi cập nhật đối tác';
+      alert(`${errorMessage} (更新合作伙伴时出错)`);
+      throw error; // Re-throw để handleSubmit có thể bắt được
     }
-    
-    // Thêm partnerId cho các cửa hàng mới được liên kết
-    const addedStoreIds = newStoreIds.filter(sid => !oldStoreIds.includes(sid));
-    for (const storeId of addedStoreIds) {
-      await updateStore(storeId, { partnerId: id });
-    }
-    
-    await loadData();
-    setEditingPartner(null);
-    alert('Đã cập nhật đối tác thành công!');
   };
 
   const handleDeletePartner = async (id: string) => {
@@ -154,7 +177,7 @@ export const PartnerManagement: React.FC = () => {
     return true;
   });
 
-  const partnerTypes = ['Supplier', 'Service', 'Platform', 'Other'];
+  const partnerTypes = ['Supplier', 'Service', 'Platform', '代运营', '合伙', 'Other'];
   const statuses = ['Active', 'Inactive'];
 
   return (
@@ -242,12 +265,13 @@ export const PartnerManagement: React.FC = () => {
             setIsModalOpen(false);
             setEditingPartner(null);
           }}
-          onSubmit={editingPartner 
-            ? (data) => handleUpdatePartner(editingPartner.id!, data)
+          onSubmit={editingPartner && editingPartner.id
+            ? (data) => handleUpdatePartner(editingPartner.id, data)
             : handleCreatePartner
           }
           initialData={editingPartner || undefined}
           stores={stores}
+          onStoresChange={loadData}
         />
       )}
 
@@ -281,7 +305,11 @@ export const PartnerManagement: React.FC = () => {
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                   <p className="text-xs text-gray-500 uppercase font-bold mb-1">Loại đối tác (合作伙伴类型)</p>
-                  <p className="text-lg font-bold text-gray-800">{viewingPartner.type}</p>
+                  <p className="text-lg font-bold text-gray-800">
+                    {viewingPartner.type === '代运营' ? '代运营 (Dịch vụ vận hành thay)' :
+                     viewingPartner.type === '合伙' ? '合伙 (Đối tác/Partnership)' :
+                     viewingPartner.type}
+                  </p>
                 </div>
                 <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                   <p className="text-xs text-gray-500 uppercase font-bold mb-1">Trạng thái (状态)</p>
@@ -425,9 +453,13 @@ export const PartnerManagement: React.FC = () => {
                           partner.type === 'Supplier' ? 'bg-blue-100 text-blue-800' :
                           partner.type === 'Service' ? 'bg-green-100 text-green-800' :
                           partner.type === 'Platform' ? 'bg-purple-100 text-purple-800' :
+                          partner.type === '代运营' ? 'bg-orange-100 text-orange-800' :
+                          partner.type === '合伙' ? 'bg-pink-100 text-pink-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {partner.type}
+                          {partner.type === '代运营' ? '代运营 (Dịch vụ vận hành thay)' :
+                           partner.type === '合伙' ? '合伙 (Đối tác/Partnership)' :
+                           partner.type}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{partner.contactPerson}</td>
@@ -505,9 +537,10 @@ interface PartnerModalProps {
   onSubmit: (data: Omit<Partner, 'id' | 'code'> & { password?: string }) => Promise<void>;
   initialData?: Partner;
   stores: Store[];
+  onStoresChange?: () => Promise<void>;
 }
 
-const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, initialData, stores }) => {
+const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, initialData, stores, onStoresChange }) => {
   const [formData, setFormData] = useState<Omit<Partner, 'id' | 'code' | 'password'> & { password?: string }>({
     name: '',
     type: 'Supplier',
@@ -566,12 +599,15 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
     if (storeId && storeId !== '') {
       setFormData(prev => {
         const currentIds = prev.storeIds || [];
-        if (!currentIds.includes(storeId)) {
+        // Toggle: Nếu đã chọn thì bỏ chọn, nếu chưa chọn thì thêm vào
+        if (currentIds.includes(storeId)) {
+          return { ...prev, storeIds: currentIds.filter(id => id !== storeId) };
+        } else {
           return { ...prev, storeIds: [...currentIds, storeId] };
         }
-        return prev;
       });
-      setStoreSearchText('');
+      // Không xóa search text và không đóng dropdown để có thể chọn tiếp nhiều cửa hàng
+      // setStoreSearchText('');
     }
   };
 
@@ -580,6 +616,54 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
       const currentIds = prev.storeIds || [];
       return { ...prev, storeIds: currentIds.filter(id => id !== storeId) };
     });
+  };
+
+  // Handle create new store
+  const handleCreateNewStore = async () => {
+    if (!storeSearchText.trim()) {
+      alert('Vui lòng nhập tên cửa hàng (请输入店铺名称)');
+      return;
+    }
+
+    const newStoreName = storeSearchText.trim();
+    
+    // Check if store already exists (case insensitive)
+    const existingStore = stores.find(s => s.name.toLowerCase() === newStoreName.toLowerCase());
+    if (existingStore) {
+      // Store exists, just select it
+      handleStoreSelect(existingStore.id);
+      setStoreSearchText('');
+      return;
+    }
+
+    try {
+      // Create new store with type 'partner'
+      const newStore = await createStore({
+        name: newStoreName,
+        storeType: 'partner'
+      });
+      
+      const newStoreId = newStore.name || `local_store_${Date.now()}`;
+      
+      // Add to selected stores
+      setFormData(prev => ({
+        ...prev,
+        storeIds: [...(prev.storeIds || []), newStoreId]
+      }));
+      
+      // Clear search text
+      setStoreSearchText('');
+      
+      // Reload stores if callback provided
+      if (onStoresChange) {
+        await onStoresChange();
+      }
+      
+      alert(`Đã tạo và thêm cửa hàng "${newStoreName}" (已创建并添加店铺 "${newStoreName}")`);
+    } catch (error) {
+      console.error('Error creating store:', error);
+      alert('Lỗi khi tạo cửa hàng mới (创建新店铺时出错): ' + (error as Error).message);
+    }
   };
 
   // Filter stores: chỉ hiển thị cửa hàng chưa có đối tác
@@ -603,6 +687,10 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
     return true;
   });
 
+  // Check if search text doesn't match any store (for creating new store)
+  const canCreateNewStore = storeSearchText.trim().length > 0 && 
+    !availableStores.some(store => store.name.toLowerCase() === storeSearchText.trim().toLowerCase());
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -615,7 +703,10 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
       await onSubmit(submitData);
       onClose();
     } catch (error) {
-      alert('Lỗi khi lưu đối tác');
+      console.error('Error submitting partner form:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Lỗi khi lưu đối tác';
+      alert(`${errorMessage} (保存合作伙伴时出错)`);
+      // Không đóng modal nếu có lỗi để người dùng có thể sửa lại
     } finally {
       setLoading(false);
     }
@@ -661,6 +752,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
                 <option value="Supplier">Nhà cung cấp (供应商)</option>
                 <option value="Service">Dịch vụ (服务)</option>
                 <option value="Platform">Nền tảng (平台)</option>
+                <option value="代运营">代运营 (Dịch vụ vận hành thay)</option>
+                <option value="合伙">合伙 (Đối tác/Partnership)</option>
                 <option value="Other">Khác (其他)</option>
               </select>
             </div>
@@ -689,9 +782,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Số điện thoại * (电话 *)</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Số điện thoại (电话)</label>
               <input
-                required
                 type="tel"
                 name="phoneNumber"
                 value={formData.phoneNumber}
@@ -751,31 +843,71 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
                     }}
                     onFocus={() => setShowStoreDropdown(true)}
                     onBlur={() => {
-                      // Delay để cho phép click vào item
-                      setTimeout(() => setShowStoreDropdown(false), 200);
+                      // Delay để cho phép click vào item - tăng thời gian để dễ chọn nhiều cửa hàng
+                      setTimeout(() => setShowStoreDropdown(false), 300);
                     }}
                     placeholder="Gõ để tìm cửa hàng... (输入搜索店铺...)"
                     className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
                   />
                   {/* Dropdown list khi focus hoặc có text */}
-                  {showStoreDropdown && filteredAvailableStores.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
-                      {filteredAvailableStores.map(store => (
+                  {showStoreDropdown && (filteredAvailableStores.length > 0 || canCreateNewStore) && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-64 overflow-y-auto">
+                      <div className="p-2 border-b border-gray-200 bg-gray-50 sticky top-0">
+                        <p className="text-xs text-gray-600 font-medium">
+                          {formData.storeIds && formData.storeIds.length > 0 
+                            ? `Đã chọn ${formData.storeIds.length} cửa hàng (已选择${formData.storeIds.length}个店铺)`
+                            : 'Click để chọn cửa hàng (点击选择店铺)'}
+                        </p>
+                      </div>
+                      {filteredAvailableStores.map(store => {
+                        const isSelected = (formData.storeIds || []).includes(store.id);
+                        return (
+                          <div
+                            key={store.id}
+                            onMouseDown={(e) => {
+                              e.preventDefault(); // Prevent blur before click
+                              handleStoreSelect(store.id);
+                              // Không đóng dropdown để có thể chọn tiếp nhiều cửa hàng
+                            }}
+                            className={`px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 ${isSelected ? 'bg-blue-100' : ''}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                readOnly
+                                className="w-4 h-4 text-brand-navy bg-gray-100 border-gray-300 rounded focus:ring-brand-navy cursor-pointer"
+                              />
+                              <span className="text-sm text-gray-700 flex-1">{store.name}</span>
+                              {isSelected && (
+                                <span className="text-xs text-blue-600 font-medium">✓</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {/* Option to create new store */}
+                      {canCreateNewStore && (
                         <div
-                          key={store.id}
                           onMouseDown={(e) => {
-                            e.preventDefault(); // Prevent blur before click
-                            handleStoreSelect(store.id);
-                            setShowStoreDropdown(false);
+                            e.preventDefault();
+                            handleCreateNewStore();
                           }}
-                          className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          className="px-3 py-2 hover:bg-green-50 cursor-pointer border-t border-gray-200 bg-green-50"
                         >
-                          <span className="text-sm text-gray-700">{store.name}</span>
+                          <div className="flex items-center gap-3">
+                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span className="text-sm text-green-700 font-medium flex-1">
+                              Tạo cửa hàng mới: "{storeSearchText}" (创建新店铺: "{storeSearchText}")
+                            </span>
+                          </div>
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
-                  {showStoreDropdown && storeSearchText && filteredAvailableStores.length === 0 && (
+                  {showStoreDropdown && storeSearchText && filteredAvailableStores.length === 0 && !canCreateNewStore && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg p-3">
                       <p className="text-sm text-gray-500">Không tìm thấy cửa hàng nào (未找到店铺)</p>
                     </div>
