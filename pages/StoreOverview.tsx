@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Store, StoreOverview } from '../types';
 
 export const StoreOverviewPage: React.FC = () => {
@@ -110,8 +111,6 @@ export const StoreOverviewPage: React.FC = () => {
     }));
   }, [storeOverviews]);
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
 
   const handleStoreToggle = (storeId: string) => {
     setSelectedStores(prev => {

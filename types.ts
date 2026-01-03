@@ -48,8 +48,23 @@ export interface Personnel {
   email?: string; // email login
   password?: string; // password login
   role?: 'admin' | 'user'; // role
-  baseSalary?: number; // Lương cứng
-  monthlyKPITarget?: number; // Mục tiêu KPI theo tháng (doanh số)
+  baseSalary?: number; // Lương cứng (mặc định)
+  monthlyKPITarget?: number; // Mục tiêu KPI theo tháng mặc định (doanh số)
+  monthlySalary?: Record<string, number>; // Lương cứng theo từng tháng (key: YYYY-MM, value: lương)
+  monthlyKPI?: Record<string, number>; // KPI theo từng tháng (key: YYYY-MM, value: KPI target)
+  weeklyKPI?: Record<string, number>; // KPI theo từng tuần (key: YYYY-WW, value: KPI target)
+}
+
+export interface KPIAssignment {
+  id?: string;
+  personnelId: string;
+  personnelName: string;
+  periodType: 'month' | 'week'; // Loại kỳ: tháng hoặc tuần
+  periodKey: string; // YYYY-MM cho tháng, YYYY-WW cho tuần
+  kpiTarget: number; // Mục tiêu KPI
+  assignedAt?: string; // Ngày giao
+  assignedBy?: string; // Người giao
+  notes?: string; // Ghi chú
 }
 
 export interface AdShiftData {

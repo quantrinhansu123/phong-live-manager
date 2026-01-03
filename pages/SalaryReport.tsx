@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchPersonnel, fetchStores } from '../services/dataService';
+import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
 
 export const SalaryReport: React.FC = () => {
@@ -145,8 +146,6 @@ export const SalaryReport: React.FC = () => {
     return Object.values(dataMap).sort((a, b) => b.totalGMV - a.totalGMV);
   }, [monthlyReports, personnel]);
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
 
   const getStatusColor = (status: 'green' | 'yellow' | 'red') => {
     switch (status) {
@@ -170,6 +169,13 @@ export const SalaryReport: React.FC = () => {
     }
   };
 
+  // Check if user is logged in
+  const currentUser = localStorage.getItem('currentUser');
+  if (!currentUser) {
+    window.location.hash = '#/login';
+    return null;
+  }
+
   if (isLoading) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
@@ -178,26 +184,11 @@ export const SalaryReport: React.FC = () => {
     );
   }
 
-  // Check if user is admin
-  const currentUser = localStorage.getItem('currentUser');
-  const isAdmin = personnel.find(p => p.email === currentUser)?.role === 'admin';
-
-  if (!isAdmin) {
-    return (
-      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="bg-white p-8 rounded shadow-lg text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Không có quyền truy cập</h2>
-          <p className="text-gray-600">Chỉ Admin mới có thể xem báo cáo này.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
+    <div className="p-6 bg-gray-50 min-h-screen w-screen font-sans space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800 uppercase">Báo Cáo Doanh Số / Lương (Admin)</h2>
+        <h2 className="text-2xl font-bold text-gray-800 uppercase">Báo Cáo Doanh Số / Lương</h2>
         <div className="flex gap-2 items-center">
           <label className="text-sm font-medium text-gray-700">Tháng:</label>
           <input

@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { fetchPersonnel, createPersonnel, updatePersonnel, deletePersonnel, fetchLiveReports, MOCK_VIDEO_METRICS } from '../services/dataService';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
+import { formatCurrency } from '../utils/formatUtils';
 import { Personnel as PersonnelType, LiveReport } from '../types';
 
 export const Personnel: React.FC = () => {
   const [personnelList, setPersonnelList] = useState<PersonnelType[]>([]);
   const [liveReports, setLiveReports] = useState<LiveReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'list' | 'salary'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'salary' | 'assignKPI'>('list');
   
   // Filter state
   const [searchText, setSearchText] = useState('');
@@ -29,6 +30,19 @@ export const Personnel: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<PersonnelType | null>(null); // For Details View
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showSalaryKPIModal, setShowSalaryKPIModal] = useState(false);
+  const [selectedPersonForSalaryKPI, setSelectedPersonForSalaryKPI] = useState<PersonnelType | null>(null);
+  const [salaryKPIFormData, setSalaryKPIFormData] = useState({ salary: 0, kpi: 0 });
+  
+  // KPI Assignment state
+  const [kpiPeriodType, setKpiPeriodType] = useState<'month' | 'week'>('month');
+  const currentDateForKPI = new Date();
+  const [kpiPeriodValue, setKpiPeriodValue] = useState<string>(`${currentDateForKPI.getFullYear()}-${String(currentDateForKPI.getMonth() + 1).padStart(2, '0')}`);
+  const [selectedPersonnelForKPI, setSelectedPersonnelForKPI] = useState<string[]>([]);
+  const [kpiTargetValue, setKpiTargetValue] = useState<number>(0);
+  const [kpiNotes, setKpiNotes] = useState<string>('');
+  const [showPersonnelDropdown, setShowPersonnelDropdown] = useState(false);
+  const [personnelSearchText, setPersonnelSearchText] = useState('');
 
   // Form State
   const initialFormState = {
@@ -140,22 +154,30 @@ export const Personnel: React.FC = () => {
         return sum + (Number(report.gmv) || 0);
       }, 0);
 
-      // Tính phần trăm tiến độ
-      const kpiTarget = person.monthlyKPITarget || 0;
+      // Lấy KPI và lương cho tháng được chọn (ưu tiên monthlyKPI/monthlySalary, fallback về monthlyKPITarget/baseSalary)
+      const kpiTarget = person.monthlyKPI?.[selectedMonth] ?? person.monthlyKPITarget ?? 0;
+      const monthlySalary = person.monthlySalary?.[selectedMonth] ?? person.baseSalary ?? 0;
       const progressPercent = kpiTarget > 0 ? (actualRevenue / kpiTarget) * 100 : 0;
 
       return {
         person,
         actualRevenue,
         kpiTarget,
+        monthlySalary,
         progressPercent,
         reportCount: selectedMonthReports.length
       };
     });
   }, [personnelList, liveReports, selectedMonth]);
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
+  // Helper function to get week number
+  const getWeekNumber = (date: Date): number => {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  };
 
   // Filter personnel
   const filteredPersonnel = useMemo(() => {
@@ -223,6 +245,26 @@ export const Personnel: React.FC = () => {
             }`}
           >
             Lương & KPIs theo tháng (月薪和KPI)
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('assignKPI');
+              // Initialize period values
+              const currentDate = new Date();
+              if (kpiPeriodType === 'month') {
+                setKpiPeriodValue(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`);
+              } else {
+                const week = getWeekNumber(currentDate);
+                setKpiPeriodValue(`${currentDate.getFullYear()}-W${String(week).padStart(2, '0')}`);
+              }
+            }}
+            className={`px-6 py-3 font-medium text-sm transition-colors rounded-t-lg ${
+              activeTab === 'assignKPI'
+                ? 'border-b-2 border-brand-navy text-brand-navy bg-blue-50'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+            }`}
+          >
+            Giao KPIs (分配KPI)
           </button>
         </div>
       </div>
@@ -538,7 +580,7 @@ export const Personnel: React.FC = () => {
                     <tr><td colSpan={8} className="py-8 text-center text-gray-400">Chưa có dữ liệu (暂无数据)</td></tr>
                   ) : (
                     salaryKPIData.map((item) => {
-                      const { person, actualRevenue, kpiTarget, progressPercent, reportCount } = item;
+                      const { person, actualRevenue, kpiTarget, monthlySalary, progressPercent, reportCount } = item;
                       const progressColor = progressPercent >= 100 
                         ? 'bg-green-100 text-green-800 border-green-300' 
                         : progressPercent >= 50 
@@ -563,7 +605,7 @@ export const Personnel: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-6 py-4 border-r text-right font-bold text-green-600">
-                            {person.baseSalary ? formatCurrency(person.baseSalary) : '-'}
+                            {item.monthlySalary > 0 ? formatCurrency(item.monthlySalary) : '-'}
                           </td>
                           <td className="px-6 py-4 border-r text-right font-medium text-blue-600">
                             {kpiTarget > 0 ? formatCurrency(kpiTarget) : '-'}
@@ -595,10 +637,16 @@ export const Personnel: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 text-center">
                             <button
-                              onClick={() => handleEdit(person)}
-                              className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
+                              onClick={() => {
+                                setSelectedPersonForSalaryKPI(person);
+                                const currentSalary = person.monthlySalary?.[selectedMonth] ?? person.baseSalary ?? 0;
+                                const currentKPI = person.monthlyKPI?.[selectedMonth] ?? person.monthlyKPITarget ?? 0;
+                                setSalaryKPIFormData({ salary: currentSalary, kpi: currentKPI });
+                                setShowSalaryKPIModal(true);
+                              }}
+                              className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
                             >
-                              Xem (查看)
+                              Chỉnh sửa (编辑)
                             </button>
                           </td>
                         </tr>
@@ -609,6 +657,466 @@ export const Personnel: React.FC = () => {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Assign KPI Tab */}
+      {activeTab === 'assignKPI' && (
+        <div className="space-y-6">
+          {/* Form Giao KPI */}
+          <div className="bg-white rounded shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">Giao KPIs (分配KPI)</h3>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (selectedPersonnelForKPI.length === 0 || !kpiPeriodValue || kpiTargetValue <= 0) {
+                alert('Vui lòng điền đầy đủ thông tin');
+                return;
+              }
+
+              try {
+                // Update KPI for each selected personnel
+                for (const personnelId of selectedPersonnelForKPI) {
+                  const person = personnelList.find(p => (p.id || p.fullName) === personnelId);
+                  if (!person || !person.id) continue;
+
+                  const updatedPerson: PersonnelType = { ...person };
+                  
+                  if (kpiPeriodType === 'month') {
+                    updatedPerson.monthlyKPI = {
+                      ...(person.monthlyKPI || {}),
+                      [kpiPeriodValue]: kpiTargetValue
+                    };
+                  } else {
+                    updatedPerson.weeklyKPI = {
+                      ...(person.weeklyKPI || {}),
+                      [kpiPeriodValue]: kpiTargetValue
+                    };
+                  }
+
+                  await updatePersonnel(person.id, updatedPerson);
+                }
+
+                await loadData();
+                setSelectedPersonnelForKPI([]);
+                setKpiTargetValue(0);
+                setKpiNotes('');
+                alert(`Đã giao KPI cho ${selectedPersonnelForKPI.length} nhân sự thành công!`);
+              } catch (error) {
+                alert('Có lỗi xảy ra khi giao KPI.');
+              }
+            }} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Loại kỳ (周期类型) *
+                  </label>
+                  <select
+                    value={kpiPeriodType}
+                    onChange={(e) => {
+                      setKpiPeriodType(e.target.value as 'month' | 'week');
+                      const currentDate = new Date();
+                      if (e.target.value === 'month') {
+                        setKpiPeriodValue(`${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`);
+                      } else {
+                        const week = getWeekNumber(currentDate);
+                        setKpiPeriodValue(`${currentDate.getFullYear()}-W${String(week).padStart(2, '0')}`);
+                      }
+                    }}
+                    className="w-full border rounded px-3 py-2 bg-white focus:ring-brand-navy focus:border-brand-navy"
+                  >
+                    <option value="month">Theo tháng (按月)</option>
+                    <option value="week">Theo tuần (按周)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {kpiPeriodType === 'month' ? 'Tháng (月份) *' : 'Tuần (周) *'}
+                  </label>
+                  {kpiPeriodType === 'month' ? (
+                    <input
+                      type="month"
+                      required
+                      value={kpiPeriodValue}
+                      onChange={(e) => setKpiPeriodValue(e.target.value)}
+                      className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      required
+                      value={kpiPeriodValue}
+                      onChange={(e) => setKpiPeriodValue(e.target.value)}
+                      className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+                      placeholder="YYYY-WW (ví dụ: 2025-W01)"
+                      pattern="\d{4}-W\d{2}"
+                    />
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Chọn nhân sự (选择人员) *
+                  </label>
+                  <div className="relative">
+                    {/* Input field để trigger dropdown */}
+                    <input
+                      type="text"
+                      value={personnelSearchText}
+                      onChange={(e) => {
+                        setPersonnelSearchText(e.target.value);
+                        setShowPersonnelDropdown(true);
+                      }}
+                      onFocus={() => setShowPersonnelDropdown(true)}
+                      placeholder={selectedPersonnelForKPI.length > 0 
+                        ? `Đã chọn ${selectedPersonnelForKPI.length} nhân sự` 
+                        : "Tìm kiếm và chọn nhân sự..."}
+                      className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+                    />
+                    
+                    {/* Dropdown với checkbox */}
+                    {showPersonnelDropdown && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10" 
+                          onClick={() => setShowPersonnelDropdown(false)}
+                        ></div>
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {personnelList.length === 0 ? (
+                            <div className="p-3 text-sm text-gray-500">Chưa có nhân sự</div>
+                          ) : (
+                            <div className="py-1">
+                              {personnelList
+                                .filter(person => {
+                                  const searchLower = personnelSearchText.toLowerCase();
+                                  return (
+                                    person.fullName.toLowerCase().includes(searchLower) ||
+                                    person.department.toLowerCase().includes(searchLower) ||
+                                    person.position.toLowerCase().includes(searchLower) ||
+                                    person.email?.toLowerCase().includes(searchLower) ||
+                                    person.phoneNumber.includes(searchLower)
+                                  );
+                                })
+                                .map(person => {
+                                  const personId = person.id || person.fullName;
+                                  const isSelected = selectedPersonnelForKPI.includes(personId);
+                                  return (
+                                    <label
+                                      key={personId}
+                                      className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={(e) => {
+                                          if (e.target.checked) {
+                                            setSelectedPersonnelForKPI([...selectedPersonnelForKPI, personId]);
+                                          } else {
+                                            setSelectedPersonnelForKPI(selectedPersonnelForKPI.filter(id => id !== personId));
+                                          }
+                                        }}
+                                        className="rounded border-gray-300 text-brand-navy focus:ring-brand-navy"
+                                      />
+                                      <div className="flex-1">
+                                        <div className="text-sm font-medium text-gray-900">{person.fullName}</div>
+                                        <div className="text-xs text-gray-500">
+                                          {person.department} - {person.position}
+                                          {person.email && ` - ${person.email}`}
+                                        </div>
+                                      </div>
+                                    </label>
+                                  );
+                                })}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  
+                  {/* Hiển thị nhân sự đã chọn */}
+                  {selectedPersonnelForKPI.length > 0 && (
+                    <div className="mt-2 border rounded p-3 bg-gray-50 max-h-40 overflow-y-auto">
+                      <p className="text-xs text-gray-600 mb-2 font-medium">Đã chọn ({selectedPersonnelForKPI.length}):</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedPersonnelForKPI.map(personId => {
+                          const person = personnelList.find(p => (p.id || p.fullName) === personId);
+                          if (!person) return null;
+                          return (
+                            <div
+                              key={personId}
+                              className="flex items-center gap-1 bg-white border border-gray-200 rounded px-2 py-1 text-sm"
+                            >
+                              <span className="text-gray-700">{person.fullName}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedPersonnelForKPI(selectedPersonnelForKPI.filter(id => id !== personId));
+                                }}
+                                className="text-red-600 hover:text-red-800 ml-1"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mục tiêu KPI (VND) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={kpiTargetValue || ''}
+                    onChange={(e) => setKpiTargetValue(Number(e.target.value) || 0)}
+                    className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+                    placeholder="Nhập mục tiêu KPI"
+                    min="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ghi chú (备注)
+                  </label>
+                  <input
+                    type="text"
+                    value={kpiNotes}
+                    onChange={(e) => setKpiNotes(e.target.value)}
+                    className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+                    placeholder="Nhập ghi chú (tùy chọn)"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t flex justify-end">
+                <button
+                  type="submit"
+                  className="px-8 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy"
+                >
+                  Giao KPI
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Bảng theo dõi KPI đã giao */}
+          <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+            <div className="p-4 bg-gray-50 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-800">Theo dõi KPIs đã giao (已分配KPI跟踪)</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-xs text-white uppercase bg-brand-navy border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Nhân sự</th>
+                    <th className="px-4 py-3 text-left">Phòng ban</th>
+                    <th className="px-4 py-3 text-left">Loại kỳ</th>
+                    <th className="px-4 py-3 text-left">Kỳ</th>
+                    <th className="px-4 py-3 text-right">Mục tiêu KPI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const kpiAssignments: Array<{
+                      personnelName: string;
+                      department: string;
+                      periodType: 'month' | 'week';
+                      periodKey: string;
+                      kpiTarget: number;
+                    }> = [];
+
+                    personnelList.forEach(person => {
+                      // Add monthly KPIs
+                      if (person.monthlyKPI) {
+                        Object.entries(person.monthlyKPI).forEach(([periodKey, kpiTarget]) => {
+                          kpiAssignments.push({
+                            personnelName: person.fullName,
+                            department: person.department || '',
+                            periodType: 'month',
+                            periodKey,
+                          kpiTarget: Number(kpiTarget)
+                        });
+                      });
+                    }
+                    
+                    // Add weekly KPIs
+                    if (person.weeklyKPI) {
+                      Object.entries(person.weeklyKPI).forEach(([periodKey, kpiTarget]) => {
+                          kpiAssignments.push({
+                            personnelName: person.fullName,
+                            department: person.department || '',
+                            periodType: 'week',
+                            periodKey,
+                            kpiTarget: Number(kpiTarget)
+                          });
+                        });
+                      }
+                    });
+
+                    // Sort by period key (newest first)
+                    kpiAssignments.sort((a, b) => b.periodKey.localeCompare(a.periodKey));
+
+                    if (kpiAssignments.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-gray-400">Chưa có KPI nào được giao</td>
+                        </tr>
+                      );
+                    }
+
+                    return kpiAssignments.map((assignment, index) => (
+                      <tr key={index} className="border-b hover:bg-gray-50">
+                        <td className="px-4 py-3 font-medium text-gray-800">{assignment.personnelName}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded text-xs font-medium border ${
+                            assignment.department === 'Live' ? 'bg-red-50 text-red-700 border-red-200' :
+                            assignment.department === 'Media' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            'bg-gray-50 text-gray-600 border-gray-200'
+                          }`}>
+                            {assignment.department || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            assignment.periodType === 'month' 
+                              ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                              : 'bg-purple-100 text-purple-800 border border-purple-200'
+                          }`}>
+                            {assignment.periodType === 'month' ? 'Tháng' : 'Tuần'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{assignment.periodKey}</td>
+                        <td className="px-4 py-3 text-right font-bold text-blue-600">
+                          {formatCurrency(assignment.kpiTarget)}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Salary & KPI Edit Modal */}
+      {showSalaryKPIModal && selectedPersonForSalaryKPI && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70]">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex justify-between items-center mb-4 border-b pb-2">
+              <h3 className="text-lg font-bold uppercase text-gray-800">
+                Chỉnh sửa Lương & KPI - {selectedPersonForSalaryKPI.fullName}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowSalaryKPIModal(false);
+                  setSelectedPersonForSalaryKPI(null);
+                }} 
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Tháng: <span className="font-bold">{new Date(selectedMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</span>
+              </p>
+            </div>
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!selectedPersonForSalaryKPI.id) return;
+              
+              try {
+                const updatedPerson: PersonnelType = {
+                  ...selectedPersonForSalaryKPI,
+                  monthlySalary: {
+                    ...(selectedPersonForSalaryKPI.monthlySalary || {}),
+                    [selectedMonth]: salaryKPIFormData.salary
+                  },
+                  monthlyKPI: {
+                    ...(selectedPersonForSalaryKPI.monthlyKPI || {}),
+                    [selectedMonth]: salaryKPIFormData.kpi
+                  }
+                };
+                
+                await updatePersonnel(selectedPersonForSalaryKPI.id, updatedPerson);
+                await loadData();
+                setShowSalaryKPIModal(false);
+                setSelectedPersonForSalaryKPI(null);
+                alert('Đã cập nhật lương và KPI thành công!');
+              } catch (error) {
+                alert('Có lỗi xảy ra khi cập nhật.');
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Lương cứng (VND)
+                  {selectedPersonForSalaryKPI.baseSalary && (
+                    <span className="text-xs text-gray-500 ml-2">
+                      (Mặc định: {formatCurrency(selectedPersonForSalaryKPI.baseSalary)})
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={salaryKPIFormData.salary}
+                  onChange={(e) => setSalaryKPIFormData({ ...salaryKPIFormData, salary: Number(e.target.value) || 0 })}
+                  className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+                  placeholder="Nhập lương cứng"
+                  min="0"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mục tiêu KPI (VND)
+                  {selectedPersonForSalaryKPI.monthlyKPITarget && (
+                    <span className="text-xs text-gray-500 ml-2">
+                      (Mặc định: {formatCurrency(selectedPersonForSalaryKPI.monthlyKPITarget)})
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="number"
+                  required
+                  value={salaryKPIFormData.kpi}
+                  onChange={(e) => setSalaryKPIFormData({ ...salaryKPIFormData, kpi: Number(e.target.value) || 0 })}
+                  className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+                  placeholder="Nhập mục tiêu KPI"
+                  min="0"
+                />
+              </div>
+
+              <div className="pt-4 border-t flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSalaryKPIModal(false);
+                    setSelectedPersonForSalaryKPI(null);
+                  }}
+                  className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-8 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy"
+                >
+                  Lưu
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { fetchStores, createStore, updateStore, deleteStore, fetchPartners, fetchPersonnel } from '../services/dataService';
 import { StoreDetailModal } from '../components/StoreDetailModal';
+import { FilterBar } from '../components/FilterBar';
+import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { Store, Partner, Personnel } from '../types';
 
 export const StoreManager: React.FC = () => {
@@ -13,10 +15,14 @@ export const StoreManager: React.FC = () => {
     const [newStorePartnerId, setNewStorePartnerId] = useState<string>('');
     const [newStoreType, setNewStoreType] = useState<'own' | 'partner'>('own');
     const [newStorePersonnelIds, setNewStorePersonnelIds] = useState<string[]>([]);
+    const [personnelSearchText, setPersonnelSearchText] = useState('');
+    const [showPersonnelDropdown, setShowPersonnelDropdown] = useState(false);
     const [editingStore, setEditingStore] = useState<Store | null>(null);
     const [selectedStore, setSelectedStore] = useState<Store | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [storeToDelete, setStoreToDelete] = useState<string | null>(null);
+    const [searchText, setSearchText] = useState('');
+    const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
 
     useEffect(() => {
         loadStores();
@@ -54,10 +60,12 @@ export const StoreManager: React.FC = () => {
                 storeType: newStoreType,
                 personnelIds: newStorePersonnelIds.length > 0 ? newStorePersonnelIds : undefined
             });
-            setNewStoreName('');
+        setNewStoreName('');
             setNewStorePartnerId('');
             setNewStoreType('own');
             setNewStorePersonnelIds([]);
+            setPersonnelSearchText('');
+            setShowPersonnelDropdown(false);
             setIsAddFormOpen(false);
             await loadStores();
             alert(`Đã thêm cửa hàng: ${storeNameToAdd}`);
@@ -83,7 +91,42 @@ export const StoreManager: React.FC = () => {
         setNewStorePartnerId(store.partnerId || '');
         setNewStoreType(store.storeType || 'own');
         setNewStorePersonnelIds(store.personnelIds || []);
+        setPersonnelSearchText('');
+        setShowPersonnelDropdown(false);
     };
+
+    const handlePersonnelSelect = (personnelId: string) => {
+        if (personnelId && personnelId !== '') {
+            if (!newStorePersonnelIds.includes(personnelId)) {
+                setNewStorePersonnelIds([...newStorePersonnelIds, personnelId]);
+            }
+            setPersonnelSearchText('');
+            setShowPersonnelDropdown(false);
+        }
+    };
+
+    const handleRemovePersonnel = (personnelId: string) => {
+        setNewStorePersonnelIds(newStorePersonnelIds.filter(id => id !== personnelId));
+    };
+
+    // Filter personnel theo search text
+    const filteredPersonnel = personnel.filter(person => {
+        // Loại bỏ các nhân sự đã được chọn
+        if (newStorePersonnelIds.includes(person.id || '')) return false;
+        
+        // Nếu có text tìm kiếm, filter theo text
+        if (personnelSearchText) {
+            const searchLower = personnelSearchText.toLowerCase();
+            return (
+                person.fullName.toLowerCase().includes(searchLower) ||
+                person.department.toLowerCase().includes(searchLower) ||
+                person.position.toLowerCase().includes(searchLower)
+            );
+        }
+        
+        // Nếu không có text, hiển thị tất cả
+        return true;
+    });
 
     const handleCancelEdit = () => {
         setEditingStore(null);
@@ -91,6 +134,8 @@ export const StoreManager: React.FC = () => {
         setNewStorePartnerId('');
         setNewStoreType('own');
         setNewStorePersonnelIds([]);
+        setPersonnelSearchText('');
+        setShowPersonnelDropdown(false);
         setIsAddFormOpen(false);
     };
 
@@ -126,15 +171,54 @@ export const StoreManager: React.FC = () => {
         if (storeToDelete) {
             try {
                 await deleteStore(storeToDelete);
-                setStoreToDelete(null);
+            setStoreToDelete(null);
                 await loadStores();
-                alert('Đã xóa cửa hàng');
+            alert('Đã xóa cửa hàng');
             } catch (error) {
                 console.error('Error deleting store:', error);
                 alert('Có lỗi xảy ra khi xóa cửa hàng');
             }
         }
     };
+
+    // Filter stores với search và filters
+    const filteredStores = useMemo(() => {
+        let filtered = stores;
+
+        // Filter by search text
+        if (searchText) {
+            const searchLower = searchText.toLowerCase();
+            filtered = filtered.filter(store => {
+                const partnerName = partners.find(p => p.id === store.partnerId)?.name || '';
+                const personnelNames = (store.personnelIds || [])
+                    .map(id => personnel.find(p => p.id === id)?.fullName || '')
+                    .join(' ');
+                return (
+                    store.name.toLowerCase().includes(searchLower) ||
+                    partnerName.toLowerCase().includes(searchLower) ||
+                    personnelNames.toLowerCase().includes(searchLower)
+                );
+            });
+        }
+
+        // Filter by store type
+        if (selectedFilters.storeTypes && selectedFilters.storeTypes.length > 0) {
+            filtered = filtered.filter(store => {
+                const storeType = store.storeType || 'own';
+                return selectedFilters.storeTypes!.includes(storeType);
+            });
+        }
+
+        // Filter by partner
+        if (selectedFilters.partners && selectedFilters.partners.length > 0) {
+            filtered = filtered.filter(store => {
+                if (!store.partnerId) return false;
+                return selectedFilters.partners!.includes(store.partnerId);
+            });
+        }
+
+        return filtered;
+    }, [stores, partners, personnel, searchText, selectedFilters]);
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen font-sans">
@@ -154,6 +238,8 @@ export const StoreManager: React.FC = () => {
                         setNewStorePartnerId('');
                         setNewStoreType('own');
                         setNewStorePersonnelIds([]);
+                        setPersonnelSearchText('');
+                        setShowPersonnelDropdown(false);
                     }}
                     className="bg-brand-navy hover:bg-brand-darkNavy text-white px-4 py-2 rounded shadow text-sm font-bold flex items-center gap-2"
                 >
@@ -162,7 +248,66 @@ export const StoreManager: React.FC = () => {
                     </svg>
                     Thêm Cửa Hàng Mới
                 </button>
-             </div>
+                    </div>
+
+             {/* Filter Bar */}
+             <FilterBar
+                onSearch={setSearchText}
+                onExportExcel={() => {
+                    const exportData = filteredStores.map(store => {
+                        const partner = partners.find(p => p.id === store.partnerId);
+                        const personnelList = (store.personnelIds || [])
+                            .map(id => personnel.find(p => p.id === id)?.fullName || '')
+                            .join(', ');
+                        return {
+                            'Tên cửa hàng': store.name,
+                            'Loại': store.storeType === 'own' ? 'Của mình' : 'Đối tác phụ trách',
+                            'Đối tác': partner?.name || '',
+                            'Nhân sự phụ trách': personnelList || '',
+                        };
+                    });
+                    exportToExcel(exportData, `stores-${new Date().toISOString().split('T')[0]}.xlsx`);
+                }}
+                onImportExcel={async (file) => {
+                    try {
+                        const data = await importFromExcel(file);
+                        alert(`Đã import ${data.length} cửa hàng từ Excel. Vui lòng kiểm tra dữ liệu.`);
+                        // TODO: Implement import logic
+                    } catch (error) {
+                        alert('Lỗi khi import Excel: ' + (error as Error).message);
+                    }
+                }}
+                onReset={() => {
+                    setSearchText('');
+                    setSelectedFilters({});
+                }}
+                filterFields={[
+                    {
+                        key: 'storeTypes',
+                        label: 'Loại cửa hàng',
+                        type: 'checkbox',
+                        options: [
+                            { value: 'own', label: 'Của mình' },
+                            { value: 'partner', label: 'Đối tác phụ trách' }
+                        ]
+                    },
+                    {
+                        key: 'partners',
+                        label: 'Đối tác',
+                        type: 'checkbox',
+                        options: partners.map(p => ({ value: p.id || '', label: p.name }))
+                    }
+                ]}
+                selectedFilters={selectedFilters}
+                onFilterChange={(field, values) => {
+                    setSelectedFilters(prev => ({ ...prev, [field]: values }));
+                }}
+                dateFrom=""
+                dateTo=""
+                onDateFromChange={() => {}}
+                onDateToChange={() => {}}
+                onQuickDateSelect={() => {}}
+             />
 
              {/* Table */}
              <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
@@ -183,12 +328,12 @@ export const StoreManager: React.FC = () => {
                                 <tr>
                                     <td colSpan={5} className="py-8 text-center text-gray-500">Đang tải...</td>
                                 </tr>
-                            ) : stores.length === 0 ? (
+                            ) : filteredStores.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="py-8 text-center text-gray-400">Chưa có cửa hàng nào</td>
                                 </tr>
                             ) : (
-                                stores.map(store => (
+                                filteredStores.map(store => (
                                     <tr key={store.id} className="border-b hover:bg-gray-50">
                                         <td className="px-4 py-3 font-bold text-gray-800">{store.name}</td>
                                         <td className="px-4 py-3">
@@ -218,33 +363,33 @@ export const StoreManager: React.FC = () => {
                                                             </span>
                                                         ) : null;
                                                     })}
-                                                </div>
+                                    </div>
                                             ) : '-'}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex justify-center gap-1">
-                                                <button
+                                        <button
                                                     onClick={() => handleStoreClick(store)}
-                                                    className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
-                                                    title="Xem chi tiết"
-                                                >
+                                            className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
+                                            title="Xem chi tiết"
+                                        >
                                                     Xem
-                                                </button>
-                                                <button
+                                        </button>
+                                        <button
                                                     onClick={() => handleStartEdit(store)}
-                                                    className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
-                                                    title="Sửa"
-                                                >
+                                            className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
+                                            title="Sửa"
+                                        >
                                                     Sửa
-                                                </button>
-                                                <button
-                                                    onClick={(e) => handleDeleteStore(store.id, e)}
-                                                    className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
-                                                    title="Xóa"
-                                                >
+                                        </button>
+                                        <button
+                                            onClick={(e) => handleDeleteStore(store.id, e)}
+                                            className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
+                                            title="Xóa"
+                                        >
                                                     Xóa
-                                                </button>
-                                            </div>
+                                        </button>
+                                    </div>
                                         </td>
                                     </tr>
                                 ))
@@ -252,7 +397,7 @@ export const StoreManager: React.FC = () => {
                         </tbody>
                     </table>
                 </div>
-             </div>
+                    </div>
 
             {/* Add/Edit Store Modal */}
             {(isAddFormOpen || editingStore) && (
@@ -274,9 +419,9 @@ export const StoreManager: React.FC = () => {
                         <form onSubmit={(e) => { e.preventDefault(); editingStore ? handleUpdateStore() : handleAddStore(); }} className="space-y-4">
                             <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">Tên cửa hàng *</label>
-                                <input
+                                <input 
                                     required
-                                    type="text"
+                                    type="text" 
                                     value={newStoreName}
                                     onChange={(e) => setNewStoreName(e.target.value)}
                                     placeholder="Nhập tên cửa hàng"
@@ -312,28 +457,76 @@ export const StoreManager: React.FC = () => {
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">Nhân sự phụ trách</label>
-                                <div className="border rounded px-3 py-2 bg-white max-h-32 overflow-y-auto">
-                                    {personnel.length === 0 ? (
-                                        <p className="text-xs text-gray-500">Chưa có nhân sự</p>
-                                    ) : (
-                                        personnel.map(person => (
-                                            <label key={person.id} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-gray-50">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={newStorePersonnelIds.includes(person.id || '')}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setNewStorePersonnelIds([...newStorePersonnelIds, person.id || '']);
-                                                        } else {
-                                                            setNewStorePersonnelIds(newStorePersonnelIds.filter(id => id !== person.id));
-                                                        }
-                                                    }}
-                                                    className="rounded border-gray-300 text-brand-navy focus:ring-brand-navy"
-                                                />
-                                                <span className="text-sm text-gray-700">{person.fullName} ({person.department})</span>
-                                            </label>
-                                        ))
-                                    )}
+                                <div className="space-y-3">
+                                    {/* Searchable input để tìm và chọn nhân sự */}
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={personnelSearchText}
+                                            onChange={(e) => {
+                                                setPersonnelSearchText(e.target.value);
+                                                setShowPersonnelDropdown(true);
+                                            }}
+                                            onFocus={() => setShowPersonnelDropdown(true)}
+                                            onBlur={() => {
+                                                // Delay để cho phép click vào item
+                                                setTimeout(() => setShowPersonnelDropdown(false), 200);
+                                            }}
+                                            placeholder="Gõ để tìm nhân sự..."
+                                            className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+                                        />
+                                        {/* Dropdown list khi focus hoặc có text */}
+                                        {showPersonnelDropdown && filteredPersonnel.length > 0 && (
+                                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
+                                                {filteredPersonnel.map(person => (
+                                                    <div
+                                                        key={person.id}
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault(); // Prevent blur before click
+                                                            handlePersonnelSelect(person.id || '');
+                                                            setShowPersonnelDropdown(false);
+                                                        }}
+                                                        className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                                    >
+                                                        <div className="text-sm text-gray-700 font-medium">{person.fullName}</div>
+                                                        <div className="text-xs text-gray-500">{person.department} - {person.position}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {showPersonnelDropdown && personnelSearchText && filteredPersonnel.length === 0 && (
+                                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg p-3">
+                                                <p className="text-sm text-gray-500">Không tìm thấy nhân sự nào</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Danh sách nhân sự đã chọn */}
+                                    {newStorePersonnelIds.length > 0 && (
+                                        <div className="border rounded p-3 bg-gray-50 max-h-40 overflow-y-auto">
+                                            <p className="text-xs text-gray-600 mb-2 font-medium">Nhân sự đã chọn:</p>
+                                            <div className="space-y-1">
+                                                {newStorePersonnelIds.map(personnelId => {
+                                                    const person = personnel.find(p => p.id === personnelId);
+                                                    return person ? (
+                                                        <div key={personnelId} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
+                                                            <div>
+                                                                <span className="text-sm text-gray-700 font-medium">{person.fullName}</span>
+                                                                <span className="text-xs text-gray-500 ml-2">({person.department})</span>
+                                                            </div>
+                                    <button 
+                                        type="button"
+                                                                onClick={() => handleRemovePersonnel(personnelId)}
+                                                                className="text-red-600 hover:text-red-800 text-xs px-2 py-1 hover:bg-red-50 rounded"
+                                    >
+                                                                Xóa
+                                    </button>
+                                                        </div>
+                                                    ) : null;
+                                                })}
+                                            </div>
+                                        </div>
+                                )}
                                 </div>
                             </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
+import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
 
 export const Dashboard: React.FC = () => {
@@ -153,8 +154,6 @@ export const Dashboard: React.FC = () => {
     return Object.values(map).sort((a, b) => b.gmv - a.gmv);
   }, [filteredReports, stores, selectedStore]);
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);

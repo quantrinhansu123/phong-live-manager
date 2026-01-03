@@ -3,6 +3,7 @@ import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ComposedChart } from 'recharts';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
+import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
 
 export const CPQC: React.FC = () => {
@@ -240,9 +241,6 @@ export const CPQC: React.FC = () => {
       .slice(0, 10); // Top 10
   }, [filteredReports, stores]);
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
-
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
@@ -374,7 +372,7 @@ export const CPQC: React.FC = () => {
             key: 'callCounts',
             label: 'Lần gọi',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.callCount).filter(c => c !== undefined))).sort((a, b) => (a || 0) - (b || 0)).map(count => ({ value: count!.toString(), label: count!.toString() }))
+            options: Array.from(new Set(reports.map(r => r.callCount).filter(c => c !== undefined))).sort((a, b) => Number(a || 0) - Number(b || 0)).map(count => ({ value: count!.toString(), label: count!.toString() }))
           },
           {
             key: 'statuses',

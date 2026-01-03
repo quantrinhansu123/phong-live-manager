@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchStores, MOCK_STORES } from '../services/dataService';
 import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
+import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
 import { LiveReportModal } from '../components/LiveReportModal';
 import { createLiveReport, updateLiveReport, deleteLiveReport } from '../services/dataService';
@@ -142,8 +143,6 @@ export const LiveReportDetail: React.FC = () => {
     return filtered;
   }, [reports, dateFrom, dateTo, selectedFilters, searchText, stores]);
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
 
   const getStatusColor = (roi: number) => {
     if (roi >= 400) return 'bg-green-100 text-green-800 border-green-200';
