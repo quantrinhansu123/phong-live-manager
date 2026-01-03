@@ -797,14 +797,14 @@ export const LiveSessionReport: React.FC = () => {
             <div className="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <h3 className="text-lg font-bold text-gray-800">Báo Cáo Tổng Kết Nhân Viên (员工汇总报告)</h3>
               <div className="flex gap-2 items-center flex-wrap">
-                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Từ ngày:</label>
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Từ ngày: (从日期:)</label>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
                   className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
                 />
-                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Đến ngày:</label>
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Đến ngày: (至日期:)</label>
                 <input
                   type="date"
                   value={dateTo}
@@ -818,12 +818,12 @@ export const LiveSessionReport: React.FC = () => {
                 <thead className="text-xs text-white uppercase bg-brand-navy border-b">
                   <tr>
                     <th className="px-6 py-3 border-r text-left">Nhân viên (员工)</th>
-                    <th className="px-6 py-3 border-r text-left">Phòng ban</th>
+                    <th className="px-6 py-3 border-r text-left">Phòng ban (部门)</th>
                     <th className="px-6 py-3 border-r text-right">Tổng GMV (总GMV)</th>
                     <th className="px-6 py-3 border-r text-right">Tổng Chi phí QC (总广告费)</th>
                     <th className="px-6 py-3 border-r text-right">ROI TB (平均ROI)</th>
                     <th className="px-6 py-3 border-r text-center">Số báo cáo (报告数)</th>
-                    <th className="px-6 py-3 text-right">Lợi nhuận</th>
+                    <th className="px-6 py-3 text-right">Lợi nhuận (利润)</th>
                     <th className="px-6 py-3 text-center">Thao tác (操作)</th>
                   </tr>
                 </thead>
@@ -900,7 +900,7 @@ export const LiveSessionReport: React.FC = () => {
 
           {/* Link to Detail Page */}
           <div className="bg-white rounded shadow-sm border border-gray-200 p-4 text-center">
-            <p className="text-gray-600 mb-3">Xem bảng chi tiết đầy đủ với tất cả các trường dữ liệu:</p>
+            <p className="text-gray-600 mb-3">Xem bảng chi tiết đầy đủ với tất cả các trường dữ liệu: (查看包含所有数据字段的详细表格:)</p>
             <Link
               to="/live-report-detail"
               className="inline-block bg-brand-navy hover:bg-brand-darkNavy text-white px-6 py-2 rounded font-bold transition-colors"

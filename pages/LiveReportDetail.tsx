@@ -153,7 +153,7 @@ export const LiveReportDetail: React.FC = () => {
   if (isLoading) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Đang tải dữ liệu...</div>
+        <div className="text-gray-500">Đang tải dữ liệu... (正在加载数据...)</div>
       </div>
     );
   }
@@ -185,7 +185,7 @@ export const LiveReportDetail: React.FC = () => {
             <div className="bg-gradient-to-r from-brand-navy to-blue-700 p-6 text-white">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold uppercase mb-2">Chi tiết Báo Cáo Live</h2>
+                  <h2 className="text-2xl font-bold uppercase mb-2">Chi tiết Báo Cáo Live (直播报告详情)</h2>
                   <p className="text-blue-100 text-sm">ID: {selectedReport.id || 'N/A'}</p>
                 </div>
                 <button 
@@ -201,19 +201,19 @@ export const LiveReportDetail: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-6">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Ngày</p>
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Ngày (日期)</p>
                   <p className="text-lg font-bold text-gray-800">{selectedReport.date}</p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Cửa hàng</p>
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Cửa hàng (店铺)</p>
                   <p className="text-lg font-bold text-gray-800">{stores.find(s => s.id === selectedReport.channelId)?.name || 'Unknown'}</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Host</p>
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Host (主播)</p>
                   <p className="text-lg font-bold text-gray-800">{selectedReport.hostName}</p>
                 </div>
                 <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">GMV</p>
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">GMV (交易额)</p>
                   <p className="text-lg font-bold text-gray-800">{formatCurrency(Number(selectedReport.gmv))}</p>
                 </div>
               </div>
@@ -223,7 +223,7 @@ export const LiveReportDetail: React.FC = () => {
                 onClick={() => { setIsViewModalOpen(false); setSelectedReport(null); }} 
                 className="px-6 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium"
               >
-                Đóng
+                Đóng (关闭)
               </button>
               <button
                 onClick={() => {
@@ -232,7 +232,7 @@ export const LiveReportDetail: React.FC = () => {
                 }}
                 className="px-6 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy"
               >
-                Sửa
+                Sửa (编辑)
               </button>
             </div>
           </div>
@@ -248,11 +248,11 @@ export const LiveReportDetail: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Xác nhận xóa?</h3>
-            <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa báo cáo này không? Hành động này không thể hoàn tác.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Xác nhận xóa? (确认删除?)</h3>
+            <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa báo cáo này không? Hành động này không thể hoàn tác. (您确定要删除此报告吗? 此操作无法撤销。)</p>
             <div className="flex justify-center gap-3">
-              <button onClick={() => setReportToDelete(null)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-gray-800">Hủy</button>
-              <button onClick={() => handleDeleteReport(reportToDelete)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Xóa</button>
+              <button onClick={() => setReportToDelete(null)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-gray-800">Hủy (取消)</button>
+              <button onClick={() => handleDeleteReport(reportToDelete)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Xóa (删除)</button>
             </div>
           </div>
         </div>
@@ -268,7 +268,7 @@ export const LiveReportDetail: React.FC = () => {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Nhập Báo Cáo Mới
+          Nhập Báo Cáo Mới (输入新报告)
         </button>
       </div>
 
@@ -312,7 +312,7 @@ export const LiveReportDetail: React.FC = () => {
             const data = await importFromExcel(file);
             alert(`Đã import ${data.length} bản ghi từ Excel. Vui lòng kiểm tra dữ liệu.`);
           } catch (error) {
-            alert('Lỗi khi import Excel: ' + (error as Error).message);
+            alert('Lỗi khi import Excel (导入Excel时出错): ' + (error as Error).message);
           }
         }}
         onReset={() => {
@@ -326,59 +326,59 @@ export const LiveReportDetail: React.FC = () => {
         filterFields={[
           {
             key: 'stores',
-            label: 'Cửa hàng',
+            label: 'Cửa hàng (店铺)',
             type: 'checkbox',
             options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
           },
           {
             key: 'hosts',
-            label: 'Host',
+            label: 'Host (主播)',
             type: 'checkbox',
             options: Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
           },
           {
             key: 'shifts',
-            label: 'Ca',
+            label: 'Ca (班次)',
             type: 'checkbox',
             options: [
-              { value: 'Sáng', label: 'Sáng' },
-              { value: 'Chiều', label: 'Chiều' },
-              { value: 'Tối', label: 'Tối' }
+              { value: 'Sáng', label: 'Sáng (早班)' },
+              { value: 'Chiều', label: 'Chiều (中班)' },
+              { value: 'Tối', label: 'Tối (晚班)' }
             ]
           },
           {
             key: 'reporters',
-            label: 'Người báo cáo',
+            label: 'Người báo cáo (报告人)',
             type: 'checkbox',
             options: Array.from(new Set(reports.map(r => r.reporter).filter(Boolean))).map(reporter => ({ value: reporter!, label: reporter! }))
           },
           {
             key: 'customerGroups',
-            label: 'Nhóm KH',
+            label: 'Nhóm KH (客户群)',
             type: 'checkbox',
             options: Array.from(new Set(reports.map(r => r.customerGroup).filter(Boolean))).map(group => ({ value: group!, label: group! }))
           },
           {
             key: 'sources',
-            label: 'Nguồn tới',
+            label: 'Nguồn tới (来源)',
             type: 'checkbox',
             options: Array.from(new Set(reports.map(r => r.source).filter(Boolean))).map(source => ({ value: source!, label: source! }))
           },
           {
             key: 'salesPersons',
-            label: 'NV sale',
+            label: 'NV sale (销售员)',
             type: 'checkbox',
             options: Array.from(new Set(reports.map(r => r.salesPerson).filter(Boolean))).map(sales => ({ value: sales!, label: sales! }))
           },
           {
             key: 'callCounts',
-            label: 'Lần gọi',
+            label: 'Lần gọi (呼叫次数)',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.callCount).filter(c => c !== undefined))).sort((a, b) => (a || 0) - (b || 0)).map(count => ({ value: count!.toString(), label: count!.toString() }))
+            options: Array.from(new Set(reports.map(r => r.callCount).filter(c => c !== undefined))).sort((a, b) => Number(a || 0) - Number(b || 0)).map(count => ({ value: count!.toString(), label: count!.toString() }))
           },
           {
             key: 'statuses',
-            label: 'Trạng thái',
+            label: 'Trạng thái (状态)',
             type: 'checkbox',
             options: Array.from(new Set(reports.map(r => r.status).filter(Boolean))).map(status => ({ value: status!, label: status! }))
           }
@@ -400,36 +400,36 @@ export const LiveReportDetail: React.FC = () => {
       {/* Detailed Table */}
       <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-bold text-gray-800">Bảng Chi Tiết ({filteredData.length} bản ghi)</h3>
+          <h3 className="text-lg font-bold text-gray-800">Bảng Chi Tiết (详细表格) ({filteredData.length} bản ghi (条记录))</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-center">
             <thead className="text-xs text-white uppercase bg-brand-navy border-b">
               <tr>
-                <th className="px-3 py-2 border-r whitespace-nowrap sticky left-0 bg-brand-navy z-10">Ngày</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Kênh Live</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Host</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Ca</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Thời gian</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Thời lượng</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Người báo cáo</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap text-blue-200">GMV</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Tổng GMV</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap text-red-200">CPQC</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">GPM</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">ROI (%)</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Đơn hàng</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Giá TB</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Tỉ lệ chuyển đổi (%)</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Click SP</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Tỉ lệ Click SP (%)</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">CTR (%)</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Tổng lượt xem</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Người xem</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">TG xem TB</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">FL mới</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Đánh giá</th>
-                <th className="px-3 py-2 whitespace-nowrap sticky right-0 bg-brand-navy z-10">Thao tác</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap sticky left-0 bg-brand-navy z-10">Ngày (日期)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Kênh Live (直播频道)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Host (主播)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Ca (班次)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Thời gian (时间)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Thời lượng (时长)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Người báo cáo (报告人)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap text-blue-200">GMV (交易额)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Tổng GMV (总交易额)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap text-red-200">CPQC (广告费)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">GPM (每千次展示费用)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">ROI (%) (投资回报率)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Đơn hàng (订单数)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Giá TB (平均价格)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Tỉ lệ chuyển đổi (%) (转化率)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Click SP (商品点击量)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Tỉ lệ Click SP (%) (商品点击率)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">CTR (%) (点击率)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Tổng lượt xem (总观看量)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Người xem (观众)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">TG xem TB (平均观看时长)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">FL mới (新增粉丝)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Đánh giá (评估)</th>
+                <th className="px-3 py-2 whitespace-nowrap sticky right-0 bg-brand-navy z-10">Thao tác (操作)</th>
               </tr>
             </thead>
             <tbody>
@@ -480,7 +480,7 @@ export const LiveReportDetail: React.FC = () => {
                       <td className="px-3 py-2 border-r text-xs">{row.newFollowers ? Number(row.newFollowers).toLocaleString() : '-'}</td>
                       <td className="px-3 py-2 border-r">
                         <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(roiVal)}`}>
-                          {roiVal >= 400 ? 'TỐT' : roiVal >= 200 ? 'KHÁ' : 'CẦN TỐI ƯU'}
+                          {roiVal >= 400 ? 'TỐT (良好)' : roiVal >= 200 ? 'KHÁ (一般)' : 'CẦN TỐI ƯU (需优化)'}
                         </span>
                       </td>
                       <td className="px-3 py-2 sticky right-0 bg-white z-5">
@@ -488,23 +488,23 @@ export const LiveReportDetail: React.FC = () => {
                           <button
                             onClick={() => handleViewReport(row)}
                             className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
-                            title="Xem chi tiết"
+                            title="Xem chi tiết (查看详情)"
                           >
-                            Xem
+                            查看
                           </button>
                           <button
                             onClick={() => handleEditReport(row)}
                             className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
                             title="Sửa"
                           >
-                            Sửa
+                            编辑
                           </button>
                           <button
                             onClick={() => row.id && setReportToDelete(row.id)}
                             className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
-                            title="Xóa"
+                            title="Xóa (删除)"
                           >
-                            Xóa
+                            删除
                           </button>
                         </div>
                       </td>

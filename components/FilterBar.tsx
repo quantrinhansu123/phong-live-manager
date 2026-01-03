@@ -64,7 +64,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   // Quick date filters
   const defaultQuickFilters: QuickDateFilter[] = [
     {
-      label: 'Hôm nay',
+      label: 'Hôm nay (今天)',
       getDateRange: () => {
         const today = new Date();
         const dateStr = today.toISOString().split('T')[0];
@@ -72,7 +72,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       },
     },
     {
-      label: 'Hôm qua',
+      label: 'Hôm qua (昨天)',
       getDateRange: () => {
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
@@ -81,7 +81,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       },
     },
     {
-      label: 'Tuần này',
+      label: 'Tuần này (本周)',
       getDateRange: () => {
         const today = new Date();
         const dayOfWeek = today.getDay();
@@ -96,7 +96,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       },
     },
     {
-      label: 'Tuần trước',
+      label: 'Tuần trước (上周)',
       getDateRange: () => {
         const today = new Date();
         const dayOfWeek = today.getDay();
@@ -111,7 +111,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       },
     },
     {
-      label: 'Tháng này',
+      label: 'Tháng này (本月)',
       getDateRange: () => {
         const today = new Date();
         const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -123,7 +123,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       },
     },
     {
-      label: 'Tháng trước',
+      label: 'Tháng trước (上月)',
       getDateRange: () => {
         const today = new Date();
         const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -135,7 +135,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       },
     },
     {
-      label: '30 ngày qua',
+      label: '30 ngày qua (过去30天)',
       getDateRange: () => {
         const today = new Date();
         const thirtyDaysAgo = new Date();
@@ -171,7 +171,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         <div className="flex-1 min-w-[200px]">
           <input
             type="text"
-            placeholder="Tìm kiếm tổng (tất cả các giá trị trong bảng)..."
+            placeholder="Tìm kiếm tổng (tất cả các giá trị trong bảng)... (搜索全部 (表格中的所有值)...)"
             value={searchText}
             onChange={handleSearch}
             className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy"
@@ -184,7 +184,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          Tải xuống Excel
+          Tải xuống Excel (下载Excel)
         </button>
         <label className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm font-medium flex items-center gap-2 cursor-pointer">
           <input
@@ -196,7 +196,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
-          Tải lên Excel
+          Tải lên Excel (上传Excel)
         </label>
         <button
           onClick={onReset}
@@ -205,19 +205,19 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          Quay lại
+          Quay lại (重置)
         </button>
       </div>
 
       {/* Dòng 2: Bộ lọc */}
       <div className="border-t border-gray-200 pt-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-gray-700">Bộ lọc</h3>
+          <h3 className="text-sm font-bold text-gray-700">Bộ lọc (筛选)</h3>
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="text-sm text-brand-navy hover:underline"
           >
-            {showFilters ? 'Ẩn bộ lọc' : 'Hiện bộ lọc'}
+            {showFilters ? 'Ẩn bộ lọc (隐藏筛选)' : 'Hiện bộ lọc (显示筛选)'}
           </button>
         </div>
 
@@ -225,11 +225,11 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <div className="space-y-4">
             {/* Bộ lọc thời gian */}
             <div className="bg-gray-50 p-3 rounded border border-gray-200">
-              <h4 className="text-xs font-bold text-gray-700 mb-2 uppercase">Lọc theo thời gian</h4>
+              <h4 className="text-xs font-bold text-gray-700 mb-2 uppercase">Lọc theo thời gian (按时间筛选)</h4>
               <div className="space-y-2">
                 {/* Lọc nhanh */}
                 <div>
-                  <label className="text-xs text-gray-600 mb-1 block">Lọc nhanh:</label>
+                  <label className="text-xs text-gray-600 mb-1 block">Lọc nhanh: (快速筛选:)</label>
                   <div className="flex flex-wrap gap-2">
                     {allQuickFilters.map((filter, index) => (
                       <button
@@ -245,7 +245,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 {/* Từ ngày đến ngày */}
                 <div className="flex gap-2 items-end">
                   <div className="flex-1">
-                    <label className="text-xs text-gray-600 mb-1 block">Từ ngày:</label>
+                    <label className="text-xs text-gray-600 mb-1 block">Từ ngày: (从日期:)</label>
                     <input
                       type="date"
                       value={dateFrom}
@@ -254,7 +254,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="text-xs text-gray-600 mb-1 block">Đến ngày:</label>
+                    <label className="text-xs text-gray-600 mb-1 block">Đến ngày: (至日期:)</label>
                     <input
                       type="date"
                       value={dateTo}
@@ -269,33 +269,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             {/* Bộ lọc theo các trường */}
             {filterFields.length > 0 && (
               <div className="bg-gray-50 p-3 rounded border border-gray-200">
-                <h4 className="text-xs font-bold text-gray-700 mb-2 uppercase">Lọc theo trường</h4>
+                <h4 className="text-xs font-bold text-gray-700 mb-2 uppercase">Lọc theo trường (按字段筛选)</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filterFields.map((field) => (
                     <div key={field.key}>
                       <label className="text-xs font-medium text-gray-700 mb-2 block">
                         {field.label}:
                       </label>
-                      {field.type === 'checkbox' && field.options ? (
-                        <div className="space-y-1 max-h-32 overflow-y-auto border border-gray-200 rounded p-2 bg-white">
-                          {field.options.map((option) => (
-                            <label
-                              key={option.value}
-                              className="flex items-center gap-2 text-xs cursor-pointer hover:bg-gray-50 p-1 rounded"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={(selectedFilters[field.key] || []).includes(option.value)}
-                                onChange={(e) =>
-                                  handleCheckboxChange(field.key, option.value, e.target.checked)
-                                }
-                                className="w-4 h-4 text-brand-navy border-gray-300 rounded focus:ring-brand-navy"
-                              />
-                              <span className="text-gray-700">{option.label}</span>
-                            </label>
-                          ))}
-                        </div>
-                      ) : field.type === 'select' && field.options ? (
+                      {(field.type === 'checkbox' || field.type === 'select') && field.options ? (
                         <select
                           multiple
                           value={selectedFilters[field.key] || []}
@@ -303,8 +284,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                             const values = Array.from(e.target.selectedOptions, (option) => option.value);
                             onFilterChange(field.key, values);
                           }}
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:border-brand-navy"
-                          size={4}
+                          className="w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white"
+                          size={Math.min(field.options.length, 6)}
                         >
                           {field.options.map((option) => (
                             <option key={option.value} value={option.value}>

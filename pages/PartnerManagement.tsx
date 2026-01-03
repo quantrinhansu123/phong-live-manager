@@ -172,7 +172,7 @@ export const PartnerManagement: React.FC = () => {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Thêm Đối Tác Mới
+          Thêm Đối Tác Mới (添加新合作伙伴)
         </button>
       </div>
 
@@ -212,13 +212,13 @@ export const PartnerManagement: React.FC = () => {
         filterFields={[
           {
             key: 'types',
-            label: 'Loại đối tác',
+            label: 'Loại đối tác (合作伙伴类型)',
             type: 'checkbox',
             options: partnerTypes.map(type => ({ value: type, label: type }))
           },
           {
             key: 'statuses',
-            label: 'Trạng thái',
+            label: 'Trạng thái (状态)',
             type: 'checkbox',
             options: statuses.map(status => ({ value: status, label: status }))
           }
@@ -265,51 +265,51 @@ export const PartnerManagement: React.FC = () => {
             </button>
 
             <h2 className="text-2xl font-bold text-gray-800 mb-6 uppercase border-b pb-2">
-              Chi Tiết Đối Tác
+              Chi Tiết Đối Tác (合作伙伴详情)
             </h2>
 
             <div className="space-y-6">
               {/* Thông tin cơ bản */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Tên đối tác</p>
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Tên đối tác (合作伙伴名称)</p>
                   <p className="text-lg font-bold text-gray-800">{viewingPartner.name}</p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Mã đối tác</p>
-                  <p className="text-lg font-bold text-gray-800">{viewingPartner.code || 'Chưa có mã'}</p>
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Mã đối tác (合作伙伴代码)</p>
+                  <p className="text-lg font-bold text-gray-800">{viewingPartner.code || 'Chưa có mã (暂无代码)'}</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Loại đối tác</p>
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Loại đối tác (合作伙伴类型)</p>
                   <p className="text-lg font-bold text-gray-800">{viewingPartner.type}</p>
                 </div>
                 <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Trạng thái</p>
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Trạng thái (状态)</p>
                   <span className={`px-3 py-1 rounded text-sm font-bold ${
                     viewingPartner.status === 'Active' 
                       ? 'bg-green-100 text-green-800 border border-green-300' 
                       : 'bg-red-100 text-red-800 border border-red-300'
                   }`}>
-                    {viewingPartner.status === 'Active' ? 'Hoạt động' : 'Ngừng hoạt động'}
+                    {viewingPartner.status === 'Active' ? 'Hoạt động (活跃)' : 'Ngừng hoạt động (暂停)'}
                   </span>
                 </div>
                 <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Người liên hệ</p>
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Người liên hệ (联系人)</p>
                   <p className="text-lg font-bold text-gray-800">{viewingPartner.contactPerson}</p>
                 </div>
                 <div className="bg-pink-50 p-4 rounded-lg border border-pink-200">
-                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Số điện thoại</p>
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Số điện thoại (电话)</p>
                   <p className="text-lg font-bold text-gray-800">{viewingPartner.phoneNumber}</p>
                 </div>
                 {viewingPartner.email && (
                   <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
-                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Email</p>
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Email (邮箱)</p>
                     <p className="text-lg font-bold text-gray-800">{viewingPartner.email}</p>
                   </div>
                 )}
                 {viewingPartner.address && (
                   <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Địa chỉ</p>
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Địa chỉ (地址)</p>
                     <p className="text-lg font-bold text-gray-800">{viewingPartner.address}</p>
                   </div>
                 )}
@@ -317,7 +317,7 @@ export const PartnerManagement: React.FC = () => {
 
               {/* Danh sách cửa hàng */}
               <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-800 mb-4">Danh Sách Cửa Hàng Liên Kết</h3>
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Danh Sách Cửa Hàng Liên Kết (关联店铺列表)</h3>
                 {viewingPartner.storeIds && viewingPartner.storeIds.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {viewingPartner.storeIds.map(storeId => {
@@ -326,21 +326,21 @@ export const PartnerManagement: React.FC = () => {
                         <div key={storeId} className="bg-white p-3 rounded border border-blue-200 flex items-center justify-between">
                           <span className="font-medium text-gray-800">{store.name}</span>
                           <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs border border-blue-300">
-                            Liên kết
+                            Liên kết (关联)
                           </span>
                         </div>
                       ) : null;
                     })}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center py-4">Chưa có cửa hàng nào được liên kết</p>
+                  <p className="text-gray-500 text-center py-4">Chưa có cửa hàng nào được liên kết (暂无关联店铺)</p>
                 )}
               </div>
 
               {/* Ghi chú */}
               {viewingPartner.notes && (
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">Ghi chú</h3>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Ghi chú (备注)</h3>
                   <p className="text-gray-700 whitespace-pre-wrap">{viewingPartner.notes}</p>
                 </div>
               )}
@@ -351,7 +351,7 @@ export const PartnerManagement: React.FC = () => {
                 onClick={() => setViewingPartner(null)} 
                 className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50"
               >
-                Đóng
+                Đóng (关闭)
               </button>
               <button
                 onClick={() => {
@@ -361,7 +361,7 @@ export const PartnerManagement: React.FC = () => {
                 }}
                 className="px-6 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy"
               >
-                Sửa
+                Sửa (编辑)
               </button>
             </div>
           </div>
@@ -377,11 +377,11 @@ export const PartnerManagement: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Xác nhận xóa?</h3>
-            <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa đối tác này không? Hành động này không thể hoàn tác.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Xác nhận xóa? (确认删除?)</h3>
+            <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa đối tác này không? Hành động này không thể hoàn tác. (您确定要删除此合作伙伴吗? 此操作无法撤销。)</p>
             <div className="flex justify-center gap-3">
-              <button onClick={() => setPartnerToDelete(null)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-gray-800">Hủy</button>
-              <button onClick={() => handleDeletePartner(partnerToDelete)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Xóa</button>
+              <button onClick={() => setPartnerToDelete(null)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-gray-800">Hủy (取消)</button>
+              <button onClick={() => handleDeletePartner(partnerToDelete)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Xóa (删除)</button>
             </div>
           </div>
         </div>
@@ -390,30 +390,30 @@ export const PartnerManagement: React.FC = () => {
       {/* Partners Table */}
       <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-bold text-gray-800">Danh Sách Đối Tác ({filteredPartners.length} đối tác)</h3>
+          <h3 className="text-lg font-bold text-gray-800">Danh Sách Đối Tác (合作伙伴列表) ({filteredPartners.length} đối tác)</h3>
         </div>
         {isLoading ? (
-          <div className="p-8 text-center text-gray-500">Đang tải dữ liệu...</div>
+          <div className="p-8 text-center text-gray-500">Đang tải dữ liệu... (正在加载数据...)</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-xs text-white uppercase bg-brand-navy border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left">Tên đối tác</th>
-                  <th className="px-4 py-3 text-left">Mã</th>
-                  <th className="px-4 py-3 text-left">Loại</th>
-                  <th className="px-4 py-3 text-left">Người liên hệ</th>
-                  <th className="px-4 py-3 text-left">Số điện thoại</th>
-                  <th className="px-4 py-3 text-left">Email</th>
-                  <th className="px-4 py-3 text-left">Trạng thái</th>
-                  <th className="px-4 py-3 text-center">Thao tác</th>
+                  <th className="px-4 py-3 text-left">Tên đối tác (合作伙伴名称)</th>
+                  <th className="px-4 py-3 text-left">Mã (代码)</th>
+                  <th className="px-4 py-3 text-left">Loại (类型)</th>
+                  <th className="px-4 py-3 text-left">Người liên hệ (联系人)</th>
+                  <th className="px-4 py-3 text-left">Số điện thoại (电话)</th>
+                  <th className="px-4 py-3 text-left">Email (邮箱)</th>
+                  <th className="px-4 py-3 text-left">Trạng thái (状态)</th>
+                  <th className="px-4 py-3 text-center">Thao tác (操作)</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredPartners.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-8 text-center text-gray-400">
-                      Chưa có đối tác nào
+                      Chưa có đối tác nào (暂无合作伙伴)
                     </td>
                   </tr>
                 ) : (
@@ -453,7 +453,7 @@ export const PartnerManagement: React.FC = () => {
                             ? 'bg-green-100 text-green-800 border border-green-300' 
                             : 'bg-red-100 text-red-800 border border-red-300'
                         }`}>
-                          {partner.status === 'Active' ? 'Hoạt động' : 'Ngừng hoạt động'}
+                          {partner.status === 'Active' ? 'Hoạt động (活跃)' : 'Ngừng hoạt động (暂停)'}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -463,9 +463,9 @@ export const PartnerManagement: React.FC = () => {
                               setViewingPartner(partner);
                             }}
                             className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
-                            title="Xem"
+                            title="Xem (查看)"
                           >
-                            Xem
+                            查看
                           </button>
                           <button
                             onClick={() => {
@@ -473,16 +473,16 @@ export const PartnerManagement: React.FC = () => {
                               setIsModalOpen(true);
                             }}
                             className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
-                            title="Sửa"
+                            title="Sửa (编辑)"
                           >
-                            Sửa
+                            编辑
                           </button>
                           <button
                             onClick={() => partner.id && setPartnerToDelete(partner.id)}
                             className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
-                            title="Xóa"
+                            title="Xóa (删除)"
                           >
-                            Xóa
+                            删除
                           </button>
                         </div>
                       </td>
@@ -633,13 +633,13 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
         </button>
 
         <h2 className="text-xl font-bold text-gray-800 mb-6 uppercase border-b pb-2">
-          {initialData ? 'Cập nhật Đối Tác' : 'Thêm Đối Tác Mới'}
+          {initialData ? 'Cập nhật Đối Tác (更新合作伙伴)' : 'Thêm Đối Tác Mới (添加新合作伙伴)'}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Tên đối tác *</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Tên đối tác * (合作伙伴名称 *)</label>
               <input
                 required
                 type="text"
@@ -650,7 +650,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Loại đối tác *</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Loại đối tác * (合作伙伴类型 *)</label>
               <select
                 required
                 name="type"
@@ -658,14 +658,14 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
                 onChange={handleChange}
                 className="w-full border rounded px-3 py-2 bg-white focus:ring-brand-navy focus:border-brand-navy"
               >
-                <option value="Supplier">Nhà cung cấp</option>
-                <option value="Service">Dịch vụ</option>
-                <option value="Platform">Nền tảng</option>
-                <option value="Other">Khác</option>
+                <option value="Supplier">Nhà cung cấp (供应商)</option>
+                <option value="Service">Dịch vụ (服务)</option>
+                <option value="Platform">Nền tảng (平台)</option>
+                <option value="Other">Khác (其他)</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Trạng thái *</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Trạng thái * (状态 *)</label>
               <select
                 required
                 name="status"
@@ -673,12 +673,12 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
                 onChange={handleChange}
                 className="w-full border rounded px-3 py-2 bg-white focus:ring-brand-navy focus:border-brand-navy"
               >
-                <option value="Active">Hoạt động</option>
-                <option value="Inactive">Ngừng hoạt động</option>
+                <option value="Active">Hoạt động (活跃)</option>
+                <option value="Inactive">Ngừng hoạt động (暂停)</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Người liên hệ *</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Người liên hệ * (联系人 *)</label>
               <input
                 required
                 type="text"
@@ -689,7 +689,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Số điện thoại *</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Số điện thoại * (电话 *)</label>
               <input
                 required
                 type="tel"
@@ -700,20 +700,20 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Email (Tài khoản) *</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Email (Tài khoản) * (邮箱 (账号) *)</label>
               <input
                 required
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Email sẽ được dùng làm tài khoản đăng nhập"
+                placeholder="Email sẽ được dùng làm tài khoản đăng nhập (邮箱将用作登录账号)"
                 className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
               />
             </div>
             {!initialData && (
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Mật khẩu</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Mật khẩu (密码)</label>
                 <input
                   type="password"
                   name="password"
@@ -721,14 +721,14 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
                   onChange={(e) => {
                     setFormData(prev => ({ ...prev, password: e.target.value } as any));
                   }}
-                  placeholder="Để trống để tự động tạo mật khẩu"
+                  placeholder="Để trống để tự động tạo mật khẩu (留空以自动生成密码)"
                   className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
                 />
-                <p className="text-xs text-gray-500 mt-1">Nếu để trống, mật khẩu sẽ được tự động tạo</p>
+                <p className="text-xs text-gray-500 mt-1">Nếu để trống, mật khẩu sẽ được tự động tạo (如果留空，密码将自动生成)</p>
               </div>
             )}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Địa chỉ</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Địa chỉ (地址)</label>
               <input
                 type="text"
                 name="address"
@@ -738,7 +738,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-gray-700 mb-1">Cửa hàng liên kết</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Cửa hàng liên kết (关联店铺)</label>
               <div className="space-y-3">
                 {/* Searchable input để tìm và chọn cửa hàng */}
                 <div className="relative">
@@ -754,7 +754,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
                       // Delay để cho phép click vào item
                       setTimeout(() => setShowStoreDropdown(false), 200);
                     }}
-                    placeholder="Gõ để tìm cửa hàng..."
+                    placeholder="Gõ để tìm cửa hàng... (输入搜索店铺...)"
                     className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
                   />
                   {/* Dropdown list khi focus hoặc có text */}
@@ -777,7 +777,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
                   )}
                   {showStoreDropdown && storeSearchText && filteredAvailableStores.length === 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg p-3">
-                      <p className="text-sm text-gray-500">Không tìm thấy cửa hàng nào</p>
+                      <p className="text-sm text-gray-500">Không tìm thấy cửa hàng nào (未找到店铺)</p>
                     </div>
                   )}
                 </div>
@@ -785,7 +785,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
                 {/* Danh sách cửa hàng đã chọn */}
                 {formData.storeIds && formData.storeIds.length > 0 && (
                   <div className="border rounded p-3 bg-gray-50 max-h-40 overflow-y-auto">
-                    <p className="text-xs text-gray-600 mb-2 font-medium">Cửa hàng đã chọn:</p>
+                    <p className="text-xs text-gray-600 mb-2 font-medium">Cửa hàng đã chọn: (已选店铺:)</p>
                     <div className="space-y-1">
                       {formData.storeIds.map(storeId => {
                         const store = stores.find(s => s.id === storeId);
@@ -797,7 +797,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
                               onClick={() => handleRemoveStore(storeId)}
                               className="text-red-600 hover:text-red-800 text-xs px-2 py-1 hover:bg-red-50 rounded"
                             >
-                              Xóa
+                              删除
                             </button>
                           </div>
                         ) : null;
@@ -809,7 +809,7 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Ghi chú</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Ghi chú (备注)</label>
             <textarea
               name="notes"
               value={formData.notes}
@@ -821,14 +821,14 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
 
           <div className="pt-4 border-t flex justify-end gap-3">
             <button type="button" onClick={onClose} className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50">
-              Hủy
+              取消
             </button>
             <button
               type="submit"
               disabled={loading}
               className="px-8 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy disabled:opacity-50"
             >
-              {loading ? 'Đang lưu...' : initialData ? 'Cập nhật' : 'Thêm mới'}
+              {loading ? 'Đang lưu... (正在保存...)' : initialData ? 'Cập nhật (更新)' : 'Thêm mới (新增)'}
             </button>
           </div>
         </form>

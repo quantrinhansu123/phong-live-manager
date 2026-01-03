@@ -407,7 +407,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                       {/* GMV & Chi phí QC theo thời gian */}
                       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                         <div className="p-4 bg-gray-50 border-b border-gray-200">
-                          <h4 className="font-bold text-gray-800">GMV & Chi phí QC Theo Thời Gian</h4>
+                          <h4 className="font-bold text-gray-800">GMV & Chi phí QC Theo Thời Gian (GMV和广告费时间图表)</h4>
                         </div>
                         <div className="p-4">
                           <ResponsiveContainer width="100%" height={300}>
@@ -429,11 +429,11 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                                   }
                                   return value.toLocaleString();
                                 }}
-                                labelFormatter={(label) => `Ngày: ${formatDate(label)}`}
+                                labelFormatter={(label) => `Ngày (日期): ${formatDate(label)}`}
                               />
                               <Legend />
-                              <Bar yAxisId="left" dataKey="gmv" name="GMV" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                              <Bar yAxisId="left" dataKey="adCost" name="Chi phí QC" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                              <Bar yAxisId="left" dataKey="gmv" name="GMV (交易额)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                              <Bar yAxisId="left" dataKey="adCost" name="Chi phí QC (广告费)" fill="#ef4444" radius={[4, 4, 0, 0]} />
                             </ComposedChart>
                           </ResponsiveContainer>
                         </div>
@@ -442,7 +442,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                       {/* ROI theo thời gian */}
                       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                         <div className="p-4 bg-gray-50 border-b border-gray-200">
-                          <h4 className="font-bold text-gray-800">ROI Theo Thời Gian</h4>
+                          <h4 className="font-bold text-gray-800">ROI Theo Thời Gian (ROI时间图表)</h4>
                         </div>
                         <div className="p-4">
                           <ResponsiveContainer width="100%" height={300}>
@@ -458,10 +458,10 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                               <YAxis />
                               <Tooltip 
                                 formatter={(value: number) => `${value.toFixed(1)}%`}
-                                labelFormatter={(label) => `Ngày: ${formatDate(label)}`}
+                                labelFormatter={(label) => `Ngày (日期): ${formatDate(label)}`}
                               />
                               <Legend />
-                              <Line type="monotone" dataKey="roi" name="ROI (%)" stroke="#10b981" strokeWidth={2} />
+                              <Line type="monotone" dataKey="roi" name="ROI (%) (投资回报率)" stroke="#10b981" strokeWidth={2} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
@@ -470,7 +470,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                       {/* Đơn hàng theo thời gian */}
                       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                         <div className="p-4 bg-gray-50 border-b border-gray-200">
-                          <h4 className="font-bold text-gray-800">Đơn Hàng Theo Thời Gian</h4>
+                          <h4 className="font-bold text-gray-800">Đơn Hàng Theo Thời Gian (订单时间图表)</h4>
                         </div>
                         <div className="p-4">
                           <ResponsiveContainer width="100%" height={300}>
@@ -486,10 +486,10 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                               <YAxis />
                               <Tooltip 
                                 formatter={(value: number) => value.toLocaleString()}
-                                labelFormatter={(label) => `Ngày: ${formatDate(label)}`}
+                                labelFormatter={(label) => `Ngày (日期): ${formatDate(label)}`}
                               />
                               <Legend />
-                              <Line type="monotone" dataKey="orders" name="Số đơn hàng" stroke="#8b5cf6" strokeWidth={2} />
+                              <Line type="monotone" dataKey="orders" name="Số đơn hàng (订单数)" stroke="#8b5cf6" strokeWidth={2} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
@@ -498,7 +498,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                       {/* Giá trị đơn TB theo thời gian */}
                       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                         <div className="p-4 bg-gray-50 border-b border-gray-200">
-                          <h4 className="font-bold text-gray-800">Giá Trị Đơn TB Theo Thời Gian</h4>
+                          <h4 className="font-bold text-gray-800">Giá Trị Đơn TB Theo Thời Gian (平均订单价值时间图表)</h4>
                         </div>
                         <div className="p-4">
                           <ResponsiveContainer width="100%" height={300}>
@@ -514,10 +514,10 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                               <YAxis />
                               <Tooltip 
                                 formatter={(value: number) => formatCurrency(value)}
-                                labelFormatter={(label) => `Ngày: ${formatDate(label)}`}
+                                labelFormatter={(label) => `Ngày (日期): ${formatDate(label)}`}
                               />
                               <Legend />
-                              <Line type="monotone" dataKey="avgOrderValue" name="Giá trị đơn TB" stroke="#f59e0b" strokeWidth={2} />
+                              <Line type="monotone" dataKey="avgOrderValue" name="Giá trị đơn TB (平均订单价值)" stroke="#f59e0b" strokeWidth={2} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
@@ -526,7 +526,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                       {/* Lượt xem & Người xem Live theo thời gian */}
                       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                         <div className="p-4 bg-gray-50 border-b border-gray-200">
-                          <h4 className="font-bold text-gray-800">Lượt Xem & Người Xem Live Theo Thời Gian</h4>
+                          <h4 className="font-bold text-gray-800">Lượt Xem & Người Xem Live Theo Thời Gian (直播观看和观看者时间图表)</h4>
                         </div>
                         <div className="p-4">
                           <ResponsiveContainer width="100%" height={300}>
@@ -543,11 +543,11 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                               <YAxis yAxisId="right" orientation="right" />
                               <Tooltip 
                                 formatter={(value: number) => value.toLocaleString()}
-                                labelFormatter={(label) => `Ngày: ${formatDate(label)}`}
+                                labelFormatter={(label) => `Ngày (日期): ${formatDate(label)}`}
                               />
                               <Legend />
-                              <Bar yAxisId="left" dataKey="totalViews" name="Tổng lượt xem Live" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                              <Line yAxisId="right" type="monotone" dataKey="totalViewers" name="Người xem Live" stroke="#10b981" strokeWidth={2} />
+                              <Bar yAxisId="left" dataKey="totalViews" name="Tổng lượt xem Live (总直播观看)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                              <Line yAxisId="right" type="monotone" dataKey="totalViewers" name="Người xem Live (直播观看者)" stroke="#10b981" strokeWidth={2} />
                             </ComposedChart>
                           </ResponsiveContainer>
                         </div>
@@ -556,7 +556,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                       {/* Số báo cáo theo thời gian */}
                       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                         <div className="p-4 bg-gray-50 border-b border-gray-200">
-                          <h4 className="font-bold text-gray-800">Số Báo Cáo Theo Thời Gian</h4>
+                          <h4 className="font-bold text-gray-800">Số Báo Cáo Theo Thời Gian (报告数量时间图表)</h4>
                         </div>
                         <div className="p-4">
                           <ResponsiveContainer width="100%" height={300}>
@@ -572,10 +572,10 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                               <YAxis />
                               <Tooltip 
                                 formatter={(value: number) => value.toLocaleString()}
-                                labelFormatter={(label) => `Ngày: ${formatDate(label)}`}
+                                labelFormatter={(label) => `Ngày (日期): ${formatDate(label)}`}
                               />
                               <Legend />
-                              <Bar dataKey="reportCount" name="Số báo cáo" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="reportCount" name="Số báo cáo (报告数)" fill="#6366f1" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         </div>

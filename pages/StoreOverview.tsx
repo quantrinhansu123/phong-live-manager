@@ -133,7 +133,7 @@ export const StoreOverviewPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Đang tải dữ liệu...</div>
+        <div className="text-gray-500">Đang tải dữ liệu... (正在加载数据...)</div>
       </div>
     );
   }
@@ -152,14 +152,14 @@ export const StoreOverviewPage: React.FC = () => {
     <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800 uppercase">Tổng Quan Tất Cả Cửa Hàng</h2>
+        <h2 className="text-2xl font-bold text-gray-800 uppercase">Tổng Quan Tất Cả Cửa Hàng (所有店铺总览)</h2>
         <div className="flex gap-2 flex-wrap items-center">
           <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-2 bg-white">
             <button
               onClick={handleSelectAll}
                 className="text-sm font-medium text-brand-navy hover:underline"
             >
-              {selectedStores.length === stores.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+              {selectedStores.length === stores.length ? 'Bỏ chọn tất cả (取消全选)' : 'Chọn tất cả (全选)'}
             </button>
           </div>
           <input
@@ -168,7 +168,7 @@ export const StoreOverviewPage: React.FC = () => {
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
           />
-          <span className="text-gray-600">đến</span>
+          <span className="text-gray-600">đến (至)</span>
           <input
             type="date"
             className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
@@ -180,7 +180,7 @@ export const StoreOverviewPage: React.FC = () => {
 
       {/* Store Selection */}
       <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-        <h3 className="text-sm font-bold text-gray-800 mb-3">Chọn cửa hàng:</h3>
+        <h3 className="text-sm font-bold text-gray-800 mb-3">Chọn cửa hàng: (选择店铺:)</h3>
         <div className="flex flex-wrap gap-2">
           {stores.map(store => (
             <label key={store.id} className="flex items-center gap-2 cursor-pointer">
@@ -199,23 +199,23 @@ export const StoreOverviewPage: React.FC = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-blue-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV (总GMV)</p>
           <p className="text-xl font-bold text-blue-600 mt-1">{formatCurrency(totalGMV)}</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-red-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC (总广告费)</p>
           <p className="text-xl font-bold text-red-600 mt-1">{formatCurrency(totalAdCost)}</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">ROI Trung Bình</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">ROI Trung Bình (平均ROI)</p>
           <p className="text-xl font-bold text-green-600 mt-1">{avgROI.toFixed(1)}%</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Đơn Hàng</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Đơn Hàng (总订单)</p>
           <p className="text-xl font-bold text-purple-600 mt-1">{totalOrders.toLocaleString()}</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-orange-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Lượt Xem</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Lượt Xem (总浏览量)</p>
           <p className="text-xl font-bold text-orange-600 mt-1">{totalViews.toLocaleString()}</p>
         </div>
       </div>
@@ -224,7 +224,7 @@ export const StoreOverviewPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* GMV by Store */}
         <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">GMV Theo Cửa Hàng</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">GMV Theo Cửa Hàng (按店铺GMV)</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -233,14 +233,14 @@ export const StoreOverviewPage: React.FC = () => {
               <Tooltip formatter={(value: number) => formatCurrency(value)} />
               <Legend />
               <Bar dataKey="gmv" name="GMV" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="adCost" name="Chi phí QC" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="adCost" name="Chi phí QC (广告费)" fill="#ef4444" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         {/* ROI by Store */}
         <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">ROI Theo Cửa Hàng</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">ROI Theo Cửa Hàng (按店铺ROI)</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -255,7 +255,7 @@ export const StoreOverviewPage: React.FC = () => {
 
         {/* GMV Distribution */}
         <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Phân Bố GMV</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Phân Bố GMV (GMV分布)</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -279,7 +279,7 @@ export const StoreOverviewPage: React.FC = () => {
 
         {/* Orders by Store */}
         <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Đơn Hàng Theo Cửa Hàng</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Đơn Hàng Theo Cửa Hàng (按店铺订单)</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -287,7 +287,7 @@ export const StoreOverviewPage: React.FC = () => {
               <YAxis />
               <Tooltip formatter={(value: number) => value.toLocaleString()} />
               <Legend />
-              <Bar dataKey="orders" name="Số đơn hàng" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="orders" name="Số đơn hàng (订单数)" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -296,28 +296,28 @@ export const StoreOverviewPage: React.FC = () => {
       {/* Store Overview Table */}
       <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-bold text-gray-800">Chi Tiết Cửa Hàng</h3>
+          <h3 className="text-lg font-bold text-gray-800">Chi Tiết Cửa Hàng (店铺详情)</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-brand-navy text-white border-b">
               <tr>
-                <th className="px-4 py-3 text-left">Cửa hàng</th>
-                <th className="px-4 py-3 text-right">Tổng GMV</th>
-                <th className="px-4 py-3 text-right">Chi phí QC</th>
-                <th className="px-4 py-3 text-right">Lợi nhuận</th>
-                <th className="px-4 py-3 text-right">ROI</th>
-                <th className="px-4 py-3 text-right">Tỉ lệ chuyển đổi</th>
-                <th className="px-4 py-3 text-right">Đơn hàng</th>
-                <th className="px-4 py-3 text-right">Lượt xem</th>
-                <th className="px-4 py-3 text-center">Số báo cáo</th>
+                <th className="px-4 py-3 text-left">Cửa hàng (店铺)</th>
+                <th className="px-4 py-3 text-right">Tổng GMV (总GMV)</th>
+                <th className="px-4 py-3 text-right">Chi phí QC (广告费)</th>
+                <th className="px-4 py-3 text-right">Lợi nhuận (利润)</th>
+                <th className="px-4 py-3 text-right">ROI (投资回报率)</th>
+                <th className="px-4 py-3 text-right">Tỉ lệ chuyển đổi (转化率)</th>
+                <th className="px-4 py-3 text-right">Đơn hàng (订单)</th>
+                <th className="px-4 py-3 text-right">Lượt xem (浏览量)</th>
+                <th className="px-4 py-3 text-center">Số báo cáo (报告数)</th>
               </tr>
             </thead>
             <tbody>
               {storeOverviews.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
-                    Chưa có dữ liệu
+                    Chưa có dữ liệu (暂无数据)
                   </td>
                 </tr>
               ) : (

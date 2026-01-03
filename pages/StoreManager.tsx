@@ -246,7 +246,7 @@ export const StoreManager: React.FC = () => {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    Thêm Cửa Hàng Mới
+                    Thêm Cửa Hàng Mới (添加新店铺)
                 </button>
                     </div>
 
@@ -284,16 +284,16 @@ export const StoreManager: React.FC = () => {
                 filterFields={[
                     {
                         key: 'storeTypes',
-                        label: 'Loại cửa hàng',
+                        label: 'Loại cửa hàng (店铺类型)',
                         type: 'checkbox',
                         options: [
-                            { value: 'own', label: 'Của mình' },
-                            { value: 'partner', label: 'Đối tác phụ trách' }
+                            { value: 'own', label: 'Của mình (自己的)' },
+                            { value: 'partner', label: 'Đối tác phụ trách (合作伙伴负责)' }
                         ]
                     },
                     {
                         key: 'partners',
-                        label: 'Đối tác',
+                        label: 'Đối tác (合作伙伴)',
                         type: 'checkbox',
                         options: partners.map(p => ({ value: p.id || '', label: p.name }))
                     }
@@ -315,22 +315,22 @@ export const StoreManager: React.FC = () => {
                     <table className="w-full text-sm">
                         <thead className="text-xs text-white uppercase bg-brand-navy border-b">
                             <tr>
-                                <th className="px-4 py-3 text-left">Tên cửa hàng</th>
-                                <th className="px-4 py-3 text-left">Loại</th>
-                                <th className="px-4 py-3 text-left">Đối tác</th>
-                                <th className="px-4 py-3 text-left">Nhân sự phụ trách</th>
-                                <th className="px-4 py-3 text-center">Thao tác</th>
+                                <th className="px-4 py-3 text-left">Tên cửa hàng (店铺名称)</th>
+                                <th className="px-4 py-3 text-left">Loại (类型)</th>
+                                <th className="px-4 py-3 text-left">Đối tác (合作伙伴)</th>
+                                <th className="px-4 py-3 text-left">Nhân sự phụ trách (负责人事)</th>
+                                <th className="px-4 py-3 text-center">Thao tác (操作)</th>
                             </tr>
                         </thead>
                         <tbody>
                             {/* Store Rows */}
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={5} className="py-8 text-center text-gray-500">Đang tải...</td>
+                                    <td colSpan={5} className="py-8 text-center text-gray-500">Đang tải... (正在加载...)</td>
                                 </tr>
                             ) : filteredStores.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="py-8 text-center text-gray-400">Chưa có cửa hàng nào</td>
+                                    <td colSpan={5} className="py-8 text-center text-gray-400">Chưa có cửa hàng nào (暂无店铺)</td>
                                 </tr>
                             ) : (
                                 filteredStores.map(store => (
@@ -342,7 +342,7 @@ export const StoreManager: React.FC = () => {
                                                     ? 'bg-green-100 text-green-800 border border-green-300' 
                                                     : 'bg-blue-100 text-blue-800 border border-blue-300'
                                             }`}>
-                                                {store.storeType === 'own' ? 'Của mình' : 'Đối tác phụ trách'}
+                                                {store.storeType === 'own' ? 'Của mình (自己的)' : 'Đối tác phụ trách (合作伙伴负责)'}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-gray-600">
@@ -371,23 +371,23 @@ export const StoreManager: React.FC = () => {
                                         <button
                                                     onClick={() => handleStoreClick(store)}
                                             className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
-                                            title="Xem chi tiết"
+                                            title="Xem chi tiết (查看详情)"
                                         >
-                                                    Xem
+                                                    Xem (查看)
                                         </button>
                                         <button
                                                     onClick={() => handleStartEdit(store)}
                                             className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
-                                            title="Sửa"
+                                            title="Sửa (编辑)"
                                         >
-                                                    Sửa
+                                                    Sửa (编辑)
                                         </button>
                                         <button
                                             onClick={(e) => handleDeleteStore(store.id, e)}
                                             className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
-                                            title="Xóa"
+                                            title="Xóa (删除)"
                                         >
-                                                    Xóa
+                                                    Xóa (删除)
                                         </button>
                                     </div>
                                         </td>
@@ -413,41 +413,41 @@ export const StoreManager: React.FC = () => {
                         </button>
 
                         <h2 className="text-xl font-bold text-gray-800 mb-6 uppercase border-b pb-2">
-                            {editingStore ? 'Sửa Cửa Hàng' : 'Thêm Cửa Hàng Mới'}
+                            {editingStore ? 'Sửa Cửa Hàng (编辑店铺)' : 'Thêm Cửa Hàng Mới (添加新店铺)'}
                         </h2>
 
                         <form onSubmit={(e) => { e.preventDefault(); editingStore ? handleUpdateStore() : handleAddStore(); }} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Tên cửa hàng *</label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Tên cửa hàng * (店铺名称 *)</label>
                                 <input 
                                     required
                                     type="text" 
                                     value={newStoreName}
                                     onChange={(e) => setNewStoreName(e.target.value)}
-                                    placeholder="Nhập tên cửa hàng"
+                                    placeholder="Nhập tên cửa hàng (输入店铺名称)"
                                     className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
                                     autoFocus
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Loại</label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Loại (类型)</label>
                                 <select
                                     value={newStoreType}
                                     onChange={(e) => setNewStoreType(e.target.value as 'own' | 'partner')}
                                     className="w-full border rounded px-3 py-2 bg-white focus:ring-brand-navy focus:border-brand-navy"
                                 >
-                                    <option value="own">Của mình</option>
-                                    <option value="partner">Đối tác phụ trách</option>
+                                    <option value="own">Của mình (自己的)</option>
+                                    <option value="partner">Đối tác phụ trách (合作伙伴负责)</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Đối tác</label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Đối tác (合作伙伴)</label>
                                 <select
                                     value={newStorePartnerId}
                                     onChange={(e) => setNewStorePartnerId(e.target.value)}
                                     className="w-full border rounded px-3 py-2 bg-white focus:ring-brand-navy focus:border-brand-navy"
                                 >
-                                    <option value="">-- Chọn đối tác --</option>
+                                    <option value="">-- Chọn đối tác (选择合作伙伴) --</option>
                                     {partners.map(partner => (
                                         <option key={partner.id} value={partner.id}>
                                             {partner.name}
@@ -456,7 +456,7 @@ export const StoreManager: React.FC = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Nhân sự phụ trách</label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Nhân sự phụ trách (负责人事)</label>
                                 <div className="space-y-3">
                                     {/* Searchable input để tìm và chọn nhân sự */}
                                     <div className="relative">
@@ -472,7 +472,7 @@ export const StoreManager: React.FC = () => {
                                                 // Delay để cho phép click vào item
                                                 setTimeout(() => setShowPersonnelDropdown(false), 200);
                                             }}
-                                            placeholder="Gõ để tìm nhân sự..."
+                                            placeholder="Gõ để tìm nhân sự... (输入以查找人员...)"
                                             className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
                                         />
                                         {/* Dropdown list khi focus hoặc có text */}
@@ -496,7 +496,7 @@ export const StoreManager: React.FC = () => {
                                         )}
                                         {showPersonnelDropdown && personnelSearchText && filteredPersonnel.length === 0 && (
                                             <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg p-3">
-                                                <p className="text-sm text-gray-500">Không tìm thấy nhân sự nào</p>
+                                                <p className="text-sm text-gray-500">Không tìm thấy nhân sự nào (未找到人员)</p>
                                             </div>
                                         )}
                                     </div>
@@ -504,7 +504,7 @@ export const StoreManager: React.FC = () => {
                                     {/* Danh sách nhân sự đã chọn */}
                                     {newStorePersonnelIds.length > 0 && (
                                         <div className="border rounded p-3 bg-gray-50 max-h-40 overflow-y-auto">
-                                            <p className="text-xs text-gray-600 mb-2 font-medium">Nhân sự đã chọn:</p>
+                                            <p className="text-xs text-gray-600 mb-2 font-medium">Nhân sự đã chọn: (已选人员:)</p>
                                             <div className="space-y-1">
                                                 {newStorePersonnelIds.map(personnelId => {
                                                     const person = personnel.find(p => p.id === personnelId);
@@ -519,7 +519,7 @@ export const StoreManager: React.FC = () => {
                                                                 onClick={() => handleRemovePersonnel(personnelId)}
                                                                 className="text-red-600 hover:text-red-800 text-xs px-2 py-1 hover:bg-red-50 rounded"
                                     >
-                                                                Xóa
+                                                                删除
                                     </button>
                                                         </div>
                                                     ) : null;
@@ -536,13 +536,13 @@ export const StoreManager: React.FC = () => {
                                     onClick={handleCancelEdit} 
                                     className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50"
                                 >
-                                    Hủy
+                                    取消
                                 </button>
                                 <button
                                     type="submit"
                                     className="px-8 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy"
                                 >
-                                    {editingStore ? 'Cập nhật' : 'Thêm mới'}
+                                    {editingStore ? 'Cập nhật (更新)' : 'Thêm mới (添加)'}
                                 </button>
                             </div>
                         </form>

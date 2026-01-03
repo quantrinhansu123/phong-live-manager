@@ -179,7 +179,7 @@ export const SalaryReport: React.FC = () => {
   if (isLoading) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Đang tải dữ liệu...</div>
+        <div className="text-gray-500">Đang tải dữ liệu... (正在加载数据...)</div>
       </div>
     );
   }
@@ -188,9 +188,9 @@ export const SalaryReport: React.FC = () => {
     <div className="p-6 bg-gray-50 min-h-screen w-screen font-sans space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800 uppercase">Báo Cáo Doanh Số / Lương</h2>
+        <h2 className="text-2xl font-bold text-gray-800 uppercase">Báo Cáo Doanh Số / Lương (营收/工资报告)</h2>
         <div className="flex gap-2 items-center">
-          <label className="text-sm font-medium text-gray-700">Tháng:</label>
+          <label className="text-sm font-medium text-gray-700">Tháng: (月份:)</label>
           <input
             type="month"
             className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
@@ -203,44 +203,44 @@ export const SalaryReport: React.FC = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-blue-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV (总GMV)</p>
           <p className="text-xl font-bold text-blue-600 mt-1">
             {formatCurrency(salaryData.reduce((sum, item) => sum + item.totalGMV, 0))}
           </p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-red-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC (总广告费)</p>
           <p className="text-xl font-bold text-red-600 mt-1">
             {formatCurrency(salaryData.reduce((sum, item) => sum + item.totalAdCost, 0))}
           </p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Lợi Nhuận</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Lợi Nhuận (总利润)</p>
           <p className="text-xl font-bold text-green-600 mt-1">
             {formatCurrency(salaryData.reduce((sum, item) => sum + item.profit, 0))}
           </p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Số Nhân Viên</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Số Nhân Viên (员工人数)</p>
           <p className="text-xl font-bold text-purple-600 mt-1">{salaryData.length}</p>
         </div>
       </div>
 
       {/* Legend */}
       <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-        <h3 className="text-sm font-bold text-gray-800 mb-3">Chú thích màu sắc:</h3>
+        <h3 className="text-sm font-bold text-gray-800 mb-3">Chú thích màu sắc: (颜色说明:)</h3>
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-green-100 border-2 border-green-300"></div>
-            <span className="text-sm text-gray-700">Xanh: Tốt (KPI ≥ 100% hoặc ROI ≥ 400%)</span>
+            <span className="text-sm text-gray-700">Xanh: Tốt (绿色: 良好) (KPI ≥ 100% hoặc ROI ≥ 400%)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-yellow-100 border-2 border-yellow-300"></div>
-            <span className="text-sm text-gray-700">Vàng: Khá (KPI ≥ 80% hoặc ROI ≥ 200%)</span>
+            <span className="text-sm text-gray-700">Vàng: Khá (黄色: 一般) (KPI ≥ 80% hoặc ROI ≥ 200%)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-red-100 border-2 border-red-300"></div>
-            <span className="text-sm text-gray-700">Đỏ: Cần cải thiện (KPI &lt; 80% hoặc ROI &lt; 200%)</span>
+            <span className="text-sm text-gray-700">Đỏ: Cần cải thiện (红色: 需改进) (KPI &lt; 80% hoặc ROI &lt; 200%)</span>
           </div>
         </div>
       </div>
@@ -248,31 +248,31 @@ export const SalaryReport: React.FC = () => {
       {/* Salary Report Table */}
       <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-bold text-gray-800">Chi Tiết Doanh Số / Lương</h3>
+          <h3 className="text-lg font-bold text-gray-800">Chi Tiết Doanh Số / Lương (营收/工资详情)</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-brand-navy text-white border-b">
               <tr>
-                <th className="px-4 py-3 text-left">Nhân viên</th>
-                <th className="px-4 py-3 text-left">Phòng ban</th>
-                <th className="px-4 py-3 text-right">Lương cứng</th>
-                <th className="px-4 py-3 text-right">Mục tiêu KPI</th>
-                <th className="px-4 py-3 text-right">Tổng GMV</th>
-                <th className="px-4 py-3 text-right">Chi phí QC</th>
-                <th className="px-4 py-3 text-right">Lợi nhuận</th>
-                <th className="px-4 py-3 text-right">ROI</th>
-                <th className="px-4 py-3 text-center">Đạt KPI</th>
-                <th className="px-4 py-3 text-center">Trạng thái KPI</th>
-                <th className="px-4 py-3 text-center">Trạng thái Lương</th>
-                <th className="px-4 py-3 text-center">Số báo cáo</th>
+                <th className="px-4 py-3 text-left">Nhân viên (员工)</th>
+                <th className="px-4 py-3 text-left">Phòng ban (部门)</th>
+                <th className="px-4 py-3 text-right">Lương cứng (固定工资)</th>
+                <th className="px-4 py-3 text-right">Mục tiêu KPI (KPI目标)</th>
+                <th className="px-4 py-3 text-right">Tổng GMV (总GMV)</th>
+                <th className="px-4 py-3 text-right">Chi phí QC (广告费)</th>
+                <th className="px-4 py-3 text-right">Lợi nhuận (利润)</th>
+                <th className="px-4 py-3 text-right">ROI (投资回报率)</th>
+                <th className="px-4 py-3 text-center">Đạt KPI (KPI达成率)</th>
+                <th className="px-4 py-3 text-center">Trạng thái KPI (KPI状态)</th>
+                <th className="px-4 py-3 text-center">Trạng thái Lương (工资状态)</th>
+                <th className="px-4 py-3 text-center">Số báo cáo (报告数)</th>
               </tr>
             </thead>
             <tbody>
               {salaryData.length === 0 ? (
                 <tr>
                   <td colSpan={12} className="px-4 py-8 text-center text-gray-400">
-                    Chưa có dữ liệu cho tháng này
+                    Chưa có dữ liệu cho tháng này (本月暂无数据)
                   </td>
                 </tr>
               ) : (

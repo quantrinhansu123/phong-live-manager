@@ -30,13 +30,13 @@ export const Login: React.FC = () => {
                     window.location.reload();
                     return;
                 } else {
-                    setError('Mật khẩu không đúng!');
+                    setError('Mật khẩu không đúng! (密码不正确!)');
                 }
             } else {
-                setError('Email không tồn tại trong hệ thống!');
+                setError('Email không tồn tại trong hệ thống! (系统中不存在此邮箱!)');
             }
         } catch (err) {
-            setError('Lỗi kết nối, vui lòng thử lại.');
+            setError('Lỗi kết nối, vui lòng thử lại. (连接错误，请重试。)');
         } finally {
             setLoading(false);
         }
@@ -92,7 +92,7 @@ export const Login: React.FC = () => {
                 </form>
 
                 <div className="mt-4 text-center text-xs text-gray-500">
-                    <p>Admin mặc định: admin@phonglive.com / password</p>
+                    <p>Admin mặc định (默认管理员): admin@phonglive.com / password</p>
                 </div>
             </div>
         </div>

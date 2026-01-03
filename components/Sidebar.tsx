@@ -19,7 +19,7 @@ export const Sidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-white border-r border-gray-200 h-screen flex flex-col fixed left-0 top-0 z-50">
       <div className="h-16 flex items-center justify-center border-b border-brand-navy bg-brand-navy">
-        <h1 className="text-white font-bold text-xl uppercase tracking-wider">Phong Live</h1>
+        <h1 className="text-white font-bold text-xl uppercase tracking-wider">Quản Lý Phòng Live (直播管理室)</h1>
       </div>
       <nav className="flex-1 overflow-y-auto py-4">
         <ul className="space-y-1">
@@ -42,7 +42,7 @@ export const Sidebar: React.FC = () => {
       </nav>
       <div className="p-4 border-t border-gray-200 bg-gray-50">
         <div className="mb-2">
-          <p className="text-xs text-gray-500 font-bold uppercase">Người dùng</p>
+          <p className="text-xs text-gray-500 font-bold uppercase">Người dùng (用户)</p>
           <p className="text-sm font-medium text-gray-800 truncate">{localStorage.getItem('currentUser') || 'Unknown'}</p>
         </div>
         <button
@@ -52,10 +52,10 @@ export const Sidebar: React.FC = () => {
           }}
           className="w-full text-xs text-brand-navy hover:text-blue-800 font-medium py-1 text-left"
         >
-          Đăng xuất
+          Đăng xuất (登出)
         </button>
         <div className="text-xs text-gray-400 text-center mt-2 pt-2 border-t border-gray-200">
-          © 2025 Phong Live System
+          © 2025 Quản Lý Phòng Live (直播管理室)
         </div>
       </div>
     </aside>

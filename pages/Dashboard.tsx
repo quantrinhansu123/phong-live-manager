@@ -163,7 +163,7 @@ export const Dashboard: React.FC = () => {
   if (isLoading) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Đang tải dữ liệu...</div>
+        <div className="text-gray-500">Đang tải dữ liệu... (正在加载数据...)</div>
       </div>
     );
   }
@@ -172,14 +172,14 @@ export const Dashboard: React.FC = () => {
     <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800 uppercase">Dashboard - Số Liệu Quan Trọng</h2>
+        <h2 className="text-2xl font-bold text-gray-800 uppercase">Dashboard - Số Liệu Quan Trọng (仪表板 - 重要数据)</h2>
         <div className="flex gap-2 flex-wrap items-center">
           <select
             className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
             value={selectedStore}
             onChange={(e) => setSelectedStore(e.target.value)}
           >
-            <option value="all">Tất cả cửa hàng</option>
+            <option value="all">Tất cả cửa hàng (所有店铺)</option>
             {stores.filter(s => s.id !== 'all').map(store => (
               <option key={store.id} value={store.id}>{store.name}</option>
             ))}
@@ -190,7 +190,7 @@ export const Dashboard: React.FC = () => {
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
           />
-          <span className="text-gray-600">đến</span>
+          <span className="text-gray-600">đến (至)</span>
           <input
             type="date"
             className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
@@ -203,23 +203,23 @@ export const Dashboard: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-blue-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV (总GMV)</p>
           <p className="text-xl font-bold text-gray-800 mt-1">{formatCurrency(totals.totalGMV)}</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-red-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC (总广告费)</p>
           <p className="text-xl font-bold text-red-600 mt-1">{formatCurrency(totals.totalAdCost)}</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">ROI</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">ROI (投资回报率)</p>
           <p className="text-xl font-bold text-green-600 mt-1">{totals.roi.toFixed(1)}%</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Đơn Hàng</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Đơn Hàng (总订单)</p>
           <p className="text-xl font-bold text-purple-600 mt-1">{totals.totalOrders.toLocaleString()}</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-orange-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Lượt Xem</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Lượt Xem (总浏览量)</p>
           <p className="text-xl font-bold text-orange-600 mt-1">{totals.totalViews.toLocaleString()}</p>
         </div>
       </div>
@@ -227,16 +227,16 @@ export const Dashboard: React.FC = () => {
       {/* GMV Chart by Date */}
       <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-          <h3 className="text-lg font-bold text-gray-800">Biểu Đồ GMV Theo Thời Gian</h3>
+          <h3 className="text-lg font-bold text-gray-800">Biểu Đồ GMV Theo Thời Gian (GMV时间图表)</h3>
           <div className="flex gap-2 items-center flex-wrap">
-            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Từ ngày:</label>
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Từ ngày (从日期):</label>
             <input
               type="date"
               value={chartDateFrom}
               onChange={(e) => setChartDateFrom(e.target.value)}
               className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
             />
-            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Đến ngày:</label>
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Đến ngày (至日期):</label>
             <input
               type="date"
               value={chartDateTo}
@@ -264,7 +264,7 @@ export const Dashboard: React.FC = () => {
             <Line 
               type="monotone" 
               dataKey="gmv" 
-              name="Doanh số (GMV)" 
+              name="Doanh số (GMV) (销售额)" 
               stroke="#10b981" 
               strokeWidth={3}
               dot={{ fill: '#10b981', r: 4 }}
@@ -273,7 +273,7 @@ export const Dashboard: React.FC = () => {
             <Line 
               type="monotone" 
               dataKey="adCost" 
-              name="Chi phí QC" 
+              name="Chi phí QC (广告费)" 
               stroke="#ef4444" 
               strokeWidth={3}
               dot={{ fill: '#ef4444', r: 4 }}
@@ -286,7 +286,7 @@ export const Dashboard: React.FC = () => {
       {/* GMV Chart by Store (if all stores selected) */}
       {selectedStore === 'all' && storeChartData.length > 0 && (
         <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">GMV Theo Cửa Hàng</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">GMV Theo Cửa Hàng (按店铺GMV)</h3>
           <ResponsiveContainer width="100%" height={400}>
             <BarChart data={storeChartData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -300,7 +300,7 @@ export const Dashboard: React.FC = () => {
               <Tooltip formatter={(value: number) => formatCurrency(value)} />
               <Legend />
               <Bar dataKey="gmv" name="GMV" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="adCost" name="Chi phí QC" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="adCost" name="Chi phí QC (广告费)" fill="#ef4444" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -308,7 +308,7 @@ export const Dashboard: React.FC = () => {
 
       {/* Orders Chart */}
       <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">Biểu Đồ Đơn Hàng Theo Thời Gian</h3>
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Biểu Đồ Đơn Hàng Theo Thời Gian (订单时间图表)</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -322,10 +322,10 @@ export const Dashboard: React.FC = () => {
             <YAxis />
             <Tooltip 
               formatter={(value: number) => value.toLocaleString()}
-              labelFormatter={(label) => `Ngày: ${formatDate(label)}`}
+              labelFormatter={(label) => `Ngày (日期): ${formatDate(label)}`}
             />
             <Legend />
-            <Line type="monotone" dataKey="orders" name="Số đơn hàng" stroke="#8b5cf6" strokeWidth={2} />
+            <Line type="monotone" dataKey="orders" name="Số đơn hàng (订单数)" stroke="#8b5cf6" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       </div>

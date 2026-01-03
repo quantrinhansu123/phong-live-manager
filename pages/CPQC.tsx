@@ -252,7 +252,7 @@ export const CPQC: React.FC = () => {
   if (isLoading) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">Đang tải dữ liệu...</div>
+        <div className="text-gray-500">Đang tải dữ liệu... (正在加载数据...)</div>
       </div>
     );
   }
@@ -261,7 +261,7 @@ export const CPQC: React.FC = () => {
     <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold text-gray-800 uppercase">CPQC - Chi Phí Quản Lý Chất Lượng</h2>
+        <h2 className="text-2xl font-bold text-gray-800 uppercase">CPQC - Chi Phí Quản Lý Chất Lượng (CPQC - 质量管理成本)</h2>
         <div className="flex gap-2 border border-gray-300 rounded overflow-hidden">
           <button
             onClick={() => setViewMode('day')}
@@ -271,7 +271,7 @@ export const CPQC: React.FC = () => {
                 : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
-            Theo Ngày
+            Theo Ngày (按日)
           </button>
           <button
             onClick={() => setViewMode('shift')}
@@ -281,7 +281,7 @@ export const CPQC: React.FC = () => {
                 : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
-            Theo Ca
+            Theo Ca (按班次)
           </button>
         </div>
       </div>
@@ -398,19 +398,19 @@ export const CPQC: React.FC = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-red-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC (总广告费)</p>
           <p className="text-xl font-bold text-red-600 mt-1">
             {formatCurrency(currentData.reduce((sum, item) => sum + item.adCost, 0))}
           </p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-blue-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV (总GMV)</p>
           <p className="text-xl font-bold text-blue-600 mt-1">
             {formatCurrency(currentData.reduce((sum, item) => sum + item.gmv, 0))}
           </p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">ROI Trung Bình</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">ROI Trung Bình (平均ROI)</p>
           <p className="text-xl font-bold text-green-600 mt-1">
             {currentData.length > 0 
               ? (currentData.reduce((sum, item) => sum + item.roi, 0) / currentData.length).toFixed(1)
@@ -419,7 +419,7 @@ export const CPQC: React.FC = () => {
           </p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
-          <p className="text-xs text-gray-500 uppercase font-bold">Tỉ Lệ Chuyển Đổi TB</p>
+          <p className="text-xs text-gray-500 uppercase font-bold">Tỉ Lệ Chuyển Đổi TB (平均转化率)</p>
           <p className="text-xl font-bold text-purple-600 mt-1">
             {currentData.length > 0 
               ? (currentData.reduce((sum, item) => sum + item.conversionRate, 0) / currentData.length).toFixed(2)
@@ -433,7 +433,7 @@ export const CPQC: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chi phí Chart */}
         <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Chi Phí QC {viewMode === 'day' ? 'Theo Ngày' : 'Theo Ca'}</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Chi Phí QC (广告费) {viewMode === 'day' ? 'Theo Ngày (按日)' : 'Theo Ca (按班次)'}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={currentData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -447,14 +447,14 @@ export const CPQC: React.FC = () => {
               <YAxis />
               <Tooltip formatter={(value: number) => formatCurrency(value)} />
               <Legend />
-              <Bar dataKey="adCost" name="Chi phí QC" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="adCost" name="Chi phí QC (广告费)" fill="#ef4444" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         {/* ROI Chart */}
         <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">ROI {viewMode === 'day' ? 'Theo Ngày' : 'Theo Ca'}</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">ROI (投资回报率) {viewMode === 'day' ? 'Theo Ngày (按日)' : 'Theo Ca (按班次)'}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={currentData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -468,14 +468,14 @@ export const CPQC: React.FC = () => {
               <YAxis />
               <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
               <Legend />
-              <Line type="monotone" dataKey="roi" name="ROI (%)" stroke="#10b981" strokeWidth={2} />
+              <Line type="monotone" dataKey="roi" name="ROI (%) (投资回报率)" stroke="#10b981" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* Conversion Rate Chart */}
         <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Tỉ Lệ Chuyển Đổi {viewMode === 'day' ? 'Theo Ngày' : 'Theo Ca'}</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Tỉ Lệ Chuyển Đổi (转化率) {viewMode === 'day' ? 'Theo Ngày (按日)' : 'Theo Ca (按班次)'}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={currentData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -489,14 +489,14 @@ export const CPQC: React.FC = () => {
               <YAxis />
               <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} />
               <Legend />
-              <Line type="monotone" dataKey="conversionRate" name="Tỉ lệ chuyển đổi (%)" stroke="#8b5cf6" strokeWidth={2} />
+              <Line type="monotone" dataKey="conversionRate" name="Tỉ lệ chuyển đổi (%) (转化率)" stroke="#8b5cf6" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* Combined Chart */}
         <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">Tổng Hợp {viewMode === 'day' ? 'Theo Ngày' : 'Theo Ca'}</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Tổng Hợp (汇总) {viewMode === 'day' ? 'Theo Ngày (按日)' : 'Theo Ca (按班次)'}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <ComposedChart data={currentData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -516,10 +516,10 @@ export const CPQC: React.FC = () => {
                 }}
               />
               <Legend />
-              <Bar yAxisId="left" dataKey="adCost" name="Chi phí QC" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              <Bar yAxisId="left" dataKey="gmv" name="GMV" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Line yAxisId="right" type="monotone" dataKey="roi" name="ROI (%)" stroke="#10b981" strokeWidth={2} />
-              <Line yAxisId="right" type="monotone" dataKey="conversionRate" name="Tỉ lệ chuyển đổi (%)" stroke="#8b5cf6" strokeWidth={2} />
+              <Bar yAxisId="left" dataKey="adCost" name="Chi phí QC (广告费)" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              <Bar yAxisId="left" dataKey="gmv" name="GMV (交易额)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Line yAxisId="right" type="monotone" dataKey="roi" name="ROI (%) (投资回报率)" stroke="#10b981" strokeWidth={2} />
+              <Line yAxisId="right" type="monotone" dataKey="conversionRate" name="Tỉ lệ chuyển đổi (%) (转化率)" stroke="#8b5cf6" strokeWidth={2} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -528,27 +528,27 @@ export const CPQC: React.FC = () => {
       {/* Hotlive Ranking */}
       <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-bold text-gray-800">Xếp Hạng Hotlive</h3>
+          <h3 className="text-lg font-bold text-gray-800">Xếp Hạng Hotlive (Hotlive排名)</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-brand-navy text-white border-b">
               <tr className="text-white">
-                <th className="px-4 py-3 text-left">Hạng</th>
-                <th className="px-4 py-3 text-left">Host</th>
-                <th className="px-4 py-3 text-left">Cửa hàng</th>
-                <th className="px-4 py-3 text-right">Tổng GMV</th>
-                <th className="px-4 py-3 text-right">Chi phí QC</th>
-                <th className="px-4 py-3 text-right">ROI</th>
-                <th className="px-4 py-3 text-right">Tỉ lệ chuyển đổi</th>
-                <th className="px-4 py-3 text-right">Điểm số</th>
+                <th className="px-4 py-3 text-left">Hạng (排名)</th>
+                <th className="px-4 py-3 text-left">Host (主播)</th>
+                <th className="px-4 py-3 text-left">Cửa hàng (店铺)</th>
+                <th className="px-4 py-3 text-right">Tổng GMV (总GMV)</th>
+                <th className="px-4 py-3 text-right">Chi phí QC (广告费)</th>
+                <th className="px-4 py-3 text-right">ROI (投资回报率)</th>
+                <th className="px-4 py-3 text-right">Tỉ lệ chuyển đổi (转化率)</th>
+                <th className="px-4 py-3 text-right">Điểm số (分数)</th>
               </tr>
             </thead>
             <tbody>
               {hotliveRanking.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
-                    Chưa có dữ liệu
+                    Chưa có dữ liệu (暂无数据)
                   </td>
                 </tr>
               ) : (
@@ -594,26 +594,26 @@ export const CPQC: React.FC = () => {
       {/* Detailed Table */}
       <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
         <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <h3 className="text-lg font-bold text-gray-800">Chi Tiết CPQC {viewMode === 'day' ? 'Theo Ngày' : 'Theo Ca'}</h3>
+          <h3 className="text-lg font-bold text-gray-800">Chi Tiết CPQC {viewMode === 'day' ? 'Theo Ngày (按日详情)' : 'Theo Ca (按班次详情)'}</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-brand-navy text-white border-b">
               <tr>
-                <th className="px-4 py-3 text-left">{viewMode === 'day' ? 'Ngày' : 'Ca'}</th>
-                <th className="px-4 py-3 text-right">Chi phí QC</th>
-                <th className="px-4 py-3 text-right">GMV</th>
-                <th className="px-4 py-3 text-right">Đơn hàng</th>
-                <th className="px-4 py-3 text-right">ROI</th>
-                <th className="px-4 py-3 text-right">Tỉ lệ chuyển đổi</th>
-                <th className="px-4 py-3 text-center">Số báo cáo</th>
+                <th className="px-4 py-3 text-left">{viewMode === 'day' ? 'Ngày (日期)' : 'Ca (班次)'}</th>
+                <th className="px-4 py-3 text-right">Chi phí QC (广告费)</th>
+                <th className="px-4 py-3 text-right">GMV (交易额)</th>
+                <th className="px-4 py-3 text-right">Đơn hàng (订单数)</th>
+                <th className="px-4 py-3 text-right">ROI (投资回报率)</th>
+                <th className="px-4 py-3 text-right">Tỉ lệ chuyển đổi (转化率)</th>
+                <th className="px-4 py-3 text-center">Số báo cáo (报告数)</th>
               </tr>
             </thead>
             <tbody>
               {currentData.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
-                    Chưa có dữ liệu
+                    Chưa có dữ liệu (暂无数据)
                   </td>
                 </tr>
               ) : (

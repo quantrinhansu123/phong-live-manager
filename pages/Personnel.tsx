@@ -425,19 +425,19 @@ export const Personnel: React.FC = () => {
           filterFields={[
             {
               key: 'departments',
-              label: 'Phòng ban',
+              label: 'Phòng ban (部门)',
               type: 'checkbox',
               options: Array.from(new Set(personnelList.map(p => p.department).filter(Boolean))).map(dept => ({ value: dept, label: dept }))
             },
             {
               key: 'positions',
-              label: 'Vị trí',
+              label: 'Vị trí (职位)',
               type: 'checkbox',
               options: Array.from(new Set(personnelList.map(p => p.position).filter(Boolean))).map(pos => ({ value: pos, label: pos }))
             },
             {
               key: 'roles',
-              label: 'Vai trò',
+              label: 'Vai trò (角色)',
               type: 'checkbox',
               options: [
                 { value: 'admin', label: 'Admin' },
@@ -470,11 +470,11 @@ export const Personnel: React.FC = () => {
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-white uppercase bg-brand-navy border-b">
                   <tr>
-                    <th className="px-6 py-3 border-r">Họ và tên</th>
-                    <th className="px-6 py-3 border-r">Email (Login)</th>
-                    <th className="px-6 py-3 border-r">Phòng ban</th>
-                    <th className="px-6 py-3 border-r">Vị trí</th>
-                    <th className="px-6 py-3 border-r">SĐT</th>
+                    <th className="px-6 py-3 border-r">Họ và tên (姓名)</th>
+                    <th className="px-6 py-3 border-r">Email (登录)</th>
+                    <th className="px-6 py-3 border-r">Phòng ban (部门)</th>
+                    <th className="px-6 py-3 border-r">Vị trí (职位)</th>
+                    <th className="px-6 py-3 border-r">SĐT (电话)</th>
                     <th className="px-6 py-3 border-r">Lương cứng (固定工资)</th>
                     <th className="px-6 py-3 text-center">Thao tác (操作)</th>
                   </tr>
@@ -550,10 +550,10 @@ export const Personnel: React.FC = () => {
                   <h3 className="text-lg font-bold text-gray-800">
                     Lương & KPIs theo tháng (月薪和KPI) - {new Date(selectedMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
                   </h3>
-                  <p className="text-xs text-gray-500 mt-1">Doanh số được tính từ các báo cáo Live của nhân viên</p>
+                  <p className="text-xs text-gray-500 mt-1">Doanh số được tính từ các báo cáo Live của nhân viên (营收从员工直播报告计算)</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Chọn tháng:</label>
+                  <label className="text-sm font-medium text-gray-700">Chọn tháng: (选择月份:)</label>
                   <input
                     type="month"
                     value={selectedMonth}
@@ -565,8 +565,8 @@ export const Personnel: React.FC = () => {
               <table className="w-full text-sm">
                 <thead className="text-xs text-white uppercase bg-brand-navy border-b">
                   <tr>
-                    <th className="px-6 py-3 border-r text-left">Họ và tên</th>
-                    <th className="px-6 py-3 border-r text-left">Phòng ban</th>
+                    <th className="px-6 py-3 border-r text-left">Họ và tên (姓名)</th>
+                    <th className="px-6 py-3 border-r text-left">Phòng ban (部门)</th>
                     <th className="px-6 py-3 border-r text-right">Lương cứng (固定工资)</th>
                     <th className="px-6 py-3 border-r text-right">Mục tiêu KPI (KPI目标)</th>
                     <th className="px-6 py-3 border-r text-right">Doanh số thực (实际营收)</th>
@@ -770,8 +770,8 @@ export const Personnel: React.FC = () => {
                       }}
                       onFocus={() => setShowPersonnelDropdown(true)}
                       placeholder={selectedPersonnelForKPI.length > 0 
-                        ? `Đã chọn ${selectedPersonnelForKPI.length} nhân sự` 
-                        : "Tìm kiếm và chọn nhân sự..."}
+                        ? `Đã chọn (已选择) ${selectedPersonnelForKPI.length} nhân sự` 
+                        : "Tìm kiếm và chọn nhân sự... (搜索并选择人员...)"}
                       className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
                     />
                     
@@ -784,7 +784,7 @@ export const Personnel: React.FC = () => {
                         ></div>
                         <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                           {personnelList.length === 0 ? (
-                            <div className="p-3 text-sm text-gray-500">Chưa có nhân sự</div>
+                            <div className="p-3 text-sm text-gray-500">Chưa có nhân sự (暂无人员)</div>
                           ) : (
                             <div className="py-1">
                               {personnelList
@@ -838,7 +838,7 @@ export const Personnel: React.FC = () => {
                   {/* Hiển thị nhân sự đã chọn */}
                   {selectedPersonnelForKPI.length > 0 && (
                     <div className="mt-2 border rounded p-3 bg-gray-50 max-h-40 overflow-y-auto">
-                      <p className="text-xs text-gray-600 mb-2 font-medium">Đã chọn ({selectedPersonnelForKPI.length}):</p>
+                      <p className="text-xs text-gray-600 mb-2 font-medium">Đã chọn (已选择) ({selectedPersonnelForKPI.length}):</p>
                       <div className="flex flex-wrap gap-2">
                         {selectedPersonnelForKPI.map(personId => {
                           const person = personnelList.find(p => (p.id || p.fullName) === personId);
@@ -868,7 +868,7 @@ export const Personnel: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mục tiêu KPI (VND) *
+                    Mục tiêu KPI (VND) (KPI目标 (越南盾)) *
                   </label>
                   <input
                     type="number"
@@ -876,7 +876,7 @@ export const Personnel: React.FC = () => {
                     value={kpiTargetValue || ''}
                     onChange={(e) => setKpiTargetValue(Number(e.target.value) || 0)}
                     className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
-                    placeholder="Nhập mục tiêu KPI"
+                    placeholder="Nhập mục tiêu KPI (输入KPI目标)"
                     min="0"
                   />
                 </div>
@@ -890,7 +890,7 @@ export const Personnel: React.FC = () => {
                     value={kpiNotes}
                     onChange={(e) => setKpiNotes(e.target.value)}
                     className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
-                    placeholder="Nhập ghi chú (tùy chọn)"
+                    placeholder="Nhập ghi chú (tùy chọn) (输入备注 (可选))"
                   />
                 </div>
               </div>
@@ -900,7 +900,7 @@ export const Personnel: React.FC = () => {
                   type="submit"
                   className="px-8 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy"
                 >
-                  Giao KPI
+                  分配KPI
                 </button>
               </div>
             </form>
@@ -915,11 +915,11 @@ export const Personnel: React.FC = () => {
               <table className="w-full text-sm">
                 <thead className="text-xs text-white uppercase bg-brand-navy border-b">
                   <tr>
-                    <th className="px-4 py-3 text-left">Nhân sự</th>
-                    <th className="px-4 py-3 text-left">Phòng ban</th>
-                    <th className="px-4 py-3 text-left">Loại kỳ</th>
-                    <th className="px-4 py-3 text-left">Kỳ</th>
-                    <th className="px-4 py-3 text-right">Mục tiêu KPI</th>
+                    <th className="px-4 py-3 text-left">Nhân sự (人员)</th>
+                    <th className="px-4 py-3 text-left">Phòng ban (部门)</th>
+                    <th className="px-4 py-3 text-left">Loại kỳ (周期类型)</th>
+                    <th className="px-4 py-3 text-left">Kỳ (周期)</th>
+                    <th className="px-4 py-3 text-right">Mục tiêu KPI (KPI目标)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -966,7 +966,7 @@ export const Personnel: React.FC = () => {
                     if (kpiAssignments.length === 0) {
                       return (
                         <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-gray-400">Chưa có KPI nào được giao</td>
+                          <td colSpan={5} className="px-4 py-8 text-center text-gray-400">Chưa có KPI nào được giao (暂无已分配的KPI)</td>
                         </tr>
                       );
                     }
@@ -989,7 +989,7 @@ export const Personnel: React.FC = () => {
                               ? 'bg-blue-100 text-blue-800 border border-blue-200' 
                               : 'bg-purple-100 text-purple-800 border border-purple-200'
                           }`}>
-                            {assignment.periodType === 'month' ? 'Tháng' : 'Tuần'}
+                            {assignment.periodType === 'month' ? 'Tháng (月)' : 'Tuần (周)'}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-gray-600">{assignment.periodKey}</td>
@@ -1012,7 +1012,7 @@ export const Personnel: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
             <div className="flex justify-between items-center mb-4 border-b pb-2">
               <h3 className="text-lg font-bold uppercase text-gray-800">
-                Chỉnh sửa Lương & KPI - {selectedPersonForSalaryKPI.fullName}
+                Chỉnh sửa Lương & KPI (编辑工资和KPI) - {selectedPersonForSalaryKPI.fullName}
               </h3>
               <button 
                 onClick={() => {
@@ -1027,7 +1027,7 @@ export const Personnel: React.FC = () => {
             
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
-                Tháng: <span className="font-bold">{new Date(selectedMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</span>
+                Tháng (月份): <span className="font-bold">{new Date(selectedMonth + '-01').toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}</span>
               </p>
             </div>
 
@@ -1059,10 +1059,10 @@ export const Personnel: React.FC = () => {
             }} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Lương cứng (VND)
+                  Lương cứng (VND) (固定工资 (越南盾))
                   {selectedPersonForSalaryKPI.baseSalary && (
                     <span className="text-xs text-gray-500 ml-2">
-                      (Mặc định: {formatCurrency(selectedPersonForSalaryKPI.baseSalary)})
+                      (Mặc định (默认): {formatCurrency(selectedPersonForSalaryKPI.baseSalary)})
                     </span>
                   )}
                 </label>
@@ -1072,17 +1072,17 @@ export const Personnel: React.FC = () => {
                   value={salaryKPIFormData.salary}
                   onChange={(e) => setSalaryKPIFormData({ ...salaryKPIFormData, salary: Number(e.target.value) || 0 })}
                   className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
-                  placeholder="Nhập lương cứng"
+                  placeholder="Nhập lương cứng (输入固定工资)"
                   min="0"
                 />
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mục tiêu KPI (VND)
+                  Mục tiêu KPI (VND) (KPI目标 (越南盾))
                   {selectedPersonForSalaryKPI.monthlyKPITarget && (
                     <span className="text-xs text-gray-500 ml-2">
-                      (Mặc định: {formatCurrency(selectedPersonForSalaryKPI.monthlyKPITarget)})
+                      (Mặc định (默认): {formatCurrency(selectedPersonForSalaryKPI.monthlyKPITarget)})
                     </span>
                   )}
                 </label>
@@ -1092,7 +1092,7 @@ export const Personnel: React.FC = () => {
                   value={salaryKPIFormData.kpi}
                   onChange={(e) => setSalaryKPIFormData({ ...salaryKPIFormData, kpi: Number(e.target.value) || 0 })}
                   className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
-                  placeholder="Nhập mục tiêu KPI"
+                  placeholder="Nhập mục tiêu KPI (输入KPI目标)"
                   min="0"
                 />
               </div>
