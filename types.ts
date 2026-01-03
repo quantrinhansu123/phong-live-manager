@@ -53,6 +53,7 @@ export interface Personnel {
   monthlySalary?: Record<string, number>; // Lương cứng theo từng tháng (key: YYYY-MM, value: lương)
   monthlyKPI?: Record<string, number>; // KPI theo từng tháng (key: YYYY-MM, value: KPI target)
   weeklyKPI?: Record<string, number>; // KPI theo từng tuần (key: YYYY-WW, value: KPI target)
+  allowedMenuIds?: string[]; // Danh sách menu items mà nhân sự này có thể xem (override menu-level permissions)
 }
 
 export interface KPIAssignment {
@@ -169,4 +170,5 @@ export type UserRole = 'admin' | 'partner' | 'employee'; // Admin, Đối tác, 
 export interface MenuPermission {
   menuId: string; // ID của menu item
   allowedRoles: UserRole[]; // Danh sách role được phép truy cập
+  allowedDepartments?: string[]; // Danh sách phòng ban được phép truy cập (cho employee)
 }

@@ -16,7 +16,7 @@ export const getMenuPermissions = (): MenuPermission[] => {
 };
 
 // Kiểm tra user có quyền truy cập menu không
-export const canAccessMenu = (menuId: string, userRole: UserRole): boolean => {
+export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment?: string): boolean => {
   // Admin luôn có quyền truy cập tất cả
   if (userRole === 'admin') {
     return true;
@@ -30,7 +30,29 @@ export const canAccessMenu = (menuId: string, userRole: UserRole): boolean => {
     return false;
   }
 
-  return menuPermission.allowedRoles.includes(userRole);
+  // Kiểm tra role
+  if (!menuPermission.allowedRoles.includes(userRole)) {
+    return false;
+  }
+
+  // Nếu là employee, cần kiểm tra thêm department
+  if (userRole === 'employee') {
+    // Nếu có allowedDepartments và không rỗng, thì phải kiểm tra department
+    if (menuPermission.allowedDepartments && menuPermission.allowedDepartments.length > 0) {
+      // Nếu user không có department hoặc department không trong danh sách allowed
+      if (!userDepartment || !menuPermission.allowedDepartments.includes(userDepartment)) {
+        return false;
+      }
+    }
+    // Nếu không có allowedDepartments (undefined hoặc rỗng), thì employee có role 'employee' là đủ
+  }
+
+  return true;
+};
+
+// Lấy department hiện tại của user
+export const getCurrentUserDepartment = (): string | undefined => {
+  return localStorage.getItem('currentUserDepartment') || undefined;
 };
 
 // Lấy role hiện tại của user

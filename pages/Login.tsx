@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchPersonnel } from '../services/dataService';
+import { fetchPersonnel, fetchPartners } from '../services/dataService';
 
 export const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -15,17 +15,47 @@ export const Login: React.FC = () => {
         setLoading(true);
 
         try {
-            const personnel = await fetchPersonnel();
+            const [personnel, partners] = await Promise.all([
+                fetchPersonnel(),
+                fetchPartners()
+            ]);
 
-            // Find user by email (case-insensitive)
-            const user = personnel.find(p => p.email?.toLowerCase() === email.trim().toLowerCase());
+            // Tìm user trong Personnel trước
+            let user = personnel.find(p => p.email?.toLowerCase() === email.trim().toLowerCase());
+            let userType: 'personnel' | 'partner' = 'personnel';
+
+            // Nếu không tìm thấy trong Personnel, tìm trong Partners
+            if (!user) {
+                const partner = partners.find(p => p.email?.toLowerCase() === email.trim().toLowerCase());
+                if (partner) {
+                    user = {
+                        id: partner.id,
+                        fullName: partner.name,
+                        email: partner.email,
+                        password: partner.password,
+                        role: 'partner' as any, // Partner có role là 'partner'
+                        department: '' // Partner không có department
+                    };
+                    userType = 'partner';
+                }
+            }
 
             if (user) {
                 // Check password (simple verification for this demo)
                 if (user.password === password) {
                     localStorage.setItem('currentUser', user.fullName);
                     localStorage.setItem('currentUserId', user.id || '');
-                    localStorage.setItem('currentUserRole', user.role || 'user');
+                    // Map role: 'admin' -> 'admin', 'user' -> 'employee', 'partner' -> 'partner'
+                    let roleToStore = 'employee';
+                    if (userType === 'partner') {
+                        roleToStore = 'partner';
+                    } else if (user.role === 'admin') {
+                        roleToStore = 'admin';
+                    } else {
+                        roleToStore = 'employee';
+                    }
+                    localStorage.setItem('currentUserRole', roleToStore);
+                    localStorage.setItem('currentUserDepartment', user.department || '');
                     navigate('/');
                     window.location.reload();
                     return;

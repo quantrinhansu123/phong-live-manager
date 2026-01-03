@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ReportType } from '../types';
-import { getCurrentUserRole, canAccessMenu, isAdmin } from '../utils/permissionUtils';
+import { getCurrentUserRole, canAccessMenu, isAdmin, getCurrentUserDepartment } from '../utils/permissionUtils';
 import { MenuPermissionModal } from './MenuPermissionModal';
 
 const MENU_ITEMS = [
@@ -20,12 +20,13 @@ const MENU_ITEMS = [
 export const Sidebar: React.FC = () => {
   const [permissionMenuId, setPermissionMenuId] = useState<string | null>(null);
   const userRole = getCurrentUserRole();
+  const userDepartment = getCurrentUserDepartment();
   const admin = isAdmin();
 
-  // Filter menu items dựa trên quyền
+  // Filter menu items dựa trên quyền (bao gồm cả role và department)
   const visibleMenuItems = useMemo(() => {
-    return MENU_ITEMS.filter(item => canAccessMenu(item.id, userRole));
-  }, [userRole]);
+    return MENU_ITEMS.filter(item => canAccessMenu(item.id, userRole, userDepartment));
+  }, [userRole, userDepartment]);
 
   const handlePermissionClick = (e: React.MouseEvent, menuId: string) => {
     e.preventDefault();
@@ -86,6 +87,7 @@ export const Sidebar: React.FC = () => {
             localStorage.removeItem('currentUser');
             localStorage.removeItem('currentUserId');
             localStorage.removeItem('currentUserRole');
+            localStorage.removeItem('currentUserDepartment');
             window.location.reload();
           }}
           className="w-full text-xs text-brand-navy hover:text-blue-800 font-medium py-1 text-left"

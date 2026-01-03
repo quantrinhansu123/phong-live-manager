@@ -11,6 +11,23 @@ interface LiveReportModalProps {
   reports?: LiveReport[]; // Optional: kept for backward compatibility, but not used for host list
 }
 
+// Helper function to calculate duration from start and end time
+const calculateDuration = (startTime: string, endTime: string): string => {
+  if (!startTime || !endTime) return '';
+  const start = new Date(`2000-01-01T${startTime}`);
+  const end = new Date(`2000-01-01T${endTime}`);
+  let diff = (end.getTime() - start.getTime()) / 1000 / 60; // minutes
+  if (diff < 0) diff += 24 * 60; // handle overnight
+
+  const hours = Math.floor(diff / 60);
+  const minutes = diff % 60;
+  
+  // Format duration: "Xh Ym" or "Ym" if hours = 0
+  return hours > 0 
+    ? `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}` 
+    : `${minutes}m`;
+};
+
 export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClose, onSubmit, initialData, isEdit = false, reports: propReports }) => {
   const [stores, setStores] = React.useState(MOCK_STORES);
   const [personnel, setPersonnel] = React.useState<Personnel[]>([]);
@@ -47,7 +64,7 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
     startTime: '08:00',
     endTime: '12:00',
     hostName: '',
-    duration: '',
+    duration: calculateDuration('08:00', '12:00'), // Auto calculate from default times
     gmv: 0,
     totalGmv: 0,
     adCost: 0,
@@ -149,21 +166,10 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
     }
   }, [isOpen, initialData, isEdit, availableHosts]);
 
+  // Auto calculate duration when startTime or endTime changes
   useEffect(() => {
     if (formData.startTime && formData.endTime) {
-      const start = new Date(`2000-01-01T${formData.startTime}`);
-      const end = new Date(`2000-01-01T${formData.endTime}`);
-      let diff = (end.getTime() - start.getTime()) / 1000 / 60; // minutes
-      if (diff < 0) diff += 24 * 60; // handle overnight
-
-      const hours = Math.floor(diff / 60);
-      const minutes = diff % 60;
-      
-      // Format duration: "Xh Ym" or "Ym" if hours = 0
-      const durationStr = hours > 0 
-        ? `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}` 
-        : `${minutes}m`;
-      
+      const durationStr = calculateDuration(formData.startTime, formData.endTime);
       setFormData(prev => ({ ...prev, duration: durationStr }));
     } else if (!formData.startTime || !formData.endTime) {
       setFormData(prev => ({ ...prev, duration: '' }));

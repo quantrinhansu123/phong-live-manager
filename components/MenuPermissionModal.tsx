@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserRole, MenuPermission } from '../types';
 import { getMenuPermissions, saveMenuPermissions } from '../utils/permissionUtils';
+import { fetchPersonnel } from '../services/dataService';
 
 interface MenuPermissionModalProps {
   isOpen: boolean;
@@ -16,12 +17,21 @@ export const MenuPermissionModal: React.FC<MenuPermissionModalProps> = ({
   menuLabel 
 }) => {
   const [allowedRoles, setAllowedRoles] = useState<UserRole[]>([]);
+  const [allowedDepartments, setAllowedDepartments] = useState<string[]>([]);
+  const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       const permissions = getMenuPermissions();
       const menuPermission = permissions.find(p => p.menuId === menuId);
       setAllowedRoles(menuPermission?.allowedRoles || []);
+      setAllowedDepartments(menuPermission?.allowedDepartments || []);
+      
+      // Load danh sách departments từ personnel
+      fetchPersonnel().then(personnel => {
+        const departments = Array.from(new Set(personnel.map(p => p.department).filter(Boolean))) as string[];
+        setAvailableDepartments(departments.sort());
+      });
     }
   }, [isOpen, menuId]);
 
@@ -35,13 +45,24 @@ export const MenuPermissionModal: React.FC<MenuPermissionModalProps> = ({
     });
   };
 
+  const handleDepartmentToggle = (department: string) => {
+    setAllowedDepartments(prev => {
+      if (prev.includes(department)) {
+        return prev.filter(d => d !== department);
+      } else {
+        return [...prev, department];
+      }
+    });
+  };
+
   const handleSave = () => {
     const permissions = getMenuPermissions();
     const existingIndex = permissions.findIndex(p => p.menuId === menuId);
     
     const newPermission: MenuPermission = {
       menuId,
-      allowedRoles
+      allowedRoles,
+      allowedDepartments: allowedDepartments.length > 0 ? allowedDepartments : undefined
     };
 
     if (existingIndex >= 0) {
@@ -96,6 +117,37 @@ export const MenuPermissionModal: React.FC<MenuPermissionModalProps> = ({
             <label className="text-sm font-medium text-gray-700">Nhân viên (员工)</label>
           </div>
         </div>
+
+        {/* Phân quyền theo Phòng ban (chỉ hiện khi đã chọn Nhân viên) */}
+        {allowedRoles.includes('employee') && (
+          <div className="mb-6 border-t pt-4">
+            <h3 className="text-sm font-bold text-gray-700 mb-3">
+              Phân quyền theo Phòng ban (部门权限) (Áp dụng cho Nhân viên)
+            </h3>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {availableDepartments.length === 0 ? (
+                <p className="text-xs text-gray-500">Chưa có phòng ban nào (暂无部门)</p>
+              ) : (
+                availableDepartments.map((dept) => (
+                  <div key={dept} className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={allowedDepartments.includes(dept)}
+                      onChange={() => handleDepartmentToggle(dept)}
+                      className="w-4 h-4 text-brand-navy"
+                    />
+                    <label className="text-sm text-gray-700">{dept}</label>
+                  </div>
+                ))
+              )}
+            </div>
+            {allowedRoles.includes('employee') && allowedDepartments.length === 0 && (
+              <p className="text-xs text-gray-500 mt-2">
+                Lưu ý: Nếu không chọn phòng ban nào, tất cả nhân viên có role "employee" đều có thể truy cập.
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-end gap-3">
           <button

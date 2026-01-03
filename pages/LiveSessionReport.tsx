@@ -316,6 +316,61 @@ export const LiveSessionReport: React.FC = () => {
     };
   }, [reports, weekStartDate, weekEndDate]);
 
+  // Host Ranking (BXH) - Top 5 tốt nhất và Top 3 tệ nhất
+  const hostRanking = useMemo(() => {
+    const hostMap: Record<string, {
+      hostName: string;
+      totalGMV: number;
+      totalAdCost: number;
+      reportCount: number;
+      avgROI: number;
+      profit: number;
+    }> = {};
+
+    // Tính toán thống kê cho mỗi host từ filteredData
+    filteredData.forEach(report => {
+      if (!report.hostName) return;
+      
+      const host = report.hostName;
+      if (!hostMap[host]) {
+        hostMap[host] = {
+          hostName: host,
+          totalGMV: 0,
+          totalAdCost: 0,
+          reportCount: 0,
+          avgROI: 0,
+          profit: 0
+        };
+      }
+
+      const gmv = Number(report.gmv) || 0;
+      const adCost = Number(report.adCost) || 0;
+      
+      hostMap[host].totalGMV += gmv;
+      hostMap[host].totalAdCost += adCost;
+      hostMap[host].reportCount += 1;
+    });
+
+    // Tính ROI và profit cho mỗi host
+    const hostList = Object.values(hostMap).map(host => ({
+      ...host,
+      profit: host.totalGMV - host.totalAdCost,
+      avgROI: host.totalAdCost > 0 ? ((host.totalGMV - host.totalAdCost) / host.totalAdCost) * 100 : 0
+    }));
+
+    // Sắp xếp theo GMV (doanh số) - cao nhất trước
+    const sortedByGMV = [...hostList].sort((a, b) => b.totalGMV - a.totalGMV);
+    
+    // Top 5 tốt nhất (GMV cao nhất)
+    const top5 = sortedByGMV.slice(0, 5);
+    
+    // Top 3 tệ nhất (GMV thấp nhất, nhưng phải có ít nhất 1 báo cáo)
+    const sortedWorst = [...hostList].filter(h => h.reportCount > 0).sort((a, b) => a.totalGMV - b.totalGMV);
+    const top3Worst = sortedWorst.slice(0, 3);
+
+    return { top5, top3Worst };
+  }, [filteredData]);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
       <LiveReportModal
@@ -676,6 +731,136 @@ export const LiveSessionReport: React.FC = () => {
             <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
               <p className="text-xs text-gray-500 uppercase font-bold">ROI Tổng (总ROI)</p>
               <p className="text-xl font-bold text-green-600 mt-1">{formatPercent(metrics.roi)}</p>
+            </div>
+          </div>
+
+          {/* Host Ranking (BXH) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top 5 Host Tốt Nhất */}
+            <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-green-600 to-green-700 p-4 border-b border-gray-200">
+                <h3 className="text-lg font-bold text-white">
+                  🏆 BXH Top 5 Host Tốt Nhất (最佳主播排行榜 Top 5)
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-green-50 text-xs text-gray-700 uppercase border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-center font-bold w-12">#</th>
+                      <th className="px-4 py-3 text-left font-bold">Host (主播)</th>
+                      <th className="px-4 py-3 text-right font-bold">Tổng GMV (总GMV)</th>
+                      <th className="px-4 py-3 text-right font-bold">Chi phí QC (广告费)</th>
+                      <th className="px-4 py-3 text-right font-bold">Lợi nhuận (利润)</th>
+                      <th className="px-4 py-3 text-right font-bold">ROI (%)</th>
+                      <th className="px-4 py-3 text-center font-bold">Số báo cáo (报告数)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hostRanking.top5.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-gray-400">
+                          Chưa có dữ liệu (暂无数据)
+                        </td>
+                      </tr>
+                    ) : (
+                      hostRanking.top5.map((host, index) => (
+                        <tr key={host.hostName} className="border-b hover:bg-green-50">
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white ${
+                              index === 0 ? 'bg-yellow-500' :
+                              index === 1 ? 'bg-gray-400' :
+                              index === 2 ? 'bg-orange-600' :
+                              'bg-gray-300'
+                            }`}>
+                              {index + 1}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-gray-800">{host.hostName}</td>
+                          <td className="px-4 py-3 text-right font-bold text-blue-600">
+                            {formatCurrency(host.totalGMV)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-red-600">
+                            {formatCurrency(host.totalAdCost)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-green-600">
+                            {formatCurrency(host.profit)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(host.avgROI)}`}>
+                              {formatPercent(host.avgROI)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-gray-600">
+                            {host.reportCount}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Top 3 Host Tệ Nhất */}
+            <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-red-600 to-red-700 p-4 border-b border-gray-200">
+                <h3 className="text-lg font-bold text-white">
+                  ⚠️ BXH Top 3 Host Tệ Nhất (最差主播排行榜 Top 3)
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-red-50 text-xs text-gray-700 uppercase border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-center font-bold w-12">#</th>
+                      <th className="px-4 py-3 text-left font-bold">Host (主播)</th>
+                      <th className="px-4 py-3 text-right font-bold">Tổng GMV (总GMV)</th>
+                      <th className="px-4 py-3 text-right font-bold">Chi phí QC (广告费)</th>
+                      <th className="px-4 py-3 text-right font-bold">Lợi nhuận (利润)</th>
+                      <th className="px-4 py-3 text-right font-bold">ROI (%)</th>
+                      <th className="px-4 py-3 text-center font-bold">Số báo cáo (报告数)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hostRanking.top3Worst.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-gray-400">
+                          Chưa có dữ liệu (暂无数据)
+                        </td>
+                      </tr>
+                    ) : (
+                      hostRanking.top3Worst.map((host, index) => (
+                        <tr key={host.hostName} className="border-b hover:bg-red-50">
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white bg-red-500">
+                              {index + 1}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-gray-800">{host.hostName}</td>
+                          <td className="px-4 py-3 text-right font-bold text-blue-600">
+                            {formatCurrency(host.totalGMV)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-red-600">
+                            {formatCurrency(host.totalAdCost)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-green-600">
+                            {formatCurrency(host.profit)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(host.avgROI)}`}>
+                              {formatPercent(host.avgROI)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-gray-600">
+                            {host.reportCount}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
