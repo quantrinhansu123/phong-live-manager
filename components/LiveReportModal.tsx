@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MOCK_STORES } from '../services/dataService';
+import { MOCK_STORES, fetchStores } from '../services/dataService';
 import { LiveReport } from '../types';
 
 interface LiveReportModalProps {
@@ -11,9 +11,21 @@ interface LiveReportModalProps {
 }
 
 export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClose, onSubmit, initialData, isEdit = false }) => {
+  const [stores, setStores] = React.useState(MOCK_STORES);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      fetchStores().then(data => {
+        setStores(data);
+      }).catch(() => {
+        setStores(MOCK_STORES);
+      });
+    }
+  }, [isOpen]);
+
   const defaultFormData: Omit<LiveReport, 'id'> = {
     date: new Date().toISOString().split('T')[0],
-    channelId: MOCK_STORES[1]?.id || '', // Default to first store
+    channelId: stores.filter(s => s.id !== 'all')[0]?.id || '', // Default to first store
     startTime: '08:00',
     endTime: '12:00',
     hostName: '',
@@ -33,7 +45,8 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
     avgWatchTime: '',
     productClicks: 0,
     newFollowers: 0,
-    reporter: localStorage.getItem('currentUser') || ''
+    reporter: localStorage.getItem('currentUser') || '',
+    shift: undefined
   };
 
   const [formData, setFormData] = useState<Omit<LiveReport, 'id'>>(initialData ? {
@@ -55,10 +68,11 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
     viewers: initialData.viewers || 0,
     totalViews: initialData.totalViews || 0,
     avgWatchTime: initialData.avgWatchTime || '',
-    productClicks: initialData.productClicks || 0,
-    newFollowers: initialData.newFollowers || 0,
-    reporter: initialData.reporter || localStorage.getItem('currentUser') || ''
-  } : defaultFormData);
+        productClicks: initialData.productClicks || 0,
+        newFollowers: initialData.newFollowers || 0,
+        reporter: initialData.reporter || localStorage.getItem('currentUser') || '',
+        shift: initialData.shift
+      } : defaultFormData);
 
   const [loading, setLoading] = useState(false);
 
@@ -88,7 +102,8 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
           avgWatchTime: initialData.avgWatchTime || '',
           productClicks: initialData.productClicks || 0,
           newFollowers: initialData.newFollowers || 0,
-          reporter: initialData.reporter || localStorage.getItem('currentUser') || ''
+          reporter: initialData.reporter || localStorage.getItem('currentUser') || '',
+          shift: initialData.shift
         });
       } else {
         // Reset to default for new report
@@ -165,12 +180,12 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Ngày (开始日期)</label>
-                <input required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full border rounded px-3 py-2 focus:ring-brand-red focus:border-brand-red" />
+                <input required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Kênh Live (KÊNH LIVE)</label>
                 <select name="channelId" value={formData.channelId} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-white">
-                  {MOCK_STORES.filter(s => s.id !== 'all').map(s => (
+                  {stores.filter(s => s.id !== 'all').map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
                 </select>
@@ -188,12 +203,21 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
                 <input required type="text" name="hostName" value={formData.hostName} onChange={handleChange} placeholder="Tên Host (主播名称)" className="w-full border rounded px-3 py-2" />
               </div>
               <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Ca (班次)</label>
+                <select name="shift" value={formData.shift || ''} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-white">
+                  <option value="">Chọn ca</option>
+                  <option value="Sáng">Sáng</option>
+                  <option value="Chiều">Chiều</option>
+                  <option value="Tối">Tối</option>
+                </select>
+              </div>
+              <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Thời lượng (直播时长)</label>
                 <input readOnly type="text" name="duration" value={formData.duration} className="w-full border rounded px-3 py-2 bg-gray-100 text-gray-500" />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-xs font-medium text-gray-700 mb-1">Người báo cáo (NGƯỜI BÁO CÁO)</label>
-                <input required type="text" name="reporter" value={formData.reporter || ''} onChange={handleChange} placeholder="Tên người nhập (输入人姓名)" className="w-full border rounded px-3 py-2 focus:border-brand-red" />
+                <input required type="text" name="reporter" value={formData.reporter || ''} onChange={handleChange} placeholder="Tên người nhập (输入人姓名)" className="w-full border rounded px-3 py-2 focus:border-brand-navy" />
               </div>
             </div>
           </div>
@@ -280,7 +304,7 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
             <button
               type="submit"
               disabled={loading}
-              className="px-8 py-2 bg-brand-red text-white rounded font-bold hover:bg-red-700 disabled:opacity-50"
+              className="px-8 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy disabled:opacity-50"
             >
               {loading ? 'Đang lưu... (保存中...)' : 'Lưu Báo Cáo (保存报告)'}
             </button>

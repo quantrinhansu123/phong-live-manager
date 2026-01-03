@@ -68,6 +68,40 @@ git remote add origin git@github.com:YOUR_USERNAME/phong-live-manager.git
 git push -u origin main
 ```
 
+## Deploy lên Vercel
+
+### Cách 1: Deploy qua Vercel Dashboard (Khuyến nghị)
+
+1. Đăng nhập vào [Vercel](https://vercel.com)
+2. Click "Add New Project"
+3. Import repository từ GitHub: `quantrinhansu123/phong-live-manager`
+4. Vercel sẽ tự động detect Vite project
+5. Click "Deploy"
+6. Sau khi deploy xong, bạn sẽ có link như: `https://phong-live-manager.vercel.app`
+
+### Cách 2: Deploy qua Vercel CLI
+
+1. Cài đặt Vercel CLI:
+```bash
+npm i -g vercel
+```
+
+2. Deploy:
+```bash
+vercel
+```
+
+3. Làm theo hướng dẫn trong terminal để đăng nhập và deploy
+
+### Link Vercel
+
+🌐 **Live URL**: [https://phong-live-manager.vercel.app](https://phong-live-manager.vercel.app)
+
+- Production: `https://phong-live-manager.vercel.app`
+- Direct URL: `https://phong-live-manager-5c8g209ze-congs-projects-f25af77d.vercel.app`
+
+**Lưu ý**: File `vercel.json` đã được cấu hình sẵn cho SPA routing.
+
 ## License
 
 Private project

@@ -3,16 +3,22 @@ import { NavLink } from 'react-router-dom';
 import { ReportType } from '../types';
 
 const MENU_ITEMS = [
-  { id: ReportType.LIVE_ADS, label: 'Quản lý Live (直播管理)', path: '/' },
+  { id: ReportType.DASHBOARD, label: 'Dashboard (仪表板)', path: '/' },
+  { id: ReportType.LIVE_ADS, label: 'Quản lý Live (直播管理)', path: '/live-reports' },
+  { id: 'live_report_detail', label: 'Chi tiết Báo Cáo Live (直播报告详情)', path: '/live-report-detail' },
   { id: ReportType.VIDEO_PARAM, label: 'Quản lý Video & KPI (视频和KPI管理)', path: '/video-report' },
   { id: ReportType.STORE_MGR, label: 'Quản lý Cửa Hàng (店铺管理)', path: '/stores' },
+  { id: 'store_overview', label: 'Tổng Quan Cửa Hàng (店铺总览)', path: '/store-overview' },
   { id: ReportType.PERSONNEL, label: 'Nhân sự (人事)', path: '/personnel' },
+  { id: ReportType.CPQC, label: 'CPQC (成本管理)', path: '/cpqc' },
+  { id: ReportType.SALARY_REPORT, label: 'Báo Cáo Lương (工资报告)', path: '/salary-report' },
+  { id: ReportType.PARTNER, label: 'Quản Lý Đối Tác (合作伙伴管理)', path: '/partners' },
 ];
 
 export const Sidebar: React.FC = () => {
   return (
     <aside className="w-64 bg-white border-r border-gray-200 h-screen flex flex-col fixed left-0 top-0 z-50">
-      <div className="h-16 flex items-center justify-center border-b border-brand-red bg-brand-red">
+      <div className="h-16 flex items-center justify-center border-b border-brand-navy bg-brand-navy">
         <h1 className="text-white font-bold text-xl uppercase tracking-wider">Phong Live</h1>
       </div>
       <nav className="flex-1 overflow-y-auto py-4">
@@ -21,9 +27,9 @@ export const Sidebar: React.FC = () => {
             <li key={item.id}>
               <NavLink
                 to={item.path}
-                className={({ isActive }) =>
+                  className={({ isActive }) =>
                   `flex items-center px-6 py-3 text-sm font-medium transition-colors ${isActive
-                    ? 'bg-red-50 text-brand-red border-r-4 border-brand-red'
+                    ? 'bg-blue-50 text-brand-navy border-r-4 border-brand-navy'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`
                 }
@@ -44,7 +50,7 @@ export const Sidebar: React.FC = () => {
             localStorage.removeItem('currentUser');
             window.location.reload();
           }}
-          className="w-full text-xs text-red-600 hover:text-red-800 font-medium py-1 text-left"
+          className="w-full text-xs text-brand-navy hover:text-blue-800 font-medium py-1 text-left"
         >
           Đăng xuất
         </button>

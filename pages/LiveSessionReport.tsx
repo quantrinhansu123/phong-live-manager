@@ -1,14 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MOCK_STORES, fetchLiveReports, createLiveReport, updateLiveReport, deleteLiveReport, fetchPersonnel } from '../services/dataService';
+import { Link } from 'react-router-dom';
+import { MOCK_STORES, fetchLiveReports, createLiveReport, updateLiveReport, deleteLiveReport, fetchPersonnel, fetchStores } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line } from 'recharts';
 import { LiveReportModal } from '../components/LiveReportModal';
-import { LiveReport, Personnel } from '../types';
+import { FilterBar, FilterField } from '../components/FilterBar';
+import { exportToExcel, importFromExcel } from '../utils/excelUtils';
+import { LiveReport, Personnel, Store } from '../types';
 
 export const LiveSessionReport: React.FC = () => {
-  const [selectedStore, setSelectedStore] = useState<string>('all');
-  const [dateFilter, setDateFilter] = useState<string>('');
   const [reports, setReports] = useState<LiveReport[]>([]);
   const [personnelList, setPersonnelList] = useState<Personnel[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState<LiveReport | null>(null);
@@ -16,11 +18,17 @@ export const LiveSessionReport: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [reportToDelete, setReportToDelete] = useState<string | null>(null);
   
-  // Date range filter for personnel summary
+  // Filter states
+  const [searchText, setSearchText] = useState('');
+  const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
   const today = new Date();
   const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const [dateFrom, setDateFrom] = useState<string>(firstDayOfMonth.toISOString().split('T')[0]);
   const [dateTo, setDateTo] = useState<string>(today.toISOString().split('T')[0]);
+  
+  // Date range filter for personnel summary
+  const [personnelDateFrom, setPersonnelDateFrom] = useState<string>(firstDayOfMonth.toISOString().split('T')[0]);
+  const [personnelDateTo, setPersonnelDateTo] = useState<string>(today.toISOString().split('T')[0]);
   
   // Weekly report filter
   const getWeekStart = (date: Date) => {
@@ -38,12 +46,14 @@ export const LiveSessionReport: React.FC = () => {
   // Fetch data on mount
   const loadData = async () => {
     setIsLoading(true);
-    const [reportData, personnelData] = await Promise.all([
+    const [reportData, personnelData, storeData] = await Promise.all([
       fetchLiveReports(),
-      fetchPersonnel()
+      fetchPersonnel(),
+      fetchStores()
     ]);
     setReports(reportData);
     setPersonnelList(personnelData);
+    setStores(storeData);
     setIsLoading(false);
   };
 
@@ -79,14 +89,74 @@ export const LiveSessionReport: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  // Filter Data
+  // Filter Data with search and filters
   const filteredData = useMemo(() => {
-    return reports.filter(item => {
-      const matchStore = selectedStore === 'all' || item.channelId === selectedStore;
-      const matchDate = dateFilter ? item.date === dateFilter : true;
-      return matchStore && matchDate;
+    let filtered = reports;
+
+    // Filter by date range
+    filtered = filtered.filter(item => {
+      const itemDate = new Date(item.date);
+      const fromDate = new Date(dateFrom);
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      return itemDate >= fromDate && itemDate <= toDate;
     });
-  }, [reports, selectedStore, dateFilter]);
+
+    // Filter by selected filters (stores, hosts, etc.)
+    if (selectedFilters.stores && selectedFilters.stores.length > 0) {
+      filtered = filtered.filter(item => selectedFilters.stores!.includes(item.channelId));
+    }
+    if (selectedFilters.hosts && selectedFilters.hosts.length > 0) {
+      filtered = filtered.filter(item => selectedFilters.hosts!.includes(item.hostName));
+    }
+    if (selectedFilters.shifts && selectedFilters.shifts.length > 0) {
+      filtered = filtered.filter(item => item.shift && selectedFilters.shifts!.includes(item.shift));
+    }
+    if (selectedFilters.reporters && selectedFilters.reporters.length > 0) {
+      filtered = filtered.filter(item => item.reporter && selectedFilters.reporters!.includes(item.reporter));
+    }
+    if (selectedFilters.customerGroups && selectedFilters.customerGroups.length > 0) {
+      filtered = filtered.filter(item => item.customerGroup && selectedFilters.customerGroups!.includes(item.customerGroup));
+    }
+    if (selectedFilters.sources && selectedFilters.sources.length > 0) {
+      filtered = filtered.filter(item => item.source && selectedFilters.sources!.includes(item.source));
+    }
+    if (selectedFilters.salesPersons && selectedFilters.salesPersons.length > 0) {
+      filtered = filtered.filter(item => item.salesPerson && selectedFilters.salesPersons!.includes(item.salesPerson));
+    }
+    if (selectedFilters.callCounts && selectedFilters.callCounts.length > 0) {
+      filtered = filtered.filter(item => item.callCount !== undefined && selectedFilters.callCounts!.includes(item.callCount.toString()));
+    }
+    if (selectedFilters.statuses && selectedFilters.statuses.length > 0) {
+      filtered = filtered.filter(item => item.status && selectedFilters.statuses!.includes(item.status));
+    }
+
+    // Search in all fields
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(item => {
+        const storeName = stores.find(s => s.id === item.channelId)?.name || '';
+        return (
+          item.date.toLowerCase().includes(searchLower) ||
+          storeName.toLowerCase().includes(searchLower) ||
+          item.hostName.toLowerCase().includes(searchLower) ||
+          item.reporter?.toLowerCase().includes(searchLower) ||
+          item.shift?.toLowerCase().includes(searchLower) ||
+          item.customerGroup?.toLowerCase().includes(searchLower) ||
+          item.source?.toLowerCase().includes(searchLower) ||
+          item.salesPerson?.toLowerCase().includes(searchLower) ||
+          item.status?.toLowerCase().includes(searchLower) ||
+          item.callCount?.toString().includes(searchLower) ||
+          item.gmv.toString().includes(searchLower) ||
+          item.adCost.toString().includes(searchLower) ||
+          item.orders?.toString().includes(searchLower) ||
+          item.viewers?.toString().includes(searchLower)
+        );
+      });
+    }
+
+    return filtered;
+  }, [reports, dateFrom, dateTo, selectedFilters, searchText, stores]);
 
   // Calculations for KPI Cards
   const metrics = useMemo(() => {
@@ -123,7 +193,7 @@ export const LiveSessionReport: React.FC = () => {
   const getStatusColor = (roi: number) => {
     if (roi >= 400) return 'bg-green-100 text-green-800 border-green-200';
     if (roi >= 200) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    return 'bg-red-100 text-brand-red border-red-200';
+    return 'bg-red-100 text-brand-navy border-red-200';
   };
 
   // Personnel Summary by Date Range
@@ -139,8 +209,8 @@ export const LiveSessionReport: React.FC = () => {
     // Filter reports by date range
     const dateRangeReports = reports.filter(report => {
       const reportDate = new Date(report.date);
-      const fromDate = new Date(dateFrom);
-      const toDate = new Date(dateTo);
+      const fromDate = new Date(personnelDateFrom);
+      const toDate = new Date(personnelDateTo);
       toDate.setHours(23, 59, 59, 999); // Include full end date
       return reportDate >= fromDate && reportDate <= toDate;
     });
@@ -185,7 +255,7 @@ export const LiveSessionReport: React.FC = () => {
       ...item,
       avgROI: item.totalAdCost > 0 ? ((item.totalGMV - item.totalAdCost) / item.totalAdCost) * 100 : 0
     })).sort((a, b) => b.totalGMV - a.totalGMV);
-  }, [reports, personnelList, dateFrom, dateTo]);
+  }, [reports, personnelList, personnelDateFrom, personnelDateTo]);
 
   // Weekly Report by Host
   const weeklyReportData = useMemo(() => {
@@ -270,7 +340,7 @@ export const LiveSessionReport: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] overflow-y-auto p-4">
           <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="bg-gradient-to-r from-brand-red to-red-600 p-6 text-white">
+            <div className="bg-gradient-to-r from-brand-navy to-blue-700 p-6 text-white">
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-2xl font-bold uppercase mb-2">Chi tiết Báo Cáo Live (直播报告详情)</h2>
@@ -468,7 +538,7 @@ export const LiveSessionReport: React.FC = () => {
                   setIsViewModalOpen(false);
                   handleEditReport(selectedReport);
                 }}
-                className="px-6 py-2 bg-brand-red text-white rounded font-bold hover:bg-red-700 transition-colors"
+                className="px-6 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy transition-colors"
               >
                 Sửa (编辑)
               </button>
@@ -494,34 +564,98 @@ export const LiveSessionReport: React.FC = () => {
         </div>
       )}
 
-      {/* Header & Filter */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý Live (直播管理)</h2>
-        <div className="flex gap-2 flex-wrap items-center">
-          <select
-            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-red bg-white shadow-sm"
-            value={selectedStore}
-            onChange={(e) => setSelectedStore(e.target.value)}
-          >
-            {MOCK_STORES.map(store => (
-              <option key={store.id} value={store.id}>{store.name}</option>
-            ))}
-          </select>
-          <input
-            type="date"
-            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-red bg-white shadow-sm"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-          />
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="bg-brand-red hover:bg-red-700 text-white px-4 py-2 rounded shadow text-sm font-bold flex items-center gap-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            Nhập Báo Cáo (输入报告)
-          </button>
-        </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-brand-navy hover:bg-brand-darkNavy text-white px-4 py-2 rounded shadow text-sm font-bold flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          Nhập Báo Cáo (输入报告)
+        </button>
       </div>
+
+      {/* Filter Bar */}
+      <FilterBar
+        onSearch={setSearchText}
+        onExportExcel={() => {
+          const exportData = filteredData.map(report => ({
+            'Ngày': report.date,
+            'Cửa hàng': stores.find(s => s.id === report.channelId)?.name || '',
+            'Host': report.hostName,
+            'Ca': report.shift || '',
+            'Thời gian': `${report.startTime} - ${report.endTime}`,
+            'GMV': report.gmv,
+            'Chi phí QC': report.adCost,
+            'ROI': report.adCost > 0 ? (((report.gmv - report.adCost) / report.adCost) * 100).toFixed(2) + '%' : '0%',
+            'Đơn hàng': report.orders || 0,
+            'Người xem': report.viewers || 0,
+            'Người báo cáo': report.reporter || ''
+          }));
+          exportToExcel(exportData, `live-reports-${new Date().toISOString().split('T')[0]}.xlsx`);
+        }}
+        onImportExcel={async (file) => {
+          try {
+            const data = await importFromExcel(file);
+            // Process imported data and create reports
+            alert(`Đã import ${data.length} bản ghi từ Excel. Vui lòng kiểm tra dữ liệu.`);
+            // TODO: Implement import logic
+          } catch (error) {
+            alert('Lỗi khi import Excel: ' + (error as Error).message);
+          }
+        }}
+        onReset={() => {
+          setSearchText('');
+          setSelectedFilters({});
+          const today = new Date();
+          const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+          setDateFrom(firstDayOfMonth.toISOString().split('T')[0]);
+          setDateTo(today.toISOString().split('T')[0]);
+        }}
+        filterFields={[
+          {
+            key: 'stores',
+            label: 'Cửa hàng',
+            type: 'checkbox',
+            options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
+          },
+          {
+            key: 'hosts',
+            label: 'Host',
+            type: 'checkbox',
+            options: Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
+          },
+          {
+            key: 'shifts',
+            label: 'Ca',
+            type: 'checkbox',
+            options: [
+              { value: 'Sáng', label: 'Sáng' },
+              { value: 'Chiều', label: 'Chiều' },
+              { value: 'Tối', label: 'Tối' }
+            ]
+          },
+          {
+            key: 'reporters',
+            label: 'Người báo cáo',
+            type: 'checkbox',
+            options: Array.from(new Set(reports.map(r => r.reporter).filter(Boolean))).map(reporter => ({ value: reporter!, label: reporter! }))
+          }
+        ]}
+        selectedFilters={selectedFilters}
+        onFilterChange={(field, values) => {
+          setSelectedFilters(prev => ({ ...prev, [field]: values }));
+        }}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateFromChange={setDateFrom}
+        onDateToChange={setDateTo}
+        onQuickDateSelect={(from, to) => {
+          setDateFrom(from);
+          setDateTo(to);
+        }}
+      />
 
       {isLoading ? (
         <div className="text-center py-12 text-gray-500">Đang tải dữ liệu... (正在加载数据...)</div>
@@ -533,9 +667,9 @@ export const LiveSessionReport: React.FC = () => {
               <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV (总GMV)</p>
               <p className="text-xl font-bold text-gray-800 mt-1">{formatCurrency(metrics.totalGMV)}</p>
             </div>
-            <div className="bg-white p-4 rounded shadow-sm border-l-4 border-brand-red">
+            <div className="bg-white p-4 rounded shadow-sm border-l-4 border-brand-navy">
               <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC (总广告费)</p>
-              <p className="text-xl font-bold text-brand-red mt-1">{formatCurrency(metrics.totalAdCost)}</p>
+              <p className="text-xl font-bold text-brand-navy mt-1">{formatCurrency(metrics.totalAdCost)}</p>
             </div>
             <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
               <p className="text-xs text-gray-500 uppercase font-bold">ROI Tổng (总ROI)</p>
@@ -570,14 +704,14 @@ export const LiveSessionReport: React.FC = () => {
                   type="date"
                   value={weekStartDate}
                   onChange={(e) => setWeekStartDate(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-red bg-white shadow-sm"
+                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
                 />
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Đến ngày:</label>
                 <input
                   type="date"
                   value={weekEndDate}
                   onChange={(e) => setWeekEndDate(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-red bg-white shadow-sm"
+                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
                 />
               </div>
             </div>
@@ -586,20 +720,20 @@ export const LiveSessionReport: React.FC = () => {
                 <thead>
                   {/* First header row with merged cells */}
                   <tr>
-                    <th rowSpan={2} className="px-4 py-3 border-r text-center font-bold text-gray-800 bg-blue-200 sticky left-0 z-20 min-w-[120px]">
+                    <th rowSpan={2} className="px-4 py-3 border-r text-center font-bold text-white bg-brand-navy sticky left-0 z-20 min-w-[120px]">
                       NGÀY (日期)
                     </th>
-                    <th colSpan={weeklyReportData.hosts.length} className="px-4 py-3 border-r text-center font-bold text-gray-800 bg-yellow-100">
+                    <th colSpan={weeklyReportData.hosts.length} className="px-4 py-3 border-r text-center font-bold text-white bg-brand-darkNavy">
                       TÊN HOST (主播名称)
                     </th>
-                    <th rowSpan={2} className="px-4 py-3 text-center font-bold text-white bg-red-600 min-w-[140px]">
+                    <th rowSpan={2} className="px-4 py-3 text-center font-bold text-white bg-brand-darkNavy min-w-[140px]">
                       TỔNG DOANH THU TUẦN (周总营收)
                     </th>
                   </tr>
                   {/* Second header row with host names */}
                   <tr>
                     {weeklyReportData.hosts.map(host => (
-                      <th key={host} className="px-4 py-3 border-r text-center font-bold text-gray-800 bg-yellow-100 min-w-[140px]">
+                      <th key={host} className="px-4 py-3 border-r text-center font-bold text-white bg-brand-darkNavy min-w-[140px]">
                         {host}
                       </th>
                     ))}
@@ -668,20 +802,20 @@ export const LiveSessionReport: React.FC = () => {
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-red bg-white shadow-sm"
+                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
                 />
                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Đến ngày:</label>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-red bg-white shadow-sm"
+                  className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
                 />
               </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b">
+                <thead className="text-xs text-white uppercase bg-brand-navy border-b">
                   <tr>
                     <th className="px-6 py-3 border-r text-left">Nhân viên (员工)</th>
                     <th className="px-6 py-3 border-r text-left">Phòng ban</th>
@@ -764,84 +898,15 @@ export const LiveSessionReport: React.FC = () => {
             </div>
           </div>
 
-          {/* Detailed Table */}
-          <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
-            <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-800">Chi tiết Báo Cáo Live (直播报告详情)</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-center">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b">
-                  <tr>
-                    <th className="px-4 py-3 border-r whitespace-nowrap">Ngày</th>
-                    <th className="px-4 py-3 border-r whitespace-nowrap">Kênh Live</th>
-                    <th className="px-4 py-3 border-r whitespace-nowrap">Host</th>
-                    <th className="px-4 py-3 border-r whitespace-nowrap">Thời gian</th>
-                    <th className="px-4 py-3 border-r text-blue-700 whitespace-nowrap">GMV</th>
-                    <th className="px-4 py-3 border-r text-red-700 whitespace-nowrap">CPQC</th>
-                    <th className="px-4 py-3 border-r whitespace-nowrap">ROI (%)</th>
-                    <th className="px-4 py-3 border-r whitespace-nowrap">Đánh giá</th>
-                    <th className="px-4 py-3 whitespace-nowrap">Thao tác (操作)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredData.length === 0 ? (
-                    <tr><td colSpan={9} className="py-8 text-gray-400">Chưa có dữ liệu (暂无数据)</td></tr>
-                  ) : (
-                    filteredData.map((row) => {
-                      const gmv = Number(row.gmv);
-                      const ad = Number(row.adCost);
-                      const profit = gmv - ad;
-                      const roiVal = ad > 0 ? (profit / ad) * 100 : 0;
-                      return (
-                        <tr key={row.id} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-3 border-r font-medium">{row.date}</td>
-                          <td className="px-4 py-3 border-r text-gray-600">{MOCK_STORES.find(s => s.id === row.channelId)?.name || 'Unknown'}</td>
-                          <td className="px-4 py-3 border-r font-medium">{row.hostName}</td>
-                          <td className="px-4 py-3 border-r text-xs text-gray-500">
-                            {row.startTime} - {row.endTime}<br />
-                            ({row.duration})
-                          </td>
-                          <td className="px-4 py-3 border-r font-bold text-blue-600">{formatCurrency(gmv)}</td>
-                          <td className="px-4 py-3 border-r font-bold text-red-600">{formatCurrency(ad)}</td>
-                          <td className="px-4 py-3 border-r font-medium">{roiVal.toFixed(1)}%</td>
-                          <td className="px-4 py-3 border-r">
-                            <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(roiVal)}`}>
-                              {roiVal >= 400 ? 'TỐT' : roiVal >= 200 ? 'KHÁ' : 'CẦN TỐI ƯU'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-center gap-1">
-                              <button
-                                onClick={() => handleViewReport(row)}
-                                className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
-                                title="Xem chi tiết"
-                              >
-                                Xem (查看)
-                              </button>
-                              <button
-                                onClick={() => handleEditReport(row)}
-                                className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
-                                title="Sửa"
-                              >
-                                Sửa (编辑)
-                              </button>
-                              <button
-                                onClick={() => row.id && setReportToDelete(row.id)}
-                                className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
-                                title="Xóa"
-                              >
-                                Xóa (删除)
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+          {/* Link to Detail Page */}
+          <div className="bg-white rounded shadow-sm border border-gray-200 p-4 text-center">
+            <p className="text-gray-600 mb-3">Xem bảng chi tiết đầy đủ với tất cả các trường dữ liệu:</p>
+            <Link
+              to="/live-report-detail"
+              className="inline-block bg-brand-navy hover:bg-brand-darkNavy text-white px-6 py-2 rounded font-bold transition-colors"
+            >
+              Xem Chi Tiết Báo Cáo Live (直播报告详情)
+            </Link>
           </div>
         </>
       )}

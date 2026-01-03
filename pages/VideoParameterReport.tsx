@@ -1,14 +1,16 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { VIDEO_CONFIG_DATA, MOCK_VIDEO_METRICS, MOCK_STORES, fetchVideoMetrics } from '../services/dataService';
+import { MOCK_VIDEO_METRICS, MOCK_STORES, fetchVideoMetrics } from '../services/dataService';
 import { VideoMetric } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import * as XLSX from 'xlsx';
+import { VideoEditModal } from '../components/VideoEditModal';
 
 export const VideoParameterReport: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'metrics' | 'config'>('metrics');
   const [selectedStore, setSelectedStore] = useState<string>('all');
   const [videos, setVideos] = useState<VideoMetric[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingVideo, setEditingVideo] = useState<VideoMetric | undefined>(undefined);
 
   useEffect(() => {
     const loadData = async () => {
@@ -209,12 +211,51 @@ export const VideoParameterReport: React.FC = () => {
     return acc;
   }, []).sort((a, b) => b.views - a.views);
 
+  // Handle Edit Video
+  const handleEditVideo = (video: VideoMetric) => {
+    setEditingVideo(video);
+    setIsEditModalOpen(true);
+  };
+
+  // Handle Delete Video
+  const handleDeleteVideo = (videoId: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa video này? (确定要删除这个视频吗?)')) {
+      setVideos(videos.filter(v => v.id !== videoId));
+      alert('Đã xóa video thành công! (视频已删除!)');
+    }
+  };
+
+  // Handle Save Video (Edit or Add)
+  const handleSaveVideo = async (videoData: VideoMetric) => {
+    if (editingVideo) {
+      // Update existing video
+      setVideos(videos.map(v => v.id === videoData.id ? videoData : v));
+      alert('Đã cập nhật video thành công! (视频已更新!)');
+    } else {
+      // Add new video
+      const newVideo: VideoMetric = {
+        ...videoData,
+        id: `video-${Date.now()}`
+      };
+      setVideos([...videos, newVideo]);
+      alert('Đã thêm video thành công! (视频已添加!)');
+    }
+    setIsEditModalOpen(false);
+    setEditingVideo(undefined);
+  };
+
+  // Handle Add New Video
+  const handleAddVideo = () => {
+    setEditingVideo(undefined);
+    setIsEditModalOpen(true);
+  };
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý & Báo cáo Video (视频管理和报告)</h2>
         <select
-          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-red bg-white shadow-sm"
+          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
           value={selectedStore}
           onChange={(e) => setSelectedStore(e.target.value)}
         >
@@ -345,29 +386,21 @@ export const VideoParameterReport: React.FC = () => {
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('metrics')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'metrics' ? 'border-brand-red text-brand-red' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-            Danh sách Video & Đánh giá
-          </button>
-          <button
-            onClick={() => setActiveTab('config')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'config' ? 'border-brand-red text-brand-red' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
-          >
-            Cấu hình thông số
-          </button>
-        </nav>
-      </div>
-
-      {activeTab === 'metrics' && (
+      {/* Video List */}
+      <div>
         <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+            <h3 className="text-lg font-bold text-gray-800">Danh sách Video & Đánh giá (视频列表和评估)</h3>
+            <button
+              onClick={handleAddVideo}
+              className="bg-brand-navy text-white px-4 py-2 rounded hover:bg-brand-darkNavy transition shadow font-medium"
+            >
+              + Thêm Video (添加视频)
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b">
+              <thead className="text-xs text-white uppercase bg-brand-navy border-b">
                 <tr>
                   <th className="px-4 py-3">视频名称</th>
                   <th className="px-4 py-3">发布时间</th>
@@ -380,6 +413,7 @@ export const VideoParameterReport: React.FC = () => {
                   <th className="px-4 py-3 text-right">完播率</th>
                   <th className="px-4 py-3 text-right">新增粉丝数</th>
                   <th className="px-4 py-3">商品 ID</th>
+                  <th className="px-4 py-3 text-center">Hành động (操作)</th>
                 </tr>
               </thead>
               <tbody>
@@ -399,6 +433,22 @@ export const VideoParameterReport: React.FC = () => {
                       <td className="px-4 py-4 text-right">85%</td>
                       <td className="px-4 py-4 text-right">{Math.floor(video.views / 50)}</td>
                       <td className="px-4 py-4 text-gray-600">PROD{video.id}</td>
+                      <td className="px-4 py-4">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => handleEditVideo(video)}
+                            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-xs font-medium"
+                          >
+                            Sửa (编辑)
+                          </button>
+                          <button
+                            onClick={() => handleDeleteVideo(video.id)}
+                            className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 transition text-xs font-medium"
+                          >
+                            Xóa (删除)
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   )
                 })}
@@ -406,39 +456,18 @@ export const VideoParameterReport: React.FC = () => {
             </table>
           </div>
         </div>
-      )}
+      </div>
 
-      {activeTab === 'config' && (
-        <div className="bg-white rounded shadow-sm border border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200 bg-gray-50">
-            <h3 className="text-lg font-bold text-gray-800">Cấu hình đẩy excel báo cáo video (视频报告Excel推送配置)</h3>
-          </div>
-          <div className="overflow-x-auto flex-1">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b">
-                <tr>
-                  <th scope="col" className="px-6 py-3 border-r">Hạng mục</th>
-                  <th scope="col" className="px-6 py-3 border-r">Định dạng</th>
-                  <th scope="col" className="px-6 py-3">Công thức</th>
-                </tr>
-              </thead>
-              <tbody>
-                {VIDEO_CONFIG_DATA.map((item, index) => (
-                  <tr key={item.id} className={`border-b hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                    <td className="px-6 py-4 font-medium text-gray-900 border-r">{item.category}</td>
-                    <td className="px-6 py-4 text-gray-500 border-r italic">{item.format || '-'}</td>
-                    <td className="px-6 py-4">
-                      {item.sourceType === 'manual' && <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded border border-yellow-300">Nhập tay</span>}
-                      {item.sourceType === 'excel' && <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded border border-blue-300">Lấy từ excel</span>}
-                      {item.sourceType === 'formula' && <span className="text-gray-600 block text-xs font-mono bg-gray-100 p-1 rounded">{item.formula}</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* Edit Modal */}
+      <VideoEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingVideo(undefined);
+        }}
+        onSubmit={handleSaveVideo}
+        initialData={editingVideo}
+      />
     </div>
   );
 };

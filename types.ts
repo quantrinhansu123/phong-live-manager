@@ -1,6 +1,9 @@
 export interface Store {
   id: string;
   name: string;
+  partnerId?: string; // ID đối tác liên kết
+  storeType?: 'own' | 'partner'; // Loại cửa hàng: 'own' = của mình, 'partner' = đối tác phụ trách
+  personnelIds?: string[]; // Danh sách ID nhân sự phụ trách
 }
 
 export interface LiveReport {
@@ -28,6 +31,12 @@ export interface LiveReport {
   productClicks?: number; // 产品点击次数 Lượt nhấp sản phẩm
   newFollowers?: number; // 关注人数 FL mới
   reporter?: string; // NGƯỜI BÁO CÁO
+  shift?: 'Sáng' | 'Chiều' | 'Tối'; // Ca làm việc
+  customerGroup?: string; // Nhóm khách hàng
+  source?: string; // Nguồn tới
+  salesPerson?: string; // Nhân viên sale
+  callCount?: number; // Lần gọi
+  status?: string; // Trạng thái
 }
 
 export interface Personnel {
@@ -93,4 +102,49 @@ export enum ReportType {
   VIDEO_PARAM = 'video_param',
   STORE_MGR = 'store_mgr',
   PERSONNEL = 'personnel',
+  CPQC = 'cpqc',
+  SALARY_REPORT = 'salary_report',
+  PARTNER = 'partner',
+}
+
+export interface CPQCData {
+  id: string;
+  date: string;
+  shift: 'Sáng' | 'Chiều' | 'Tối';
+  storeId: string;
+  hostName: string;
+  adCost: number; // Chi phí QC
+  gmv: number;
+  orders: number;
+  conversionRate: number; // Tỉ lệ chuyển đổi
+  roi: number; // ROI
+}
+
+export interface StoreOverview {
+  storeId: string;
+  storeName: string;
+  totalGMV: number;
+  totalAdCost: number;
+  totalOrders: number;
+  totalViews: number;
+  roi: number;
+  conversionRate: number;
+  reportCount: number;
+}
+
+export interface Partner {
+  id?: string;
+  name: string; // Tên đối tác
+  code?: string; // Mã đối tác (tự động tạo)
+  type: 'Supplier' | 'Service' | 'Platform' | 'Other'; // Loại đối tác
+  contactPerson: string; // Người liên hệ
+  phoneNumber: string; // Số điện thoại
+  email?: string; // Email (dùng làm tài khoản)
+  password?: string; // Mật khẩu (tự động tạo)
+  address?: string; // Địa chỉ
+  storeIds?: string[]; // Danh sách ID cửa hàng liên kết
+  notes?: string; // Ghi chú
+  status: 'Active' | 'Inactive'; // Trạng thái
+  createdAt?: string; // Ngày tạo
+  updatedAt?: string; // Ngày cập nhật
 }

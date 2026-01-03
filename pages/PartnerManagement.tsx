@@ -1,0 +1,839 @@
+import React, { useState, useEffect } from 'react';
+import { fetchPartners, createPartner, updatePartner, deletePartner, fetchStores, createStore } from '../services/dataService';
+import { FilterBar } from '../components/FilterBar';
+import { exportToExcel, importFromExcel } from '../utils/excelUtils';
+import { Partner, Store } from '../types';
+
+export const PartnerManagement: React.FC = () => {
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
+  const [partnerToDelete, setPartnerToDelete] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
+  const [viewingPartner, setViewingPartner] = useState<Partner | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [partnerData, storeData] = await Promise.all([
+        fetchPartners(),
+        fetchStores()
+      ]);
+      setPartners(partnerData);
+      setStores(storeData.filter(s => s.id !== 'all'));
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadPartners = async () => {
+    const data = await fetchPartners();
+    setPartners(data);
+  };
+
+  // Tự động tạo mã đối tác
+  const generatePartnerCode = (name: string): string => {
+    const now = Date.now();
+    const namePrefix = name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .join('')
+      .substring(0, 3);
+    return `${namePrefix}${now.toString().slice(-6)}`;
+  };
+
+  // Tự động tạo mật khẩu
+  const generatePassword = (): string => {
+    const length = 8;
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    return password;
+  };
+
+  const handleCreatePartner = async (partner: Omit<Partner, 'id' | 'code'> & { password?: string }) => {
+    if (!partner.email || !partner.email.trim()) {
+      alert('Vui lòng nhập email (dùng làm tài khoản)');
+      return;
+    }
+    
+    const code = generatePartnerCode(partner.name);
+    // Nếu có mật khẩu nhập vào thì dùng, không thì tự động tạo
+    const password = partner.password && partner.password.trim() ? partner.password.trim() : generatePassword();
+    const newPartner = await createPartner({ ...partner, code, password });
+    const partnerId = newPartner.name || `local_partner_${Date.now()}`;
+    
+    // Cập nhật partnerId cho các cửa hàng được liên kết
+    if (partner.storeIds && partner.storeIds.length > 0) {
+      for (const storeId of partner.storeIds) {
+        await updateStore(storeId, { partnerId });
+      }
+    }
+    
+    await loadData();
+    setIsModalOpen(false);
+    alert(`Đã thêm đối tác thành công!\n\nTài khoản: ${partner.email}\nMật khẩu: ${password}\n\nVui lòng lưu lại thông tin này!`);
+  };
+
+  const handleUpdatePartner = async (id: string, partner: Partial<Omit<Partner, 'id' | 'code'>>) => {
+    // Lấy thông tin đối tác hiện tại để so sánh
+    const currentPartner = partners.find(p => p.id === id);
+    const oldStoreIds = currentPartner?.storeIds || [];
+    const newStoreIds = partner.storeIds || [];
+    
+    await updatePartner(id, partner);
+    
+    // Xóa partnerId từ các cửa hàng không còn được liên kết
+    const removedStoreIds = oldStoreIds.filter(sid => !newStoreIds.includes(sid));
+    for (const storeId of removedStoreIds) {
+      await updateStore(storeId, { partnerId: undefined });
+    }
+    
+    // Thêm partnerId cho các cửa hàng mới được liên kết
+    const addedStoreIds = newStoreIds.filter(sid => !oldStoreIds.includes(sid));
+    for (const storeId of addedStoreIds) {
+      await updateStore(storeId, { partnerId: id });
+    }
+    
+    await loadData();
+    setEditingPartner(null);
+    alert('Đã cập nhật đối tác thành công!');
+  };
+
+  const handleDeletePartner = async (id: string) => {
+    // Xóa partnerId từ các cửa hàng được liên kết
+    const partnerToDelete = partners.find(p => p.id === id);
+    if (partnerToDelete?.storeIds && partnerToDelete.storeIds.length > 0) {
+      for (const storeId of partnerToDelete.storeIds) {
+        await updateStore(storeId, { partnerId: undefined });
+      }
+    }
+    
+    await deletePartner(id);
+    await loadPartners();
+    setPartnerToDelete(null);
+    alert('Đã xóa đối tác thành công!');
+  };
+
+  // Filter data
+  const filteredPartners = partners.filter(partner => {
+    // Search filter
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      const matchSearch = 
+        partner.name.toLowerCase().includes(searchLower) ||
+        partner.code?.toLowerCase().includes(searchLower) ||
+        partner.contactPerson.toLowerCase().includes(searchLower) ||
+        partner.phoneNumber.includes(searchLower) ||
+        partner.email?.toLowerCase().includes(searchLower) ||
+        partner.taxCode?.includes(searchLower);
+      if (!matchSearch) return false;
+    }
+
+    // Type filter
+    if (selectedFilters.types && selectedFilters.types.length > 0) {
+      if (!selectedFilters.types.includes(partner.type)) return false;
+    }
+
+    // Status filter
+    if (selectedFilters.statuses && selectedFilters.statuses.length > 0) {
+      if (!selectedFilters.statuses.includes(partner.status)) return false;
+    }
+
+    return true;
+  });
+
+  const partnerTypes = ['Supplier', 'Service', 'Platform', 'Other'];
+  const statuses = ['Active', 'Inactive'];
+
+  return (
+    <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản Lý Đối Tác (合作伙伴管理)</h2>
+        <button
+          onClick={() => {
+            setEditingPartner(null);
+            setIsModalOpen(true);
+          }}
+          className="bg-brand-navy hover:bg-brand-darkNavy text-white px-4 py-2 rounded shadow text-sm font-bold flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Thêm Đối Tác Mới
+        </button>
+      </div>
+
+      {/* Filter Bar */}
+      <FilterBar
+        onSearch={setSearchText}
+        onExportExcel={() => {
+          const exportData = filteredPartners.map(partner => ({
+            'Tên đối tác': partner.name,
+            'Mã đối tác': partner.code || '',
+            'Loại': partner.type,
+            'Người liên hệ': partner.contactPerson,
+            'Số điện thoại': partner.phoneNumber,
+            'Email': partner.email || '',
+            'Địa chỉ': partner.address || '',
+            'Mã số thuế': partner.taxCode || '',
+            'Số tài khoản': partner.bankAccount || '',
+            'Tên ngân hàng': partner.bankName || '',
+            'Trạng thái': partner.status,
+            'Ghi chú': partner.notes || '',
+          }));
+          exportToExcel(exportData, `partners-${new Date().toISOString().split('T')[0]}.xlsx`);
+        }}
+        onImportExcel={async (file) => {
+          try {
+            const data = await importFromExcel(file);
+            alert(`Đã import ${data.length} đối tác từ Excel. Vui lòng kiểm tra dữ liệu.`);
+            // TODO: Implement import logic
+          } catch (error) {
+            alert('Lỗi khi import Excel: ' + (error as Error).message);
+          }
+        }}
+        onReset={() => {
+          setSearchText('');
+          setSelectedFilters({});
+        }}
+        filterFields={[
+          {
+            key: 'types',
+            label: 'Loại đối tác',
+            type: 'checkbox',
+            options: partnerTypes.map(type => ({ value: type, label: type }))
+          },
+          {
+            key: 'statuses',
+            label: 'Trạng thái',
+            type: 'checkbox',
+            options: statuses.map(status => ({ value: status, label: status }))
+          }
+        ]}
+        selectedFilters={selectedFilters}
+        onFilterChange={(field, values) => {
+          setSelectedFilters(prev => ({ ...prev, [field]: values }));
+        }}
+        dateFrom=""
+        dateTo=""
+        onDateFromChange={() => {}}
+        onDateToChange={() => {}}
+        onQuickDateSelect={() => {}}
+      />
+
+      {/* Partner Modal */}
+      {isModalOpen && (
+        <PartnerModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setEditingPartner(null);
+          }}
+          onSubmit={editingPartner 
+            ? (data) => handleUpdatePartner(editingPartner.id!, data)
+            : handleCreatePartner
+          }
+          initialData={editingPartner || undefined}
+          stores={stores}
+        />
+      )}
+
+      {/* View Partner Modal */}
+      {viewingPartner && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] overflow-y-auto p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl m-4 p-6 relative">
+            <button 
+              onClick={() => setViewingPartner(null)} 
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 uppercase border-b pb-2">
+              Chi Tiết Đối Tác
+            </h2>
+
+            <div className="space-y-6">
+              {/* Thông tin cơ bản */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Tên đối tác</p>
+                  <p className="text-lg font-bold text-gray-800">{viewingPartner.name}</p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Mã đối tác</p>
+                  <p className="text-lg font-bold text-gray-800">{viewingPartner.code || 'Chưa có mã'}</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Loại đối tác</p>
+                  <p className="text-lg font-bold text-gray-800">{viewingPartner.type}</p>
+                </div>
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Trạng thái</p>
+                  <span className={`px-3 py-1 rounded text-sm font-bold ${
+                    viewingPartner.status === 'Active' 
+                      ? 'bg-green-100 text-green-800 border border-green-300' 
+                      : 'bg-red-100 text-red-800 border border-red-300'
+                  }`}>
+                    {viewingPartner.status === 'Active' ? 'Hoạt động' : 'Ngừng hoạt động'}
+                  </span>
+                </div>
+                <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Người liên hệ</p>
+                  <p className="text-lg font-bold text-gray-800">{viewingPartner.contactPerson}</p>
+                </div>
+                <div className="bg-pink-50 p-4 rounded-lg border border-pink-200">
+                  <p className="text-xs text-gray-500 uppercase font-bold mb-1">Số điện thoại</p>
+                  <p className="text-lg font-bold text-gray-800">{viewingPartner.phoneNumber}</p>
+                </div>
+                {viewingPartner.email && (
+                  <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Email</p>
+                    <p className="text-lg font-bold text-gray-800">{viewingPartner.email}</p>
+                  </div>
+                )}
+                {viewingPartner.address && (
+                  <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Địa chỉ</p>
+                    <p className="text-lg font-bold text-gray-800">{viewingPartner.address}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Danh sách cửa hàng */}
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">Danh Sách Cửa Hàng Liên Kết</h3>
+                {viewingPartner.storeIds && viewingPartner.storeIds.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {viewingPartner.storeIds.map(storeId => {
+                      const store = stores.find(s => s.id === storeId);
+                      return store ? (
+                        <div key={storeId} className="bg-white p-3 rounded border border-blue-200 flex items-center justify-between">
+                          <span className="font-medium text-gray-800">{store.name}</span>
+                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs border border-blue-300">
+                            Liên kết
+                          </span>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-4">Chưa có cửa hàng nào được liên kết</p>
+                )}
+              </div>
+
+              {/* Ghi chú */}
+              {viewingPartner.notes && (
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">Ghi chú</h3>
+                  <p className="text-gray-700 whitespace-pre-wrap">{viewingPartner.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 pt-4 border-t flex justify-end gap-3">
+              <button 
+                onClick={() => setViewingPartner(null)} 
+                className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={() => {
+                  setViewingPartner(null);
+                  setEditingPartner(viewingPartner);
+                  setIsModalOpen(true);
+                }}
+                className="px-6 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy"
+              >
+                Sửa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {partnerToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[80]">
+          <div className="bg-white p-6 rounded shadow-lg max-w-sm w-full text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+              <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Xác nhận xóa?</h3>
+            <p className="text-sm text-gray-500 mb-6">Bạn có chắc chắn muốn xóa đối tác này không? Hành động này không thể hoàn tác.</p>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => setPartnerToDelete(null)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 text-gray-800">Hủy</button>
+              <button onClick={() => handleDeletePartner(partnerToDelete)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Partners Table */}
+      <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <h3 className="text-lg font-bold text-gray-800">Danh Sách Đối Tác ({filteredPartners.length} đối tác)</h3>
+        </div>
+        {isLoading ? (
+          <div className="p-8 text-center text-gray-500">Đang tải dữ liệu...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs text-white uppercase bg-brand-navy border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left">Tên đối tác</th>
+                  <th className="px-4 py-3 text-left">Mã</th>
+                  <th className="px-4 py-3 text-left">Loại</th>
+                  <th className="px-4 py-3 text-left">Người liên hệ</th>
+                  <th className="px-4 py-3 text-left">Số điện thoại</th>
+                  <th className="px-4 py-3 text-left">Email</th>
+                  <th className="px-4 py-3 text-left">Trạng thái</th>
+                  <th className="px-4 py-3 text-center">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPartners.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-gray-400">
+                      Chưa có đối tác nào
+                    </td>
+                  </tr>
+                ) : (
+                  filteredPartners.map((partner) => (
+                    <tr key={partner.id} className="border-b hover:bg-gray-50">
+                      <td className="px-4 py-3 font-bold text-gray-800">{partner.name}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          partner.type === 'Supplier' ? 'bg-blue-100 text-blue-800' :
+                          partner.type === 'Service' ? 'bg-green-100 text-green-800' :
+                          partner.type === 'Platform' ? 'bg-purple-100 text-purple-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {partner.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{partner.contactPerson}</td>
+                      <td className="px-4 py-3 text-gray-600">{partner.phoneNumber}</td>
+                      <td className="px-4 py-3 text-gray-600">{partner.email || '-'}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {partner.storeIds && partner.storeIds.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {partner.storeIds.map(storeId => {
+                              const store = stores.find(s => s.id === storeId);
+                              return store ? (
+                                <span key={storeId} className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs border border-blue-200">
+                                  {store.name}
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                        ) : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                          partner.status === 'Active' 
+                            ? 'bg-green-100 text-green-800 border border-green-300' 
+                            : 'bg-red-100 text-red-800 border border-red-300'
+                        }`}>
+                          {partner.status === 'Active' ? 'Hoạt động' : 'Ngừng hoạt động'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-center gap-1">
+                          <button
+                            onClick={() => {
+                              setViewingPartner(partner);
+                            }}
+                            className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
+                            title="Xem"
+                          >
+                            Xem
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingPartner(partner);
+                              setIsModalOpen(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
+                            title="Sửa"
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            onClick={() => partner.id && setPartnerToDelete(partner.id)}
+                            className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
+                            title="Xóa"
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Partner Modal Component
+interface PartnerModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: Omit<Partner, 'id' | 'code'> & { password?: string }) => Promise<void>;
+  initialData?: Partner;
+  stores: Store[];
+}
+
+const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, initialData, stores }) => {
+  const [formData, setFormData] = useState<Omit<Partner, 'id' | 'code' | 'password'> & { password?: string }>({
+    name: '',
+    type: 'Supplier',
+    contactPerson: '',
+    phoneNumber: '',
+    email: '',
+    address: '',
+    storeIds: [],
+    notes: '',
+    status: 'Active',
+    password: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [storeSearchText, setStoreSearchText] = useState('');
+  const [showStoreDropdown, setShowStoreDropdown] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      if (initialData) {
+        setFormData({
+          name: initialData.name,
+          type: initialData.type,
+          contactPerson: initialData.contactPerson,
+          phoneNumber: initialData.phoneNumber,
+          email: initialData.email || '',
+          address: initialData.address || '',
+          storeIds: initialData.storeIds || [],
+          notes: initialData.notes || '',
+          status: initialData.status,
+        });
+      } else {
+        setFormData({
+          name: '',
+          type: 'Supplier',
+          contactPerson: '',
+          phoneNumber: '',
+          email: '',
+          address: '',
+          storeIds: [],
+          notes: '',
+          status: 'Active',
+          password: '',
+        } as any);
+      }
+      setStoreSearchText('');
+      setShowStoreDropdown(false);
+    }
+  }, [isOpen, initialData]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleStoreSelect = (storeId: string) => {
+    if (storeId && storeId !== '') {
+      setFormData(prev => {
+        const currentIds = prev.storeIds || [];
+        if (!currentIds.includes(storeId)) {
+          return { ...prev, storeIds: [...currentIds, storeId] };
+        }
+        return prev;
+      });
+      setStoreSearchText('');
+    }
+  };
+
+  const handleRemoveStore = (storeId: string) => {
+    setFormData(prev => {
+      const currentIds = prev.storeIds || [];
+      return { ...prev, storeIds: currentIds.filter(id => id !== storeId) };
+    });
+  };
+
+  // Filter stores: chỉ hiển thị cửa hàng chưa có đối tác
+  const availableStores = stores.filter(store => {
+    // Chỉ hiển thị cửa hàng chưa có partnerId hoặc đã được chọn trong form này
+    return !store.partnerId || (formData.storeIds || []).includes(store.id);
+  });
+
+  // Filter stores theo search text
+  const filteredAvailableStores = availableStores.filter(store => {
+    // Loại bỏ các cửa hàng đã được chọn
+    if ((formData.storeIds || []).includes(store.id)) return false;
+    
+    // Nếu có text tìm kiếm, filter theo text
+    if (storeSearchText) {
+      const searchLower = storeSearchText.toLowerCase();
+      return store.name.toLowerCase().includes(searchLower);
+    }
+    
+    // Nếu không có text, hiển thị tất cả
+    return true;
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      // Lấy password từ formData nếu có (chỉ khi thêm mới)
+      const submitData = { ...formData } as any;
+      if (!initialData && (formData as any).password) {
+        submitData.password = (formData as any).password;
+      }
+      await onSubmit(submitData);
+      onClose();
+    } catch (error) {
+      alert('Lỗi khi lưu đối tác');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl m-4 p-6 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <h2 className="text-xl font-bold text-gray-800 mb-6 uppercase border-b pb-2">
+          {initialData ? 'Cập nhật Đối Tác' : 'Thêm Đối Tác Mới'}
+        </h2>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Tên đối tác *</label>
+              <input
+                required
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Loại đối tác *</label>
+              <select
+                required
+                name="type"
+                value={formData.type}
+                onChange={handleChange}
+                className="w-full border rounded px-3 py-2 bg-white focus:ring-brand-navy focus:border-brand-navy"
+              >
+                <option value="Supplier">Nhà cung cấp</option>
+                <option value="Service">Dịch vụ</option>
+                <option value="Platform">Nền tảng</option>
+                <option value="Other">Khác</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Trạng thái *</label>
+              <select
+                required
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full border rounded px-3 py-2 bg-white focus:ring-brand-navy focus:border-brand-navy"
+              >
+                <option value="Active">Hoạt động</option>
+                <option value="Inactive">Ngừng hoạt động</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Người liên hệ *</label>
+              <input
+                required
+                type="text"
+                name="contactPerson"
+                value={formData.contactPerson}
+                onChange={handleChange}
+                className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Số điện thoại *</label>
+              <input
+                required
+                type="tel"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Email (Tài khoản) *</label>
+              <input
+                required
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="Email sẽ được dùng làm tài khoản đăng nhập"
+                className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+              />
+            </div>
+            {!initialData && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Mật khẩu</label>
+                <input
+                  type="password"
+                  name="password"
+                  value={(formData as any).password || ''}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, password: e.target.value } as any));
+                  }}
+                  placeholder="Để trống để tự động tạo mật khẩu"
+                  className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+                />
+                <p className="text-xs text-gray-500 mt-1">Nếu để trống, mật khẩu sẽ được tự động tạo</p>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Địa chỉ</label>
+              <input
+                type="text"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Cửa hàng liên kết</label>
+              <div className="space-y-3">
+                {/* Searchable input để tìm và chọn cửa hàng */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={storeSearchText}
+                    onChange={(e) => {
+                      setStoreSearchText(e.target.value);
+                      setShowStoreDropdown(true);
+                    }}
+                    onFocus={() => setShowStoreDropdown(true)}
+                    onBlur={() => {
+                      // Delay để cho phép click vào item
+                      setTimeout(() => setShowStoreDropdown(false), 200);
+                    }}
+                    placeholder="Gõ để tìm cửa hàng..."
+                    className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+                  />
+                  {/* Dropdown list khi focus hoặc có text */}
+                  {showStoreDropdown && filteredAvailableStores.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
+                      {filteredAvailableStores.map(store => (
+                        <div
+                          key={store.id}
+                          onMouseDown={(e) => {
+                            e.preventDefault(); // Prevent blur before click
+                            handleStoreSelect(store.id);
+                            setShowStoreDropdown(false);
+                          }}
+                          className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        >
+                          <span className="text-sm text-gray-700">{store.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {showStoreDropdown && storeSearchText && filteredAvailableStores.length === 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg p-3">
+                      <p className="text-sm text-gray-500">Không tìm thấy cửa hàng nào</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Danh sách cửa hàng đã chọn */}
+                {formData.storeIds && formData.storeIds.length > 0 && (
+                  <div className="border rounded p-3 bg-gray-50 max-h-40 overflow-y-auto">
+                    <p className="text-xs text-gray-600 mb-2 font-medium">Cửa hàng đã chọn:</p>
+                    <div className="space-y-1">
+                      {formData.storeIds.map(storeId => {
+                        const store = stores.find(s => s.id === storeId);
+                        return store ? (
+                          <div key={storeId} className="flex items-center justify-between bg-white p-2 rounded border border-gray-200">
+                            <span className="text-sm text-gray-700">{store.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveStore(storeId)}
+                              className="text-red-600 hover:text-red-800 text-xs px-2 py-1 hover:bg-red-50 rounded"
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Ghi chú</label>
+            <textarea
+              name="notes"
+              value={formData.notes}
+              onChange={handleChange}
+              rows={3}
+              className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+            />
+          </div>
+
+          <div className="pt-4 border-t flex justify-end gap-3">
+            <button type="button" onClick={onClose} className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50">
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-8 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy disabled:opacity-50"
+            >
+              {loading ? 'Đang lưu...' : initialData ? 'Cập nhật' : 'Thêm mới'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+

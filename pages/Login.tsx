@@ -61,7 +61,7 @@ export const Login: React.FC = () => {
                         <input
                             type="email"
                             id="email"
-                            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red"
+                            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy"
                             placeholder="admin@phonglive.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -75,7 +75,7 @@ export const Login: React.FC = () => {
                         <input
                             type="password"
                             id="password"
-                            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red"
+                            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy"
                             placeholder="••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
@@ -85,7 +85,7 @@ export const Login: React.FC = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className={`w-full bg-brand-red text-white font-bold py-2 px-4 rounded hover:bg-red-700 transition duration-200 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        className={`w-full bg-brand-navy text-white font-bold py-2 px-4 rounded hover:bg-brand-darkNavy transition duration-200 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
                         {loading ? 'Đang kiểm tra... (检查中...)' : 'Vào hệ thống (进入系统)'}
                     </button>

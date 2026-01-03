@@ -133,7 +133,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
               onClick={() => setActiveTab('personnel')}
               className={`px-6 py-3 font-medium text-sm transition-colors ${
                 activeTab === 'personnel'
-                  ? 'border-b-2 border-brand-red text-brand-red bg-red-50'
+                  ? 'border-b-2 border-brand-navy text-brand-navy bg-blue-50'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
@@ -143,7 +143,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
               onClick={() => setActiveTab('metrics')}
               className={`px-6 py-3 font-medium text-sm transition-colors ${
                 activeTab === 'metrics'
-                  ? 'border-b-2 border-brand-red text-brand-red bg-red-50'
+                  ? 'border-b-2 border-brand-navy text-brand-navy bg-blue-50'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
@@ -153,7 +153,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
               onClick={() => setActiveTab('history')}
               className={`px-6 py-3 font-medium text-sm transition-colors ${
                 activeTab === 'history'
-                  ? 'border-b-2 border-brand-red text-brand-red bg-red-50'
+                  ? 'border-b-2 border-brand-navy text-brand-navy bg-blue-50'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
               }`}
             >
@@ -297,15 +297,15 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                          <thead className="bg-gray-100 border-b border-gray-200">
+                          <thead className="bg-brand-navy text-white border-b border-gray-200">
                             <tr>
-                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Ngày</th>
-                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Host</th>
-                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Thời gian</th>
-                              <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">GMV</th>
-                              <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Chi phí QC</th>
-                              <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">ROI</th>
-                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Người báo cáo</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">Ngày</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">Host</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">Thời gian</th>
+                              <th className="px-4 py-3 text-right text-xs font-bold text-white uppercase">GMV</th>
+                              <th className="px-4 py-3 text-right text-xs font-bold text-white uppercase">Chi phí QC</th>
+                              <th className="px-4 py-3 text-right text-xs font-bold text-white uppercase">ROI</th>
+                              <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase">Người báo cáo</th>
                             </tr>
                           </thead>
                           <tbody>

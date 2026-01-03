@@ -1,0 +1,360 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { fetchLiveReports, fetchStores } from '../services/dataService';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { LiveReport, Store, StoreOverview } from '../types';
+
+export const StoreOverviewPage: React.FC = () => {
+  const [stores, setStores] = useState<Store[]>([]);
+  const [reports, setReports] = useState<LiveReport[]>([]);
+  const [selectedStores, setSelectedStores] = useState<string[]>([]);
+  const [dateFrom, setDateFrom] = useState<string>(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date.toISOString().split('T')[0];
+  });
+  const [dateTo, setDateTo] = useState<string>(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [storeData, reportData] = await Promise.all([
+        fetchStores(),
+        fetchLiveReports()
+      ]);
+      setStores(storeData.filter(s => s.id !== 'all'));
+      setReports(reportData);
+      // Select all stores by default
+      setSelectedStores(storeData.filter(s => s.id !== 'all').map(s => s.id));
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Filter reports by selected stores and date range
+  const filteredReports = useMemo(() => {
+    return reports.filter(report => {
+      const matchStore = selectedStores.length === 0 || selectedStores.includes(report.channelId);
+      const reportDate = new Date(report.date);
+      const fromDate = new Date(dateFrom);
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      const matchDate = reportDate >= fromDate && reportDate <= toDate;
+      return matchStore && matchDate;
+    });
+  }, [reports, selectedStores, dateFrom, dateTo]);
+
+  // Calculate overview for each store
+  const storeOverviews = useMemo(() => {
+    const overviewMap: Record<string, StoreOverview> = {};
+
+    stores.forEach(store => {
+      if (selectedStores.length === 0 || selectedStores.includes(store.id)) {
+        overviewMap[store.id] = {
+          storeId: store.id,
+          storeName: store.name,
+          totalGMV: 0,
+          totalAdCost: 0,
+          totalOrders: 0,
+          totalViews: 0,
+          roi: 0,
+          conversionRate: 0,
+          reportCount: 0
+        };
+      }
+    });
+
+    filteredReports.forEach(report => {
+      const storeId = report.channelId;
+      if (overviewMap[storeId]) {
+        overviewMap[storeId].totalGMV += Number(report.gmv) || 0;
+        overviewMap[storeId].totalAdCost += Number(report.adCost) || 0;
+        overviewMap[storeId].totalOrders += Number(report.orders) || 0;
+        overviewMap[storeId].totalViews += Number(report.totalViews) || 0;
+        overviewMap[storeId].reportCount += 1;
+      }
+    });
+
+    // Calculate ROI and conversion rate
+    Object.values(overviewMap).forEach(overview => {
+      overview.roi = overview.totalAdCost > 0 
+        ? ((overview.totalGMV - overview.totalAdCost) / overview.totalAdCost) * 100 
+        : 0;
+      
+      const storeReports = filteredReports.filter(r => r.channelId === overview.storeId);
+      const totalClicks = storeReports.reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0);
+      overview.conversionRate = totalClicks > 0 ? (overview.totalOrders / totalClicks) * 100 : 0;
+    });
+
+    return Object.values(overviewMap).sort((a, b) => b.totalGMV - a.totalGMV);
+  }, [stores, selectedStores, filteredReports]);
+
+  // Chart data
+  const chartData = useMemo(() => {
+    return storeOverviews.map(overview => ({
+      name: overview.storeName,
+      gmv: overview.totalGMV,
+      adCost: overview.totalAdCost,
+      profit: overview.totalGMV - overview.totalAdCost,
+      roi: overview.roi,
+      orders: overview.totalOrders,
+      views: overview.totalViews
+    }));
+  }, [storeOverviews]);
+
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
+
+  const handleStoreToggle = (storeId: string) => {
+    setSelectedStores(prev => {
+      if (prev.includes(storeId)) {
+        return prev.filter(id => id !== storeId);
+      } else {
+        return [...prev, storeId];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedStores.length === stores.length) {
+      setSelectedStores([]);
+    } else {
+      setSelectedStores(stores.map(s => s.id));
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">Đang tải dữ liệu...</div>
+      </div>
+    );
+  }
+
+  const totalGMV = storeOverviews.reduce((sum, s) => sum + s.totalGMV, 0);
+  const totalAdCost = storeOverviews.reduce((sum, s) => sum + s.totalAdCost, 0);
+  const totalOrders = storeOverviews.reduce((sum, s) => sum + s.totalOrders, 0);
+  const totalViews = storeOverviews.reduce((sum, s) => sum + s.totalViews, 0);
+  const avgROI = storeOverviews.length > 0 
+    ? storeOverviews.reduce((sum, s) => sum + s.roi, 0) / storeOverviews.length 
+    : 0;
+
+  const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+
+  return (
+    <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h2 className="text-2xl font-bold text-gray-800 uppercase">Tổng Quan Tất Cả Cửa Hàng</h2>
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="flex items-center gap-2 border border-gray-300 rounded px-3 py-2 bg-white">
+            <button
+              onClick={handleSelectAll}
+                className="text-sm font-medium text-brand-navy hover:underline"
+            >
+              {selectedStores.length === stores.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+            </button>
+          </div>
+          <input
+            type="date"
+            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
+          <span className="text-gray-600">đến</span>
+          <input
+            type="date"
+            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white shadow-sm"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Store Selection */}
+      <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
+        <h3 className="text-sm font-bold text-gray-800 mb-3">Chọn cửa hàng:</h3>
+        <div className="flex flex-wrap gap-2">
+          {stores.map(store => (
+            <label key={store.id} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedStores.includes(store.id)}
+                onChange={() => handleStoreToggle(store.id)}
+                className="w-4 h-4 text-brand-navy border-gray-300 rounded focus:ring-brand-navy"
+              />
+              <span className="text-sm text-gray-700">{store.name}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="bg-white p-4 rounded shadow-sm border-l-4 border-blue-500">
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng GMV</p>
+          <p className="text-xl font-bold text-blue-600 mt-1">{formatCurrency(totalGMV)}</p>
+        </div>
+        <div className="bg-white p-4 rounded shadow-sm border-l-4 border-red-500">
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Chi Phí QC</p>
+          <p className="text-xl font-bold text-red-600 mt-1">{formatCurrency(totalAdCost)}</p>
+        </div>
+        <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
+          <p className="text-xs text-gray-500 uppercase font-bold">ROI Trung Bình</p>
+          <p className="text-xl font-bold text-green-600 mt-1">{avgROI.toFixed(1)}%</p>
+        </div>
+        <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Đơn Hàng</p>
+          <p className="text-xl font-bold text-purple-600 mt-1">{totalOrders.toLocaleString()}</p>
+        </div>
+        <div className="bg-white p-4 rounded shadow-sm border-l-4 border-orange-500">
+          <p className="text-xs text-gray-500 uppercase font-bold">Tổng Lượt Xem</p>
+          <p className="text-xl font-bold text-orange-600 mt-1">{totalViews.toLocaleString()}</p>
+        </div>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* GMV by Store */}
+        <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">GMV Theo Cửa Hàng</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+              <YAxis />
+              <Tooltip formatter={(value: number) => formatCurrency(value)} />
+              <Legend />
+              <Bar dataKey="gmv" name="GMV" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="adCost" name="Chi phí QC" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* ROI by Store */}
+        <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">ROI Theo Cửa Hàng</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+              <YAxis />
+              <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Legend />
+              <Bar dataKey="roi" name="ROI (%)" fill="#10b981" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* GMV Distribution */}
+        <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Phân Bố GMV</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={chartData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="gmv"
+              >
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value: number) => formatCurrency(value)} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Orders by Store */}
+        <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">Đơn Hàng Theo Cửa Hàng</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+              <YAxis />
+              <Tooltip formatter={(value: number) => value.toLocaleString()} />
+              <Legend />
+              <Bar dataKey="orders" name="Số đơn hàng" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Store Overview Table */}
+      <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <h3 className="text-lg font-bold text-gray-800">Chi Tiết Cửa Hàng</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-brand-navy text-white border-b">
+              <tr>
+                <th className="px-4 py-3 text-left">Cửa hàng</th>
+                <th className="px-4 py-3 text-right">Tổng GMV</th>
+                <th className="px-4 py-3 text-right">Chi phí QC</th>
+                <th className="px-4 py-3 text-right">Lợi nhuận</th>
+                <th className="px-4 py-3 text-right">ROI</th>
+                <th className="px-4 py-3 text-right">Tỉ lệ chuyển đổi</th>
+                <th className="px-4 py-3 text-right">Đơn hàng</th>
+                <th className="px-4 py-3 text-right">Lượt xem</th>
+                <th className="px-4 py-3 text-center">Số báo cáo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {storeOverviews.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
+                    Chưa có dữ liệu
+                  </td>
+                </tr>
+              ) : (
+                storeOverviews.map((overview) => (
+                  <tr key={overview.storeId} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-3 font-bold text-gray-800">{overview.storeName}</td>
+                    <td className="px-4 py-3 text-right font-bold text-blue-600">{formatCurrency(overview.totalGMV)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-red-600">{formatCurrency(overview.totalAdCost)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-green-600">
+                      {formatCurrency(overview.totalGMV - overview.totalAdCost)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={`px-2 py-1 rounded text-xs font-bold border ${
+                        overview.roi >= 400 ? 'bg-green-100 text-green-800 border-green-300' :
+                        overview.roi >= 200 ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                        'bg-red-100 text-red-800 border-red-300'
+                      }`}>
+                        {overview.roi.toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                        {overview.conversionRate.toFixed(2)}%
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium">{overview.totalOrders.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-right font-medium">{overview.totalViews.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-center font-medium">{overview.reportCount}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+

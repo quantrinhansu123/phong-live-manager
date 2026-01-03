@@ -6,6 +6,12 @@ import { VideoParameterReport } from './pages/VideoParameterReport';
 import { Personnel } from './pages/Personnel';
 import { StoreManager } from './pages/StoreManager';
 import { Login } from './pages/Login';
+import { Dashboard } from './pages/Dashboard';
+import { CPQC } from './pages/CPQC';
+import { SalaryReport } from './pages/SalaryReport';
+import { StoreOverviewPage } from './pages/StoreOverview';
+import { LiveReportDetail } from './pages/LiveReportDetail';
+import { PartnerManagement } from './pages/PartnerManagement';
 
 const ProtectedLayout: React.FC = () => {
   const user = localStorage.getItem('currentUser');
@@ -30,10 +36,16 @@ const App: React.FC = () => {
         <Route path="/login" element={<Login />} />
 
         <Route element={<ProtectedLayout />}>
-          <Route path="/" element={<LiveSessionReport />} />
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/live-reports" element={<LiveSessionReport />} />
+          <Route path="/live-report-detail" element={<LiveReportDetail />} />
           <Route path="/video-report" element={<VideoParameterReport />} />
           <Route path="/stores" element={<StoreManager />} />
+          <Route path="/store-overview" element={<StoreOverviewPage />} />
           <Route path="/personnel" element={<Personnel />} />
+          <Route path="/cpqc" element={<CPQC />} />
+          <Route path="/salary-report" element={<SalaryReport />} />
+          <Route path="/partners" element={<PartnerManagement />} />
         </Route>
       </Routes>
     </Router>
