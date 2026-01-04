@@ -86,7 +86,7 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
   }
 
   // Kiểm tra role
-  if (!menuPermission.allowedRoles.includes(userRole)) {
+  if (!menuPermission.allowedRoles || !Array.isArray(menuPermission.allowedRoles) || !menuPermission.allowedRoles.includes(userRole)) {
     return false;
   }
 
