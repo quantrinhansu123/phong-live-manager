@@ -71,8 +71,8 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
     return true;
   }
 
-  // Partner mặc định có quyền xem "Quản lý Cửa Hàng" (STORE_MGR = 'store_mgr')
-  if (userRole === 'partner' && menuId === 'store_mgr') {
+  // Partner mặc định có quyền xem "Quản lý Cửa Hàng" (STORE_MGR = 'store_mgr') và "Quản lý Live" (LIVE_ADS = 'live_ads')
+  if (userRole === 'partner' && (menuId === 'store_mgr' || menuId === 'live_ads')) {
     return true;
   }
 

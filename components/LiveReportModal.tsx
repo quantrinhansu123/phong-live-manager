@@ -233,7 +233,7 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
                 <input required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Kênh Live (KÊNH LIVE)</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Cửa hàng (店铺)</label>
                 <select name="channelId" value={formData.channelId} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-white">
                   {stores.filter(s => s.id !== 'all').map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>
