@@ -3,7 +3,7 @@ import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ComposedChart } from 'recharts';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
 
 export const CPQC: React.FC = () => {
@@ -135,7 +135,7 @@ export const CPQC: React.FC = () => {
 
     // Calculate ROI and conversion rate
     Object.values(map).forEach(day => {
-      day.roi = day.adCost > 0 ? ((day.gmv - day.adCost) / day.adCost) * 100 : 0;
+      day.roi = calculateROI(day.gmv, day.adCost);
       day.conversionRate = day.orders > 0 && filteredReports.length > 0 
         ? (day.orders / filteredReports.filter(r => r.date === day.date).reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0)) * 100 
         : 0;
@@ -177,7 +177,7 @@ export const CPQC: React.FC = () => {
 
     // Calculate ROI and conversion rate
     Object.values(map).forEach(shiftData => {
-      shiftData.roi = shiftData.adCost > 0 ? ((shiftData.gmv - shiftData.adCost) / shiftData.adCost) * 100 : 0;
+      shiftData.roi = calculateROI(shiftData.gmv, shiftData.adCost);
       const shiftReports = filteredReports.filter(r => (r.shift || 'Chưa xác định') === shiftData.shift);
       const totalClicks = shiftReports.reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0);
       shiftData.conversionRate = totalClicks > 0 ? (shiftData.orders / totalClicks) * 100 : 0;
@@ -227,7 +227,7 @@ export const CPQC: React.FC = () => {
 
     // Calculate metrics and score
     Object.values(map).forEach(item => {
-      item.roi = item.totalAdCost > 0 ? ((item.totalGMV - item.totalAdCost) / item.totalAdCost) * 100 : 0;
+      item.roi = calculateROI(item.totalGMV, item.totalAdCost);
       const hostReports = filteredReports.filter(r => r.hostName === item.hostName && r.channelId === item.storeName);
       const totalClicks = hostReports.reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0);
       item.conversionRate = totalClicks > 0 ? (item.totalOrders / totalClicks) * 100 : 0;
@@ -296,7 +296,7 @@ export const CPQC: React.FC = () => {
                 'Chi phí QC': item.adCost,
                 'GMV': item.gmv,
                 'Đơn hàng': item.orders,
-                'ROI': item.roi.toFixed(2) + '%',
+                'ROI': formatROI(item.roi),
                 'Tỉ lệ chuyển đổi': item.conversionRate.toFixed(2) + '%',
                 'Số báo cáo': item.reportCount
               }))
@@ -305,7 +305,7 @@ export const CPQC: React.FC = () => {
                 'Chi phí QC': item.adCost,
                 'GMV': item.gmv,
                 'Đơn hàng': item.orders,
-                'ROI': item.roi.toFixed(2) + '%',
+                'ROI': formatROI(item.roi),
                 'Tỉ lệ chuyển đổi': item.conversionRate.toFixed(2) + '%',
                 'Số báo cáo': item.reportCount
               }));
@@ -413,9 +413,9 @@ export const CPQC: React.FC = () => {
           <p className="text-xs text-gray-500 uppercase font-bold">ROI Trung Bình (平均ROI)</p>
           <p className="text-xl font-bold text-green-600 mt-1">
             {currentData.length > 0 
-              ? (currentData.reduce((sum, item) => sum + item.roi, 0) / currentData.length).toFixed(1)
-              : '0'
-            }%
+              ? formatROI(currentData.reduce((sum, item) => sum + item.roi, 0) / currentData.length)
+              : '0.00'
+            }
           </p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
@@ -570,11 +570,11 @@ export const CPQC: React.FC = () => {
                     <td className="px-4 py-3 text-right font-bold text-red-600">{formatCurrency(item.totalAdCost)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        item.roi >= 400 ? 'bg-green-100 text-green-800' :
-                        item.roi >= 200 ? 'bg-yellow-100 text-yellow-800' :
+                        item.roi >= 4.0 ? 'bg-green-100 text-green-800' :
+                        item.roi >= 2.0 ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {item.roi.toFixed(1)}%
+                        {formatROI(item.roi)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -627,11 +627,11 @@ export const CPQC: React.FC = () => {
                     <td className="px-4 py-3 text-right">{item.orders.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        item.roi >= 400 ? 'bg-green-100 text-green-800' :
-                        item.roi >= 200 ? 'bg-yellow-100 text-yellow-800' :
+                        item.roi >= 4.0 ? 'bg-green-100 text-green-800' :
+                        item.roi >= 2.0 ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {item.roi.toFixed(1)}%
+                        {formatROI(item.roi)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">

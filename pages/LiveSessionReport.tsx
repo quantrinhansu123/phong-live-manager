@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { LiveReportModal } from '../components/LiveReportModal';
 import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
 
 export const LiveSessionReport: React.FC = () => {
@@ -169,7 +169,7 @@ export const LiveSessionReport: React.FC = () => {
       totalAdCost += Number(item.adCost);
     });
 
-    const roi = totalAdCost > 0 ? ((totalGMV - totalAdCost) / totalAdCost) * 100 : 0;
+    const roi = calculateROI(totalGMV, totalAdCost);
 
     return { totalGMV, totalAdCost, roi };
   }, [filteredData]);
@@ -188,11 +188,12 @@ export const LiveSessionReport: React.FC = () => {
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
   }, [filteredData]);
 
-  const formatPercent = (val: number) => `${val.toFixed(2)}%`;
+  const formatPercent = (val: number) => formatROI(val);
 
   const getStatusColor = (roi: number) => {
-    if (roi >= 400) return 'bg-green-100 text-green-800 border-green-200';
-    if (roi >= 200) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    // roi là giá trị thập phân (ví dụ: 4.0 = 400%, 2.0 = 200%)
+    if (roi >= 4.0) return 'bg-green-100 text-green-800 border-green-200';
+    if (roi >= 2.0) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     return 'bg-red-100 text-brand-navy border-red-200';
   };
 
@@ -253,7 +254,7 @@ export const LiveSessionReport: React.FC = () => {
     // Calculate average ROI for each person
     return Object.values(summaryMap).map(item => ({
       ...item,
-      avgROI: item.totalAdCost > 0 ? ((item.totalGMV - item.totalAdCost) / item.totalAdCost) * 100 : 0
+      avgROI: calculateROI(item.totalGMV, item.totalAdCost)
     })).sort((a, b) => b.totalGMV - a.totalGMV);
   }, [reports, personnelList, personnelDateFrom, personnelDateTo]);
 
@@ -355,7 +356,7 @@ export const LiveSessionReport: React.FC = () => {
     const hostList = Object.values(hostMap).map(host => ({
       ...host,
       profit: host.totalGMV - host.totalAdCost,
-      avgROI: host.totalAdCost > 0 ? ((host.totalGMV - host.totalAdCost) / host.totalAdCost) * 100 : 0
+      avgROI: calculateROI(host.totalGMV, host.totalAdCost)
     }));
 
     // Sắp xếp theo GMV (doanh số) - cao nhất trước
@@ -481,8 +482,8 @@ export const LiveSessionReport: React.FC = () => {
                     <p className="text-xs text-gray-600 uppercase font-bold mb-1">ROI (%)</p>
                     <p className="text-lg font-bold text-gray-800">
                       {Number(selectedReport.adCost) > 0 
-                        ? formatPercent(((Number(selectedReport.gmv) - Number(selectedReport.adCost)) / Number(selectedReport.adCost)) * 100)
-                        : '0%'}
+                        ? formatROI(calculateROI(Number(selectedReport.gmv), Number(selectedReport.adCost)))
+                        : '0.00'}
                     </p>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -645,7 +646,7 @@ export const LiveSessionReport: React.FC = () => {
             'Thời gian': `${report.startTime} - ${report.endTime}`,
             'GMV': report.gmv,
             'Chi phí QC': report.adCost,
-            'ROI': report.adCost > 0 ? (((report.gmv - report.adCost) / report.adCost) * 100).toFixed(2) + '%' : '0%',
+            'ROI': report.adCost > 0 ? formatROI(calculateROI(Number(report.gmv), Number(report.adCost))) : '0.00',
             'Đơn hàng': report.orders || 0,
             'Người xem': report.viewers || 0,
             'Người báo cáo': report.reporter || ''

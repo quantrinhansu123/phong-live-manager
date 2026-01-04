@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchStores, MOCK_STORES } from '../services/dataService';
 import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
 import { LiveReportModal } from '../components/LiveReportModal';
 import { createLiveReport, updateLiveReport, deleteLiveReport } from '../services/dataService';
@@ -145,8 +145,9 @@ export const LiveReportDetail: React.FC = () => {
 
 
   const getStatusColor = (roi: number) => {
-    if (roi >= 400) return 'bg-green-100 text-green-800 border-green-200';
-    if (roi >= 200) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    // roi là giá trị thập phân (ví dụ: 4.0 = 400%, 2.0 = 200%)
+    if (roi >= 4.0) return 'bg-green-100 text-green-800 border-green-200';
+    if (roi >= 2.0) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     return 'bg-red-100 text-red-800 border-red-200';
   };
 
@@ -295,7 +296,7 @@ export const LiveReportDetail: React.FC = () => {
             'Tổng GMV': report.totalGmv || 0,
             'Chi phí QC': report.adCost,
             'GPM': report.gpm || 0,
-            'ROI': report.adCost > 0 ? (((report.gmv - report.adCost) / report.adCost) * 100).toFixed(2) + '%' : '0%',
+            'ROI': report.adCost > 0 ? formatROI(calculateROI(Number(report.gmv), Number(report.adCost))) : '0.00',
             'Đơn hàng': report.orders || 0,
             'Giá TB': report.averagePrice || 0,
             'Tỉ lệ chuyển đổi': report.conversionRate ? Number(report.conversionRate).toFixed(2) + '%' : '',
@@ -442,7 +443,7 @@ export const LiveReportDetail: React.FC = () => {
                   const gmv = Number(row.gmv);
                   const ad = Number(row.adCost);
                   const profit = gmv - ad;
-                  const roiVal = ad > 0 ? (profit / ad) * 100 : 0;
+                  const roiVal = calculateROI(gmv, ad);
                   const storeName = stores.find(s => s.id === row.channelId)?.name || MOCK_STORES.find(s => s.id === row.channelId)?.name || 'Unknown';
                   return (
                     <tr key={row.id} className="border-b hover:bg-gray-50">
@@ -469,7 +470,7 @@ export const LiveReportDetail: React.FC = () => {
                       <td className="px-3 py-2 border-r font-medium text-xs">{formatCurrency(Number(row.totalGmv) || 0)}</td>
                       <td className="px-3 py-2 border-r font-bold text-red-600 text-xs">{formatCurrency(ad)}</td>
                       <td className="px-3 py-2 border-r text-xs">{row.gpm ? formatCurrency(Number(row.gpm)) : '-'}</td>
-                      <td className="px-3 py-2 border-r font-medium text-xs">{roiVal.toFixed(1)}%</td>
+                      <td className="px-3 py-2 border-r font-medium text-xs">{formatROI(roiVal)}</td>
                       <td className="px-3 py-2 border-r text-xs">{row.orders || '-'}</td>
                       <td className="px-3 py-2 border-r text-xs">{row.averagePrice ? formatCurrency(Number(row.averagePrice)) : '-'}</td>
                       <td className="px-3 py-2 border-r text-xs">{row.conversionRate ? Number(row.conversionRate).toFixed(2) + '%' : '-'}</td>
@@ -482,7 +483,7 @@ export const LiveReportDetail: React.FC = () => {
                       <td className="px-3 py-2 border-r text-xs">{row.newFollowers ? Number(row.newFollowers).toLocaleString() : '-'}</td>
                       <td className="px-3 py-2 border-r">
                         <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(roiVal)}`}>
-                          {roiVal >= 400 ? 'TỐT (良好)' : roiVal >= 200 ? 'KHÁ (一般)' : 'CẦN TỐI ƯU (需优化)'}
+                          {roiVal >= 4.0 ? 'TỐT (良好)' : roiVal >= 2.0 ? 'KHÁ (一般)' : 'CẦN TỐI ƯU (需优化)'}
                         </span>
                       </td>
                       <td className="px-3 py-2 sticky right-0 bg-white z-5">

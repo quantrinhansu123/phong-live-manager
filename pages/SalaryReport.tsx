@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchPersonnel, fetchStores } from '../services/dataService';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
 
 export const SalaryReport: React.FC = () => {
@@ -121,7 +121,7 @@ export const SalaryReport: React.FC = () => {
     // Calculate metrics and status
     Object.values(dataMap).forEach(item => {
       item.profit = item.totalGMV - item.totalAdCost;
-      item.roi = item.totalAdCost > 0 ? ((item.totalGMV - item.totalAdCost) / item.totalAdCost) * 100 : 0;
+      item.roi = calculateROI(item.totalGMV, item.totalAdCost);
       item.kpiAchievement = item.kpiTarget > 0 ? (item.totalGMV / item.kpiTarget) * 100 : 0;
 
       // KPI Status: Green >= 100%, Yellow >= 80%, Red < 80%
@@ -133,10 +133,10 @@ export const SalaryReport: React.FC = () => {
         item.kpiStatus = 'red';
       }
 
-      // Salary Status: Green (ROI >= 400%), Yellow (ROI >= 200%), Red (< 200%)
-      if (item.roi >= 400) {
+      // Salary Status: Green (ROI >= 400% = 4.0), Yellow (ROI >= 200% = 2.0), Red (< 200% = 2.0)
+      if (item.roi >= 4.0) {
         item.salaryStatus = 'green';
-      } else if (item.roi >= 200) {
+      } else if (item.roi >= 2.0) {
         item.salaryStatus = 'yellow';
       } else {
         item.salaryStatus = 'red';
@@ -300,7 +300,7 @@ export const SalaryReport: React.FC = () => {
                     <td className="px-4 py-3 text-right font-bold text-green-600">{formatCurrency(item.profit)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(item.salaryStatus)}`}>
-                        {item.roi.toFixed(1)}%
+                        {formatROI(item.roi)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center font-medium">

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
 
 export const Dashboard: React.FC = () => {
@@ -66,7 +66,7 @@ export const Dashboard: React.FC = () => {
     const totalAdCost = filteredReports.reduce((sum, r) => sum + (Number(r.adCost) || 0), 0);
     const totalOrders = filteredReports.reduce((sum, r) => sum + (Number(r.orders) || 0), 0);
     const totalViews = filteredReports.reduce((sum, r) => sum + (Number(r.totalViews) || 0), 0);
-    const roi = totalAdCost > 0 ? ((totalGMV - totalAdCost) / totalAdCost) * 100 : 0;
+    const roi = calculateROI(totalGMV, totalAdCost);
     return { totalGMV, totalAdCost, totalOrders, totalViews, roi };
   }, [filteredReports]);
 
@@ -148,7 +148,7 @@ export const Dashboard: React.FC = () => {
     // Calculate ROI for each store
     Object.keys(map).forEach(storeId => {
       const data = map[storeId];
-      data.roi = data.adCost > 0 ? ((data.gmv - data.adCost) / data.adCost) * 100 : 0;
+      data.roi = calculateROI(data.gmv, data.adCost);
     });
     
     return Object.values(map).sort((a, b) => b.gmv - a.gmv);
@@ -212,7 +212,7 @@ export const Dashboard: React.FC = () => {
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
           <p className="text-xs text-gray-500 uppercase font-bold">ROI (投资回报率)</p>
-          <p className="text-xl font-bold text-green-600 mt-1">{totals.roi.toFixed(1)}%</p>
+          <p className="text-xl font-bold text-green-600 mt-1">{formatROI(totals.roi)}</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
           <p className="text-xs text-gray-500 uppercase font-bold">Tổng Đơn Hàng (总订单)</p>

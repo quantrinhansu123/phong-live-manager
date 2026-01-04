@@ -4,6 +4,7 @@ import { StoreDetailModal } from '../components/StoreDetailModal';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { Store, Partner, Personnel } from '../types';
+import { getCurrentUserRole } from '../utils/permissionUtils';
 
 export const StoreManager: React.FC = () => {
     const [stores, setStores] = useState<Store[]>([]);
@@ -23,6 +24,8 @@ export const StoreManager: React.FC = () => {
     const [storeToDelete, setStoreToDelete] = useState<string | null>(null);
     const [searchText, setSearchText] = useState('');
     const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = localStorage.getItem('currentUserId') || '';
 
     useEffect(() => {
         loadStores();
@@ -205,6 +208,11 @@ export const StoreManager: React.FC = () => {
     const filteredStores = useMemo(() => {
         let filtered = stores;
 
+        // Nếu user là partner, chỉ hiển thị cửa hàng mà họ phụ trách
+        if (currentUserRole === 'partner' && currentUserId) {
+            filtered = filtered.filter(store => store.partnerId === currentUserId);
+        }
+
         // Filter by search text
         if (searchText) {
             const searchLower = searchText.toLowerCase();
@@ -229,8 +237,8 @@ export const StoreManager: React.FC = () => {
             });
         }
 
-        // Filter by partner
-        if (selectedFilters.partners && selectedFilters.partners.length > 0) {
+        // Filter by partner (chỉ áp dụng cho admin)
+        if (currentUserRole === 'admin' && selectedFilters.partners && selectedFilters.partners.length > 0) {
             filtered = filtered.filter(store => {
                 if (!store.partnerId) return false;
                 return selectedFilters.partners!.includes(store.partnerId);
@@ -238,7 +246,7 @@ export const StoreManager: React.FC = () => {
         }
 
         return filtered;
-    }, [stores, partners, personnel, searchText, selectedFilters]);
+    }, [stores, partners, personnel, searchText, selectedFilters, currentUserRole, currentUserId]);
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen font-sans">
@@ -250,6 +258,7 @@ export const StoreManager: React.FC = () => {
 
              <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý Cửa Hàng (店铺管理)</h2>
+                {currentUserRole === 'admin' && (
                 <button
                     onClick={() => {
                         setIsAddFormOpen(true);
@@ -268,6 +277,7 @@ export const StoreManager: React.FC = () => {
                     </svg>
                     Thêm Cửa Hàng Mới (添加新店铺)
                 </button>
+                )}
                     </div>
 
              {/* Filter Bar */}

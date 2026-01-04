@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Store, StoreOverview } from '../types';
 
 export const StoreOverviewPage: React.FC = () => {
@@ -86,9 +86,7 @@ export const StoreOverviewPage: React.FC = () => {
 
     // Calculate ROI and conversion rate
     Object.values(overviewMap).forEach(overview => {
-      overview.roi = overview.totalAdCost > 0 
-        ? ((overview.totalGMV - overview.totalAdCost) / overview.totalAdCost) * 100 
-        : 0;
+      overview.roi = calculateROI(overview.totalGMV, overview.totalAdCost);
       
       const storeReports = filteredReports.filter(r => r.channelId === overview.storeId);
       const totalClicks = storeReports.reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0);
@@ -208,7 +206,7 @@ export const StoreOverviewPage: React.FC = () => {
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
           <p className="text-xs text-gray-500 uppercase font-bold">ROI Trung Bình (平均ROI)</p>
-          <p className="text-xl font-bold text-green-600 mt-1">{avgROI.toFixed(1)}%</p>
+          <p className="text-xl font-bold text-green-600 mt-1">{formatROI(avgROI)}</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
           <p className="text-xs text-gray-500 uppercase font-bold">Tổng Đơn Hàng (总订单)</p>
@@ -331,11 +329,11 @@ export const StoreOverviewPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold border ${
-                        overview.roi >= 400 ? 'bg-green-100 text-green-800 border-green-300' :
-                        overview.roi >= 200 ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                        overview.roi >= 4.0 ? 'bg-green-100 text-green-800 border-green-300' :
+                        overview.roi >= 2.0 ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
                         'bg-red-100 text-red-800 border-red-300'
                       }`}>
-                        {overview.roi.toFixed(1)}%
+                        {formatROI(overview.roi)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">

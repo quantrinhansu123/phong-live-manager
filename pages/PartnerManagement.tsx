@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchPartners, createPartner, updatePartner, deletePartner, fetchStores, createStore, updateStore } from '../services/dataService';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
@@ -374,23 +375,35 @@ export const PartnerManagement: React.FC = () => {
               )}
             </div>
 
-            <div className="mt-6 pt-4 border-t flex justify-end gap-3">
-              <button 
-                onClick={() => setViewingPartner(null)} 
-                className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50"
+            <div className="mt-6 pt-4 border-t flex justify-between items-center">
+              <Link
+                to="/stores"
+                onClick={() => setViewingPartner(null)}
+                className="px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 flex items-center gap-2"
               >
-                Đóng (关闭)
-              </button>
-              <button
-                onClick={() => {
-                  setViewingPartner(null);
-                  setEditingPartner(viewingPartner);
-                  setIsModalOpen(true);
-                }}
-                className="px-6 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy"
-              >
-                Sửa (编辑)
-              </button>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Quản lý cửa hàng (店铺管理)
+              </Link>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setViewingPartner(null)} 
+                  className="px-6 py-2 border rounded text-gray-600 hover:bg-gray-50"
+                >
+                  Đóng (关闭)
+                </button>
+                <button
+                  onClick={() => {
+                    setViewingPartner(null);
+                    setEditingPartner(viewingPartner);
+                    setIsModalOpen(true);
+                  }}
+                  className="px-6 py-2 bg-brand-navy text-white rounded font-bold hover:bg-brand-darkNavy"
+                >
+                  Sửa (编辑)
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -433,6 +446,7 @@ export const PartnerManagement: React.FC = () => {
                   <th className="px-4 py-3 text-left">Người liên hệ (联系人)</th>
                   <th className="px-4 py-3 text-left">Số điện thoại (电话)</th>
                   <th className="px-4 py-3 text-left">Email (邮箱)</th>
+                  <th className="px-4 py-3 text-left">Cửa hàng (店铺)</th>
                   <th className="px-4 py-3 text-left">Trạng thái (状态)</th>
                   <th className="px-4 py-3 text-center">Thao tác (操作)</th>
                 </tr>
@@ -440,7 +454,7 @@ export const PartnerManagement: React.FC = () => {
               <tbody>
                 {filteredPartners.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-gray-400">
+                    <td colSpan={9} className="py-8 text-center text-gray-400">
                       Chưa có đối tác nào (暂无合作伙伴)
                     </td>
                   </tr>
@@ -448,6 +462,7 @@ export const PartnerManagement: React.FC = () => {
                   filteredPartners.map((partner) => (
                     <tr key={partner.id} className="border-b hover:bg-gray-50">
                       <td className="px-4 py-3 font-bold text-gray-800">{partner.name}</td>
+                      <td className="px-4 py-3 text-gray-600">{partner.code || '-'}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           partner.type === 'Supplier' ? 'bg-blue-100 text-blue-800' :
@@ -489,7 +504,7 @@ export const PartnerManagement: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex justify-center gap-1">
+                        <div className="flex justify-center gap-1 flex-wrap">
                           <button
                             onClick={() => {
                               setViewingPartner(partner);
@@ -499,6 +514,13 @@ export const PartnerManagement: React.FC = () => {
                           >
                             查看
                           </button>
+                          <Link
+                            to="/stores"
+                            className="text-purple-600 hover:text-purple-800 font-medium text-xs border border-purple-200 rounded px-2 py-1 bg-purple-50 hover:bg-purple-100 text-center"
+                            title="Quản lý cửa hàng (店铺管理)"
+                          >
+                            店铺
+                          </Link>
                           <button
                             onClick={() => {
                               setEditingPartner(partner);
@@ -666,11 +688,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
     }
   };
 
-  // Filter stores: chỉ hiển thị cửa hàng chưa có đối tác
-  const availableStores = stores.filter(store => {
-    // Chỉ hiển thị cửa hàng chưa có partnerId hoặc đã được chọn trong form này
-    return !store.partnerId || (formData.storeIds || []).includes(store.id);
-  });
+  // Filter stores: hiển thị tất cả cửa hàng từ danh sách
+  const availableStores = stores;
 
   // Filter stores theo search text
   const filteredAvailableStores = availableStores.filter(store => {

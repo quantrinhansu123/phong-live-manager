@@ -5,7 +5,7 @@ import { AdShiftData, VideoMetric } from '../types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, BarChart } from 'recharts';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 
 interface StoreDetailModalProps {
   isOpen: boolean;
@@ -91,7 +91,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
     const videoViews = storeVideos.reduce((sum, v) => sum + (v.views || 0), 0);
     const videoSales = storeVideos.reduce((sum, v) => sum + (v.sales || 0), 0);
     
-    const roi = totalAdCost > 0 ? ((totalGMV - totalAdCost) / totalAdCost) * 100 : 0;
+    const roi = calculateROI(totalGMV, totalAdCost);
     const avgOrderValue = totalOrders > 0 ? totalGMV / totalOrders : 0;
 
     return {
@@ -151,7 +151,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
     // Calculate ROI and avgOrderValue for each date
     Object.keys(map).forEach(date => {
       const data = map[date];
-      data.roi = data.adCost > 0 ? ((data.gmv - data.adCost) / data.adCost) * 100 : 0;
+      data.roi = calculateROI(data.gmv, data.adCost);
       data.avgOrderValue = data.orders > 0 ? data.gmv / data.orders : 0;
     });
     
@@ -354,7 +354,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                     </div>
                     <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded shadow-sm">
                       <p className="text-xs text-gray-600 uppercase font-bold mb-1">ROI</p>
-                      <p className="text-2xl font-bold text-green-600">{storeMetrics.roi.toFixed(1)}%</p>
+                      <p className="text-2xl font-bold text-green-600">{formatROI(storeMetrics.roi)}</p>
                     </div>
                   </div>
 
@@ -604,7 +604,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                           'Thời gian': `${report.startTime} - ${report.endTime}`,
                           'GMV': gmv,
                           'Chi phí QC': adCost,
-                          'ROI (%)': roi.toFixed(2),
+                          'ROI (%)': formatROI(roi),
                           'Người báo cáo': report.reporter || '',
                           'Ca': report.shift || '',
                         };
@@ -689,7 +689,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                             {filteredRecentHistory.map((report) => {
                               const gmv = Number(report.gmv) || 0;
                               const adCost = Number(report.adCost) || 0;
-                              const roi = adCost > 0 ? ((gmv - adCost) / adCost) * 100 : 0;
+                              const roi = calculateROI(gmv, adCost);
                               
                               return (
                                 <tr key={report.id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -702,11 +702,11 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                                   <td className="px-4 py-3 text-right font-bold text-red-600">{formatCurrency(adCost)}</td>
                                   <td className="px-4 py-3 text-right">
                                     <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                      roi >= 400 ? 'bg-green-100 text-green-800' :
-                                      roi >= 200 ? 'bg-yellow-100 text-yellow-800' :
+                                      roi >= 4.0 ? 'bg-green-100 text-green-800' :
+                                      roi >= 2.0 ? 'bg-yellow-100 text-yellow-800' :
                                       'bg-red-100 text-red-800'
                                     }`}>
-                                      {roi.toFixed(1)}%
+                                      {formatROI(roi)}
                                     </span>
                                   </td>
                                   <td className="px-4 py-3 text-gray-600">{report.reporter || '-'}</td>

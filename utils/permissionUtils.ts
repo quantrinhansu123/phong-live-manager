@@ -22,11 +22,17 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
     return true;
   }
 
+  // Partner mặc định có quyền xem "Quản lý Cửa Hàng" (STORE_MGR = 'store_mgr')
+  if (userRole === 'partner' && menuId === 'store_mgr') {
+    return true;
+  }
+
   const permissions = getMenuPermissions();
   const menuPermission = permissions.find(p => p.menuId === menuId);
   
   if (!menuPermission) {
     // Nếu không có permission được set, mặc định là không có quyền (cho partner và employee)
+    // Trừ trường hợp đặc biệt đã xử lý ở trên
     return false;
   }
 
