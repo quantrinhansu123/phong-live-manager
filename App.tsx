@@ -45,8 +45,11 @@ const App: React.FC = () => {
           <Route path="/personnel" element={<Personnel />} />
           <Route path="/cpqc" element={<CPQC />} />
           <Route path="/partners" element={<PartnerManagement />} />
+          <Route path="/salary-report" element={<SalaryReport />} />
         </Route>
-        <Route path="/salary-report" element={<SalaryReport />} />
+        
+        {/* Catch-all route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

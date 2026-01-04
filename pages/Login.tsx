@@ -120,10 +120,6 @@ export const Login: React.FC = () => {
                         {loading ? 'Đang kiểm tra... (检查中...)' : 'Vào hệ thống (进入系统)'}
                     </button>
                 </form>
-
-                <div className="mt-4 text-center text-xs text-gray-500">
-                    <p>Admin mặc định (默认管理员): admin@phonglive.com / password</p>
-                </div>
             </div>
         </div>
     );
