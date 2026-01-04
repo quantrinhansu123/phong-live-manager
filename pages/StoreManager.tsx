@@ -25,7 +25,6 @@ export const StoreManager: React.FC = () => {
     const [searchText, setSearchText] = useState('');
     const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
     const currentUserRole = getCurrentUserRole();
-    const currentUserId = localStorage.getItem('currentUserId') || '';
 
     useEffect(() => {
         loadStores();
@@ -208,11 +207,6 @@ export const StoreManager: React.FC = () => {
     const filteredStores = useMemo(() => {
         let filtered = stores;
 
-        // Nếu user là partner, chỉ hiển thị cửa hàng mà họ phụ trách
-        if (currentUserRole === 'partner' && currentUserId) {
-            filtered = filtered.filter(store => store.partnerId === currentUserId);
-        }
-
         // Filter by search text
         if (searchText) {
             const searchLower = searchText.toLowerCase();
@@ -246,7 +240,7 @@ export const StoreManager: React.FC = () => {
         }
 
         return filtered;
-    }, [stores, partners, personnel, searchText, selectedFilters, currentUserRole, currentUserId]);
+    }, [stores, partners, personnel, searchText, selectedFilters, currentUserRole]);
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen font-sans">

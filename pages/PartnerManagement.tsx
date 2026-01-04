@@ -211,6 +211,7 @@ export const PartnerManagement: React.FC = () => {
             'Người liên hệ': partner.contactPerson,
             'Số điện thoại': partner.phoneNumber,
             'Email': partner.email || '',
+            'Mật khẩu': partner.password || '',
             'Địa chỉ': partner.address || '',
             'Mã số thuế': partner.taxCode || '',
             'Số tài khoản': partner.bankAccount || '',
@@ -336,6 +337,12 @@ export const PartnerManagement: React.FC = () => {
                     <p className="text-lg font-bold text-gray-800">{viewingPartner.email}</p>
                   </div>
                 )}
+                {viewingPartner.password && (
+                  <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
+                    <p className="text-xs text-gray-500 uppercase font-bold mb-1">Mật khẩu (密码)</p>
+                    <p className="text-lg font-bold text-gray-800 font-mono">{viewingPartner.password}</p>
+                  </div>
+                )}
                 {viewingPartner.address && (
                   <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
                     <p className="text-xs text-gray-500 uppercase font-bold mb-1">Địa chỉ (地址)</p>
@@ -446,6 +453,7 @@ export const PartnerManagement: React.FC = () => {
                   <th className="px-4 py-3 text-left">Người liên hệ (联系人)</th>
                   <th className="px-4 py-3 text-left">Số điện thoại (电话)</th>
                   <th className="px-4 py-3 text-left">Email (邮箱)</th>
+                  <th className="px-4 py-3 text-left">Mật khẩu (密码)</th>
                   <th className="px-4 py-3 text-left">Cửa hàng (店铺)</th>
                   <th className="px-4 py-3 text-left">Trạng thái (状态)</th>
                   <th className="px-4 py-3 text-center">Thao tác (操作)</th>
@@ -454,7 +462,7 @@ export const PartnerManagement: React.FC = () => {
               <tbody>
                 {filteredPartners.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-gray-400">
+                    <td colSpan={10} className="py-8 text-center text-gray-400">
                       Chưa có đối tác nào (暂无合作伙伴)
                     </td>
                   </tr>
@@ -480,6 +488,7 @@ export const PartnerManagement: React.FC = () => {
                       <td className="px-4 py-3 text-gray-600">{partner.contactPerson}</td>
                       <td className="px-4 py-3 text-gray-600">{partner.phoneNumber}</td>
                       <td className="px-4 py-3 text-gray-600">{partner.email || '-'}</td>
+                      <td className="px-4 py-3 text-gray-600 font-mono">{partner.password || '-'}</td>
                       <td className="px-4 py-3 text-gray-600">
                         {partner.storeIds && partner.storeIds.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
