@@ -3,21 +3,7 @@ import { fetchPersonnel, createPersonnel, updatePersonnel, deletePersonnel, fetc
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency } from '../utils/formatUtils';
-import { Personnel as PersonnelType, LiveReport, ReportType } from '../types';
-
-// Menu items list (same as in Sidebar)
-const MENU_ITEMS = [
-  { id: ReportType.DASHBOARD, label: 'Dashboard (仪表板)' },
-  { id: ReportType.LIVE_ADS, label: 'Quản lý Live (直播管理)' },
-  { id: 'live_report_detail', label: 'Chi tiết Báo Cáo Live (直播报告详情)' },
-  { id: ReportType.VIDEO_PARAM, label: 'Quản lý Video & KPI (视频和KPI管理)' },
-  { id: ReportType.STORE_MGR, label: 'Quản lý Cửa Hàng (店铺管理)' },
-  { id: 'store_overview', label: 'Tổng Quan Cửa Hàng (店铺总览)' },
-  { id: ReportType.PERSONNEL, label: 'Nhân sự (人事)' },
-  { id: ReportType.CPQC, label: 'CPQC (成本管理)' },
-  { id: ReportType.SALARY_REPORT, label: 'Báo Cáo Lương (工资报告)' },
-  { id: ReportType.PARTNER, label: 'Quản Lý Đối Tác (合作伙伴管理)' },
-];
+import { Personnel as PersonnelType, LiveReport } from '../types';
 
 export const Personnel: React.FC = () => {
   const [personnelList, setPersonnelList] = useState<PersonnelType[]>([]);
@@ -69,8 +55,7 @@ export const Personnel: React.FC = () => {
     password: '',
     role: 'user' as 'user' | 'admin',
     baseSalary: 0,
-    monthlyKPITarget: 0,
-    allowedMenuIds: [] as string[]
+    monthlyKPITarget: 0
   };
   const [formData, setFormData] = useState<PersonnelType>(initialFormState);
 
@@ -108,22 +93,10 @@ export const Personnel: React.FC = () => {
   const handleEdit = (person: PersonnelType) => {
     setFormData({
       ...person,
-      password: person.password || '', // Edit mode might blank out password or keep it, simple approach: show it
-      allowedMenuIds: person.allowedMenuIds || [] // Ensure allowedMenuIds is array
+      password: person.password || '' // Edit mode might blank out password or keep it, simple approach: show it
     });
     setIsEditing(true);
     setShowForm(true);
-  };
-
-  const handleMenuToggle = (menuId: string) => {
-    setFormData(prev => {
-      const currentMenus = prev.allowedMenuIds || [];
-      if (currentMenus.includes(menuId)) {
-        return { ...prev, allowedMenuIds: currentMenus.filter(id => id !== menuId) };
-      } else {
-        return { ...prev, allowedMenuIds: [...currentMenus, menuId] };
-      }
-    });
   };
 
   const handleDelete = async (id: string) => {
@@ -386,41 +359,6 @@ export const Personnel: React.FC = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Menu Permissions - Only show for non-admin users */}
-                {formData.role !== 'admin' && (
-                  <div className="col-span-2 mt-2">
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                      Phân quyền Menu (菜单权限) - Chọn các hạng mục có thể xem (选择可查看的菜单项)
-                    </label>
-                    <div className="bg-green-50 p-4 rounded border border-green-100">
-                      <p className="text-xs text-gray-600 mb-3">
-                        Tích chọn các menu mà nhân sự này có thể xem. Nếu không chọn, sẽ áp dụng quyền mặc định theo role và phòng ban. (选择此人员可查看的菜单。如果不选择，将应用基于角色和部门的默认权限。)
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
-                        {MENU_ITEMS.map((menu) => (
-                          <div key={menu.id} className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={(formData.allowedMenuIds || []).includes(menu.id)}
-                              onChange={() => handleMenuToggle(menu.id)}
-                              className="w-4 h-4 text-brand-navy rounded"
-                              id={`menu-${menu.id}`}
-                            />
-                            <label htmlFor={`menu-${menu.id}`} className="text-sm text-gray-700 cursor-pointer">
-                              {menu.label}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      {(formData.allowedMenuIds || []).length === 0 && (
-                        <p className="text-xs text-gray-500 mt-2 italic">
-                          Chưa chọn menu nào - sẽ áp dụng quyền mặc định (未选择任何菜单 - 将应用默认权限)
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
