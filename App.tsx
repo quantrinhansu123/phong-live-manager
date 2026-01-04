@@ -1,5 +1,5 @@
-import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { LiveSessionReport } from './pages/LiveSessionReport';
 import { VideoParameterReport } from './pages/VideoParameterReport';
@@ -15,8 +15,16 @@ import { PartnerManagement } from './pages/PartnerManagement';
 
 const ProtectedLayout: React.FC = () => {
   const user = localStorage.getItem('currentUser');
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { replace: true });
+    }
+  }, [user, navigate]);
+  
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return null; // Return null while redirecting
   }
 
   return (

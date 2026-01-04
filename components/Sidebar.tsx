@@ -25,7 +25,9 @@ export const Sidebar: React.FC = () => {
 
   // Load menu permissions từ Firebase khi component mount
   useEffect(() => {
-    loadMenuPermissions();
+    loadMenuPermissions().catch(err => {
+      console.error('Error loading menu permissions:', err);
+    });
   }, []);
 
   // Filter menu items dựa trên quyền (bao gồm cả role và department)
