@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchPersonnel, fetchStores } from '../services/dataService';
 import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
+import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const SalaryReport: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
@@ -60,8 +61,15 @@ export const SalaryReport: React.FC = () => {
       salaryStatus: 'green' | 'yellow' | 'red';
     }> = {};
 
-    // Initialize with all personnel
-    personnel.forEach(person => {
+    // Filter personnel: employees only see themselves, admin sees all
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    const filteredPersonnel = isAdmin() 
+      ? personnel 
+      : personnel.filter(person => (person.id || person.fullName) === currentUserId);
+
+    // Initialize with filtered personnel
+    filteredPersonnel.forEach(person => {
       dataMap[person.id || person.fullName] = {
         person,
         totalGMV: 0,
@@ -81,8 +89,8 @@ export const SalaryReport: React.FC = () => {
     monthlyReports.forEach(report => {
       if (!report.reporter) return;
 
-      // Find matching personnel
-      const matchingPerson = personnel.find(person => {
+      // Find matching personnel (only from filtered list)
+      const matchingPerson = filteredPersonnel.find(person => {
         const reporterName = report.reporter!.toLowerCase();
         const personName = person.fullName.toLowerCase();
         const personEmail = person.email?.toLowerCase() || '';

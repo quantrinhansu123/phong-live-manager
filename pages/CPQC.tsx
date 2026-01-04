@@ -5,6 +5,7 @@ import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
+import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const CPQC: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);

@@ -119,6 +119,11 @@ export const getCurrentUserRole = (): UserRole => {
   return 'employee'; // Default
 };
 
+// Lấy ID hiện tại của user
+export const getCurrentUserId = (): string | undefined => {
+  return localStorage.getItem('currentUserId') || undefined;
+};
+
 // Kiểm tra user có phải Admin không
 export const isAdmin = (): boolean => {
   return getCurrentUserRole() === 'admin';

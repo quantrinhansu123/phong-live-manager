@@ -3,6 +3,7 @@ import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
 import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
+import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const Dashboard: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string>('all');
@@ -49,7 +50,21 @@ export const Dashboard: React.FC = () => {
 
   // Filter reports by store and date range
   const filteredReports = useMemo(() => {
+    // For partners, only show reports from their stores
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    let allowedStoreIds: string[] | null = null;
+    
+    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+      allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+    }
+    
     return reports.filter(report => {
+      // Partner filter: only show reports from partner's stores
+      if (allowedStoreIds !== null && !allowedStoreIds.includes(report.channelId)) {
+        return false;
+      }
+      
       const matchStore = selectedStore === 'all' || report.channelId === selectedStore;
       const reportDate = new Date(report.date);
       const fromDate = new Date(dateFrom);
@@ -58,7 +73,7 @@ export const Dashboard: React.FC = () => {
       const matchDate = reportDate >= fromDate && reportDate <= toDate;
       return matchStore && matchDate;
     });
-  }, [reports, selectedStore, dateFrom, dateTo]);
+  }, [reports, selectedStore, dateFrom, dateTo, stores]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -72,8 +87,22 @@ export const Dashboard: React.FC = () => {
 
   // Chart data by date (for GMV chart with separate date filter)
   const gmvChartData = useMemo(() => {
+    // For partners, only show reports from their stores
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    let allowedStoreIds: string[] | null = null;
+    
+    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+      allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+    }
+    
     // Filter reports by chart date range
     const chartFilteredReports = reports.filter(report => {
+      // Partner filter: only show reports from partner's stores
+      if (allowedStoreIds !== null && !allowedStoreIds.includes(report.channelId)) {
+        return false;
+      }
+      
       const matchStore = selectedStore === 'all' || report.channelId === selectedStore;
       const reportDate = new Date(report.date);
       const fromDate = new Date(chartDateFrom);
@@ -98,7 +127,7 @@ export const Dashboard: React.FC = () => {
     });
     
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
-  }, [reports, selectedStore, chartDateFrom, chartDateTo]);
+  }, [reports, selectedStore, chartDateFrom, chartDateTo, stores]);
 
   // Chart data by date (for other charts)
   const chartData = useMemo(() => {
@@ -180,9 +209,17 @@ export const Dashboard: React.FC = () => {
             onChange={(e) => setSelectedStore(e.target.value)}
           >
             <option value="all">Tất cả cửa hàng (所有店铺)</option>
-            {stores.filter(s => s.id !== 'all').map(store => (
-              <option key={store.id} value={store.id}>{store.name}</option>
-            ))}
+            {(() => {
+              const currentUserRole = getCurrentUserRole();
+              const currentUserId = getCurrentUserId();
+              let availableStores = stores.filter(s => s.id !== 'all');
+              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+                availableStores = availableStores.filter(s => s.partnerId === currentUserId);
+              }
+              return availableStores.map(store => (
+                <option key={store.id} value={store.id}>{store.name}</option>
+              ));
+            })()}
           </select>
           <input
             type="date"

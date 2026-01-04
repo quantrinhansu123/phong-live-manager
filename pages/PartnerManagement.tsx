@@ -4,6 +4,7 @@ import { fetchPartners, createPartner, updatePartner, deletePartner, fetchStores
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { Partner, Store } from '../types';
+import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const PartnerManagement: React.FC = () => {
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -152,6 +153,15 @@ export const PartnerManagement: React.FC = () => {
 
   // Filter data
   const filteredPartners = partners.filter(partner => {
+    // For partners, only show themselves
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+      if (partner.id !== currentUserId) {
+        return false;
+      }
+    }
+    
     // Search filter
     if (searchText) {
       const searchLower = searchText.toLowerCase();
@@ -186,18 +196,20 @@ export const PartnerManagement: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản Lý Đối Tác (合作伙伴管理)</h2>
-        <button
-          onClick={() => {
-            setEditingPartner(null);
-            setIsModalOpen(true);
-          }}
-          className="bg-brand-navy hover:bg-brand-darkNavy text-white px-4 py-2 rounded shadow text-sm font-bold flex items-center gap-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Thêm Đối Tác Mới (添加新合作伙伴)
-        </button>
+        {isAdmin() && (
+          <button
+            onClick={() => {
+              setEditingPartner(null);
+              setIsModalOpen(true);
+            }}
+            className="bg-brand-navy hover:bg-brand-darkNavy text-white px-4 py-2 rounded shadow text-sm font-bold flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Thêm Đối Tác Mới (添加新合作伙伴)
+          </button>
+        )}
       </div>
 
       {/* Filter Bar */}
@@ -530,23 +542,27 @@ export const PartnerManagement: React.FC = () => {
                           >
                             店铺
                           </Link>
-                          <button
-                            onClick={() => {
-                              setEditingPartner(partner);
-                              setIsModalOpen(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
-                            title="Sửa (编辑)"
-                          >
-                            编辑
-                          </button>
-                          <button
-                            onClick={() => partner.id && setPartnerToDelete(partner.id)}
-                            className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
-                            title="Xóa (删除)"
-                          >
-                            删除
-                          </button>
+                          {isAdmin() && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditingPartner(partner);
+                                  setIsModalOpen(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
+                                title="Sửa (编辑)"
+                              >
+                                编辑
+                              </button>
+                              <button
+                                onClick={() => partner.id && setPartnerToDelete(partner.id)}
+                                className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
+                                title="Xóa (删除)"
+                              >
+                                删除
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

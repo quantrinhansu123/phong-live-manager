@@ -7,6 +7,7 @@ import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
+import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const LiveSessionReport: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
@@ -93,6 +94,14 @@ export const LiveSessionReport: React.FC = () => {
   // Filter Data with search and filters
   const filteredData = useMemo(() => {
     let filtered = reports;
+
+    // For partners, only show reports from their stores
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+      filtered = filtered.filter(item => allowedStoreIds.includes(item.channelId));
+    }
 
     // Filter by date range
     filtered = filtered.filter(item => {

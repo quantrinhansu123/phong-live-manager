@@ -4,7 +4,7 @@ import { StoreDetailModal } from '../components/StoreDetailModal';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { Store, Partner, Personnel } from '../types';
-import { getCurrentUserRole } from '../utils/permissionUtils';
+import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const StoreManager: React.FC = () => {
     const [stores, setStores] = useState<Store[]>([]);
@@ -207,6 +207,12 @@ export const StoreManager: React.FC = () => {
     const filteredStores = useMemo(() => {
         let filtered = stores;
 
+        // For partners, only show their stores
+        const currentUserId = getCurrentUserId();
+        if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+            filtered = filtered.filter(store => store.partnerId === currentUserId);
+        }
+
         // Filter by search text
         if (searchText) {
             const searchLower = searchText.toLowerCase();
@@ -397,21 +403,21 @@ export const StoreManager: React.FC = () => {
                                             className="text-green-600 hover:text-green-800 font-medium text-xs border border-green-200 rounded px-2 py-1 bg-green-50 hover:bg-green-100"
                                             title="Xem chi tiết (查看详情)"
                                         >
-                                                    Xem (查看)
+                                            Xem (查看)
                                         </button>
                                         <button
                                                     onClick={() => handleStartEdit(store)}
                                             className="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 rounded px-2 py-1 bg-blue-50 hover:bg-blue-100"
                                             title="Sửa (编辑)"
                                         >
-                                                    Sửa (编辑)
+                                            Sửa (编辑)
                                         </button>
                                         <button
                                             onClick={(e) => handleDeleteStore(store.id, e)}
                                             className="text-red-600 hover:text-red-800 font-medium text-xs border border-red-200 rounded px-2 py-1 bg-red-50 hover:bg-red-100"
                                             title="Xóa (删除)"
                                         >
-                                                    Xóa (删除)
+                                            Xóa (删除)
                                         </button>
                                     </div>
                                         </td>
