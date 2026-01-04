@@ -55,7 +55,7 @@ export const MenuPermissionModal: React.FC<MenuPermissionModalProps> = ({
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const permissions = getMenuPermissions();
     const existingIndex = permissions.findIndex(p => p.menuId === menuId);
     
@@ -71,8 +71,10 @@ export const MenuPermissionModal: React.FC<MenuPermissionModalProps> = ({
       permissions.push(newPermission);
     }
 
-    saveMenuPermissions(permissions);
+    await saveMenuPermissions(permissions);
     onClose();
+    // Reload page để cập nhật menu
+    window.location.reload();
   };
 
   if (!isOpen) return null;

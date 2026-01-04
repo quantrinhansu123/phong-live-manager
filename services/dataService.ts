@@ -1,4 +1,4 @@
-import { HostRevenue, VideoConfigItem, Store, AdShiftData, VideoMetric, LiveReport, Personnel, Partner } from '../types';
+import { HostRevenue, VideoConfigItem, Store, AdShiftData, VideoMetric, LiveReport, Personnel, Partner, MenuPermission } from '../types';
 
 const FIREBASE_URL = 'https://phonglive-26d30-default-rtdb.asia-southeast1.firebasedatabase.app';
 
@@ -522,5 +522,58 @@ export const deletePartner = async (id: string) => {
   } catch (error) {
     console.error("Delete failed", error);
     throw error;
+  }
+};
+
+// --- MENU PERMISSIONS ---
+
+export const fetchMenuPermissions = async (): Promise<MenuPermission[]> => {
+  let permissions: MenuPermission[] = [];
+  try {
+    const response = await fetch(`${FIREBASE_URL}/menu_permissions.json`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data) {
+        // Firebase trả về object, cần convert thành array
+        if (Array.isArray(data)) {
+          permissions = data;
+        } else {
+          permissions = Object.keys(data).map(key => data[key]);
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("API unavailable, checking local storage...");
+  }
+
+  // Merge with Local Storage
+  const localPermissions = JSON.parse(localStorage.getItem('local_menu_permissions') || '[]');
+  
+  // Merge permissions and remove duplicates by menuId
+  const allPermissions = [...permissions, ...localPermissions];
+  const uniquePermissions = Array.from(
+    new Map(allPermissions.map(item => [item.menuId, item])).values()
+  );
+
+  return uniquePermissions;
+};
+
+export const saveMenuPermissionsToFirebase = async (permissions: MenuPermission[]): Promise<void> => {
+  try {
+    // Save to Firebase (save as array)
+    const response = await fetch(`${FIREBASE_URL}/menu_permissions.json`, {
+      method: 'PUT',
+      body: JSON.stringify(permissions),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) throw new Error('Failed to save menu permissions');
+    
+    // Also save to local storage as backup
+    localStorage.setItem('local_menu_permissions', JSON.stringify(permissions));
+  } catch (error) {
+    console.warn("API Error, saving to local storage instead:", error);
+    // Fallback: Save to Local Storage
+    localStorage.setItem('local_menu_permissions', JSON.stringify(permissions));
+    throw error; // Re-throw để permissionUtils có thể xử lý
   }
 };

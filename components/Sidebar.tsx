@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ReportType } from '../types';
-import { getCurrentUserRole, canAccessMenu, isAdmin, getCurrentUserDepartment } from '../utils/permissionUtils';
+import { getCurrentUserRole, canAccessMenu, isAdmin, getCurrentUserDepartment, loadMenuPermissions } from '../utils/permissionUtils';
 import { MenuPermissionModal } from './MenuPermissionModal';
 
 const MENU_ITEMS = [
@@ -22,6 +22,11 @@ export const Sidebar: React.FC = () => {
   const userRole = getCurrentUserRole();
   const userDepartment = getCurrentUserDepartment();
   const admin = isAdmin();
+
+  // Load menu permissions từ Firebase khi component mount
+  useEffect(() => {
+    loadMenuPermissions();
+  }, []);
 
   // Filter menu items dựa trên quyền (bao gồm cả role và department)
   const visibleMenuItems = useMemo(() => {
