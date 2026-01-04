@@ -27,7 +27,14 @@ export const Login: React.FC = () => {
             // Nếu không tìm thấy trong Personnel, tìm trong Partners
             if (!user) {
                 const partner = partners.find(p => p.email?.toLowerCase() === email.trim().toLowerCase());
+                
                 if (partner) {
+                    // Kiểm tra xem partner có password không
+                    if (!partner.password || partner.password.trim() === '') {
+                        setError('Đối tác này chưa có mật khẩu! Vui lòng liên hệ admin để thiết lập mật khẩu. (此合作伙伴尚未设置密码! 请联系管理员设置密码。)');
+                        setLoading(false);
+                        return;
+                    }
                     user = {
                         id: partner.id,
                         fullName: partner.name,
@@ -41,8 +48,13 @@ export const Login: React.FC = () => {
             }
 
             if (user) {
-                // Check password (simple verification for this demo)
-                if (user.password === password) {
+                // Check password (trim whitespace for comparison)
+                const userPassword = user.password?.trim() || '';
+                const inputPassword = password.trim();
+                
+                // Debug removed for production
+                
+                if (userPassword === inputPassword && userPassword !== '') {
                     localStorage.setItem('currentUser', user.fullName);
                     localStorage.setItem('currentUserId', user.id || '');
                     // Map role: 'admin' -> 'admin', 'user' -> 'employee', 'partner' -> 'partner'

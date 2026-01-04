@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Store, Personnel, LiveReport } from '../types';
-import { fetchPersonnel, fetchLiveReports, MOCK_STORES, MOCK_AD_DATA, MOCK_VIDEO_METRICS } from '../services/dataService';
-import { AdShiftData, VideoMetric } from '../types';
+import { fetchPersonnel, fetchLiveReports } from '../services/dataService';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, BarChart } from 'recharts';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
@@ -80,16 +79,12 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
     if (!store) return null;
 
     const storeReports = liveReports.filter(r => r.channelId === store.id);
-    const storeAdData = MOCK_AD_DATA.filter(a => a.storeId === store.id);
-    const storeVideos = MOCK_VIDEO_METRICS.filter(v => v.storeId === store.id);
 
     const totalGMV = storeReports.reduce((sum, r) => sum + (Number(r.gmv) || 0), 0);
     const totalAdCost = storeReports.reduce((sum, r) => sum + (Number(r.adCost) || 0), 0);
     const totalOrders = storeReports.reduce((sum, r) => sum + (Number(r.orders) || 0), 0);
     const totalViews = storeReports.reduce((sum, r) => sum + (Number(r.totalViews) || 0), 0);
     const totalViewers = storeReports.reduce((sum, r) => sum + (Number(r.viewers) || 0), 0);
-    const videoViews = storeVideos.reduce((sum, v) => sum + (v.views || 0), 0);
-    const videoSales = storeVideos.reduce((sum, v) => sum + (v.sales || 0), 0);
     
     const roi = calculateROI(totalGMV, totalAdCost);
     const avgOrderValue = totalOrders > 0 ? totalGMV / totalOrders : 0;
@@ -100,12 +95,12 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
       totalOrders,
       totalViews,
       totalViewers,
-      videoViews,
-      videoSales,
+      videoViews: 0,
+      videoSales: 0,
       roi,
       avgOrderValue,
       reportCount: storeReports.length,
-      videoCount: storeVideos.length
+      videoCount: 0
     };
   }, [store, liveReports]);
 

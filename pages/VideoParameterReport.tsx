@@ -34,18 +34,12 @@ export const VideoParameterReport: React.FC = () => {
         fetchVideoMetrics(),
         fetchStores()
       ]);
-      // Fallback to mock data if DB is empty
-      if (videoData.length === 0) {
-        console.warn("Using Mock Data because DB returned empty");
-        setVideos(MOCK_VIDEO_METRICS);
-      } else {
-        setVideos(videoData);
-      }
-      setStores(storeData.length > 0 ? storeData : MOCK_STORES);
+      setVideos(videoData);
+      setStores(storeData);
     } catch (error) {
       console.error('Error loading data:', error);
-      setVideos(MOCK_VIDEO_METRICS);
-      setStores(MOCK_STORES);
+      setVideos([]);
+      setStores([]);
     } finally {
       setIsLoading(false);
     }

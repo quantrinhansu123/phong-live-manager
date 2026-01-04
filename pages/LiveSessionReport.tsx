@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MOCK_STORES, fetchLiveReports, createLiveReport, updateLiveReport, deleteLiveReport, fetchPersonnel, fetchStores } from '../services/dataService';
+import { fetchLiveReports, createLiveReport, updateLiveReport, deleteLiveReport, fetchPersonnel, fetchStores } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line } from 'recharts';
 import { LiveReportModal } from '../components/LiveReportModal';
 import { FilterBar, FilterField } from '../components/FilterBar';
@@ -168,6 +168,35 @@ export const LiveSessionReport: React.FC = () => {
     return filtered;
   }, [reports, dateFrom, dateTo, selectedFilters, searchText, stores]);
 
+  // Filter stores and reports for partners (for filter options)
+  const filteredStoresForUser = useMemo(() => {
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    const isAdminUser = isAdmin();
+    
+    if (isAdminUser) {
+      return stores.filter(s => s.id !== 'all');
+    } else if (currentUserRole === 'partner' && currentUserId) {
+      return stores.filter(s => s.id !== 'all' && s.partnerId === currentUserId);
+    }
+    return stores.filter(s => s.id !== 'all');
+  }, [stores]);
+
+  // Filter reports for host options (only from partner's stores)
+  const filteredReportsForOptions = useMemo(() => {
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    const isAdminUser = isAdmin();
+    
+    if (isAdminUser) {
+      return reports;
+    } else if (currentUserRole === 'partner' && currentUserId) {
+      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+      return reports.filter(report => allowedStoreIds.includes(report.channelId));
+    }
+    return reports;
+  }, [reports, stores]);
+
   // Calculations for KPI Cards
   const metrics = useMemo(() => {
     let totalGMV = 0;
@@ -216,8 +245,19 @@ export const LiveSessionReport: React.FC = () => {
       avgROI: number;
     }> = {};
 
+    // For partners, only use reports from their stores
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    const isAdminUser = isAdmin();
+    
+    let reportsToUse = reports;
+    if (currentUserRole === 'partner' && !isAdminUser && currentUserId) {
+      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+      reportsToUse = reports.filter(report => allowedStoreIds.includes(report.channelId));
+    }
+
     // Filter reports by date range
-    const dateRangeReports = reports.filter(report => {
+    const dateRangeReports = reportsToUse.filter(report => {
       const reportDate = new Date(report.date);
       const fromDate = new Date(personnelDateFrom);
       const toDate = new Date(personnelDateTo);
@@ -265,15 +305,26 @@ export const LiveSessionReport: React.FC = () => {
       ...item,
       avgROI: calculateROI(item.totalGMV, item.totalAdCost)
     })).sort((a, b) => b.totalGMV - a.totalGMV);
-  }, [reports, personnelList, personnelDateFrom, personnelDateTo]);
+  }, [reports, stores, personnelList, personnelDateFrom, personnelDateTo]);
 
   // Weekly Report by Host
   const weeklyReportData = useMemo(() => {
-    // Get all unique hosts from reports
-    const allHosts = Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).sort();
+    // For partners, only use reports from their stores
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    const isAdminUser = isAdmin();
+    
+    let reportsToUse = reports;
+    if (currentUserRole === 'partner' && !isAdminUser && currentUserId) {
+      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+      reportsToUse = reports.filter(report => allowedStoreIds.includes(report.channelId));
+    }
+    
+    // Get all unique hosts from filtered reports
+    const allHosts = Array.from(new Set(reportsToUse.map(r => r.hostName).filter(Boolean))).sort();
     
     // Filter reports by week date range
-    const weekReports = reports.filter(report => {
+    const weekReports = reportsToUse.filter(report => {
       const reportDate = new Date(report.date);
       const fromDate = new Date(weekStartDate);
       const toDate = new Date(weekEndDate);
@@ -324,7 +375,7 @@ export const LiveSessionReport: React.FC = () => {
       grandTotal,
       weekRange: `${new Date(weekStartDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric' })} - ${new Date(weekEndDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric' })}`
     };
-  }, [reports, weekStartDate, weekEndDate]);
+  }, [reports, stores, weekStartDate, weekEndDate]);
 
   // Host Ranking (BXH) - Sắp xếp từ trên xuống dưới
   const hostRanking = useMemo(() => {
@@ -434,7 +485,7 @@ export const LiveSessionReport: React.FC = () => {
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                     <p className="text-xs text-gray-500 uppercase font-bold mb-1">Kênh Live (直播频道)</p>
-                    <p className="text-lg font-bold text-gray-800">{MOCK_STORES.find(s => s.id === selectedReport.channelId)?.name || 'Unknown'}</p>
+                    <p className="text-lg font-bold text-gray-800">{stores.find(s => s.id === selectedReport.channelId)?.name || 'Unknown'}</p>
                   </div>
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <p className="text-xs text-gray-500 uppercase font-bold mb-1">Host (主播)</p>
@@ -678,13 +729,13 @@ export const LiveSessionReport: React.FC = () => {
             key: 'stores',
             label: 'Cửa hàng',
             type: 'checkbox',
-            options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
+            options: filteredStoresForUser.map(s => ({ value: s.id, label: s.name }))
           },
           {
             key: 'hosts',
             label: 'Host',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
+            options: Array.from(new Set(filteredReportsForOptions.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
           },
           {
             key: 'shifts',
@@ -700,7 +751,7 @@ export const LiveSessionReport: React.FC = () => {
             key: 'reporters',
             label: 'Người báo cáo',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.reporter).filter(Boolean))).map(reporter => ({ value: reporter!, label: reporter! }))
+            options: Array.from(new Set(filteredReportsForOptions.map(r => r.reporter).filter(Boolean))).map(reporter => ({ value: reporter!, label: reporter! }))
           }
         ]}
         selectedFilters={selectedFilters}

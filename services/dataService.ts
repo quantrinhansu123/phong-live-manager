@@ -298,16 +298,18 @@ export const fetchStores = async (): Promise<Store[]> => {
 
   // Merge with Local Storage
   const localStores = JSON.parse(localStorage.getItem('local_stores') || '[]');
-  
-  // If no stores exist, seed with mock data
-  if (stores.length === 0 && localStores.length === 0) {
-    const seedStores = MOCK_STORES.filter(s => s.id !== 'all');
-    localStorage.setItem('local_stores', JSON.stringify(seedStores));
-    return seedStores;
+
+  // Filter out old mock stores (store1, store2, store3) that were seeded from MOCK_STORES
+  const mockStoreIds = ['store1', 'store2', 'store3'];
+  const filteredLocalStores = localStores.filter((s: Store) => !mockStoreIds.includes(s.id));
+
+  // If we filtered out any stores, update localStorage
+  if (filteredLocalStores.length !== localStores.length) {
+    localStorage.setItem('local_stores', JSON.stringify(filteredLocalStores));
   }
 
   // Merge stores and remove duplicates by id
-  const allStores = [...stores, ...localStores];
+  const allStores = [...stores, ...filteredLocalStores];
   const uniqueStores = allStores.reduce((acc, store) => {
     if (!acc.find(s => s.id === store.id)) {
       acc.push(store);
@@ -364,45 +366,36 @@ export const updateStore = async (id: string, store: Partial<Store>) => {
 };
 
 export const deleteStore = async (id: string) => {
+  // Delete from localStorage if it's a local or mock store
   if (id.startsWith('local_') || id.startsWith('store_')) {
     const localStores = JSON.parse(localStorage.getItem('local_stores') || '[]');
     const filtered = localStores.filter((s: Store) => s.id !== id);
     localStorage.setItem('local_stores', JSON.stringify(filtered));
-    return true;
   }
 
+  // Also try to delete from Firebase (in case it was synced there)
   try {
     const response = await fetch(`${FIREBASE_URL}/stores/${id}.json`, {
       method: 'DELETE',
     });
-    if (!response.ok) throw new Error('Failed to delete store');
+    if (!response.ok) {
+      // If it's a local/mock store and not in Firebase, that's OK
+      if (id.startsWith('local_') || id.startsWith('store_')) {
+        return true;
+      }
+      throw new Error('Failed to delete store');
+    }
     return true;
   } catch (error) {
+    // If it's a local/mock store and Firebase delete fails, that's OK (might not exist in Firebase)
+    if (id.startsWith('local_') || id.startsWith('store_')) {
+      return true;
+    }
     console.error("Delete failed", error);
     throw error;
   }
 };
 
-export const MOCK_STORES: Store[] = [
-  { id: 'all', name: 'Tất cả cửa hàng' },
-  { id: 'store1', name: 'Phong Live HCM' },
-  { id: 'store2', name: 'Phong Live HN' },
-  { id: 'store3', name: 'Phong Store Luxury' },
-];
-
-export const MOCK_AD_DATA: AdShiftData[] = [
-  { id: '1', date: '2025-12-01', shift: 'Sáng', storeId: 'store1', gmv: 15000000, adCost: 3000000, orders: 50, viewCount: 1200 },
-  { id: '2', date: '2025-12-01', shift: 'Tối', storeId: 'store1', gmv: 45000000, adCost: 8000000, orders: 150, viewCount: 5000 },
-];
-
-export const MOCK_VIDEO_METRICS: VideoMetric[] = [
-  { id: 'v1', title: 'Review Áo Thun', storeId: 'store1', platform: 'TikTok', uploadDate: '2025-12-01', views: 15000, personInCharge: 'Tuấn Edit', sales: 5000000 },
-  { id: 'v2', title: 'Sale 12.12', storeId: 'store1', platform: 'TikTok', uploadDate: '2025-12-02', views: 8000, personInCharge: 'Hương Cam', sales: 2000000 },
-];
-
-export const REPORT_DATES = [
-  '2025-12-01', '2025-12-02', '2025-12-03', '2025-12-04', '2025-12-05', '2025-12-06', '2025-12-07'
-];
 
 export const VIDEO_CONFIG_DATA: VideoConfigItem[] = [
   { id: '1', category: 'ROI', format: 'Currency', formula: 'GVM - Chi phí QC', sourceType: 'formula' },

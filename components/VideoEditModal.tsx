@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MOCK_STORES } from '../services/dataService';
-import { VideoMetric } from '../types';
+import { fetchStores } from '../services/dataService';
+import { VideoMetric, Store } from '../types';
 
 interface VideoEditModalProps {
   isOpen: boolean;
@@ -10,29 +10,47 @@ interface VideoEditModalProps {
 }
 
 export const VideoEditModal: React.FC<VideoEditModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
-  const defaultFormData: VideoMetric = {
+  const [stores, setStores] = useState<Store[]>([]);
+  const [formData, setFormData] = useState<VideoMetric>({
     id: '',
     title: '',
-    storeId: MOCK_STORES.find(s => s.id !== 'all')?.id || '',
+    storeId: '',
     platform: 'TikTok',
     uploadDate: new Date().toISOString().split('T')[0],
     views: 0,
     personInCharge: '',
     sales: 0
-  };
-
-  const [formData, setFormData] = useState<VideoMetric>(defaultFormData);
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
+      fetchStores().then(data => {
+        const filteredStores = data.filter(s => s.id !== 'all');
+        setStores(filteredStores);
+        if (!initialData && filteredStores.length > 0) {
+          setFormData(prev => ({ ...prev, storeId: filteredStores[0].id }));
+        }
+      }).catch(() => {
+        setStores([]);
+      });
+      
       if (initialData) {
         setFormData(initialData);
       } else {
-        setFormData(defaultFormData);
+        setFormData({
+          id: '',
+          title: '',
+          storeId: stores.length > 0 ? stores[0].id : '',
+          platform: 'TikTok',
+          uploadDate: new Date().toISOString().split('T')[0],
+          views: 0,
+          personInCharge: '',
+          sales: 0
+        });
       }
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, initialData, stores.length]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -91,7 +109,7 @@ export const VideoEditModal: React.FC<VideoEditModalProps> = ({ isOpen, onClose,
                 className="w-full border rounded px-3 py-2 bg-white"
                 required
               >
-                {MOCK_STORES.filter(s => s.id !== 'all').map(s => (
+                {stores.map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
@@ -182,4 +200,3 @@ export const VideoEditModal: React.FC<VideoEditModalProps> = ({ isOpen, onClose,
     </div>
   );
 };
-

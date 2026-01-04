@@ -617,7 +617,8 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
           storeIds: initialData.storeIds || [],
           notes: initialData.notes || '',
           status: initialData.status,
-        });
+          password: initialData.password || '',
+        } as any);
       } else {
         setFormData({
           name: '',
@@ -739,10 +740,19 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
     e.preventDefault();
     setLoading(true);
     try {
-      // Lấy password từ formData nếu có (chỉ khi thêm mới)
+      // Lấy password từ formData
       const submitData = { ...formData } as any;
-      if (!initialData && (formData as any).password) {
-        submitData.password = (formData as any).password;
+      if (!initialData) {
+        // Khi tạo mới: password là bắt buộc (nếu trống sẽ tự động tạo)
+        submitData.password = (formData as any).password || '';
+      } else {
+        // Khi edit: chỉ gửi password nếu có giá trị mới (không trống)
+        if ((formData as any).password && (formData as any).password.trim()) {
+          submitData.password = (formData as any).password.trim();
+        } else {
+          // Nếu trống, không gửi password để giữ nguyên password cũ
+          delete submitData.password;
+        }
       }
       await onSubmit(submitData);
       onClose();
@@ -847,22 +857,26 @@ const PartnerModal: React.FC<PartnerModalProps> = ({ isOpen, onClose, onSubmit, 
                 className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
               />
             </div>
-            {!initialData && (
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Mật khẩu (密码)</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={(formData as any).password || ''}
-                  onChange={(e) => {
-                    setFormData(prev => ({ ...prev, password: e.target.value } as any));
-                  }}
-                  placeholder="Để trống để tự động tạo mật khẩu (留空以自动生成密码)"
-                  className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
-                />
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Mật khẩu (密码) {!initialData && <span className="text-red-500">*</span>}</label>
+              <input
+                type="text"
+                name="password"
+                value={(formData as any).password || ''}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, password: e.target.value } as any));
+                }}
+                placeholder={initialData ? "Nhập mật khẩu mới (输入新密码)" : "Để trống để tự động tạo mật khẩu (留空以自动生成密码)"}
+                className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy"
+                required={!initialData}
+              />
+              {!initialData && (
                 <p className="text-xs text-gray-500 mt-1">Nếu để trống, mật khẩu sẽ được tự động tạo (如果留空，密码将自动生成)</p>
-              </div>
-            )}
+              )}
+              {initialData && (
+                <p className="text-xs text-gray-500 mt-1">Để trống nếu không muốn thay đổi mật khẩu (留空则不更改密码)</p>
+              )}
+            </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Địa chỉ (地址)</label>
               <input

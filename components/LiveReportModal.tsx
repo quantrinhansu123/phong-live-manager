@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MOCK_STORES, fetchStores, fetchPersonnel } from '../services/dataService';
+import { fetchStores, fetchPersonnel } from '../services/dataService';
 import { LiveReport, Personnel } from '../types';
 
 interface LiveReportModalProps {
@@ -29,7 +29,7 @@ const calculateDuration = (startTime: string, endTime: string): string => {
 };
 
 export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClose, onSubmit, initialData, isEdit = false, reports: propReports }) => {
-  const [stores, setStores] = React.useState(MOCK_STORES);
+  const [stores, setStores] = React.useState<Store[]>([]);
   const [personnel, setPersonnel] = React.useState<Personnel[]>([]);
 
   React.useEffect(() => {
@@ -37,7 +37,7 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
       fetchStores().then(data => {
         setStores(data);
       }).catch(() => {
-        setStores(MOCK_STORES);
+        setStores([]);
       });
       
       // Load personnel để lấy danh sách host

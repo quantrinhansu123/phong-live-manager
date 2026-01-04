@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { fetchPersonnel, createPersonnel, updatePersonnel, deletePersonnel, fetchLiveReports, MOCK_VIDEO_METRICS } from '../services/dataService';
+import { fetchPersonnel, createPersonnel, updatePersonnel, deletePersonnel, fetchLiveReports } from '../services/dataService';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency } from '../utils/formatUtils';
 import { Personnel as PersonnelType, LiveReport } from '../types';
+import { isAdmin } from '../utils/permissionUtils';
 
 export const Personnel: React.FC = () => {
   const [personnelList, setPersonnelList] = useState<PersonnelType[]>([]);
@@ -397,6 +398,7 @@ export const Personnel: React.FC = () => {
             const exportData = filteredPersonnel.map(person => ({
               'Họ và tên': person.fullName,
               'Email': person.email || '',
+              ...(isAdmin() ? { 'Mật khẩu': person.password || '' } : {}),
               'Phòng ban': person.department,
               'Vị trí': person.position,
               'SĐT': person.phoneNumber,
@@ -472,6 +474,7 @@ export const Personnel: React.FC = () => {
                   <tr>
                     <th className="px-6 py-3 border-r">Họ và tên (姓名)</th>
                     <th className="px-6 py-3 border-r">Email (登录)</th>
+                    {isAdmin() && <th className="px-6 py-3 border-r">Mật khẩu (密码)</th>}
                     <th className="px-6 py-3 border-r">Phòng ban (部门)</th>
                     <th className="px-6 py-3 border-r">Vị trí (职位)</th>
                     <th className="px-6 py-3 border-r">SĐT (电话)</th>
@@ -481,7 +484,7 @@ export const Personnel: React.FC = () => {
                 </thead>
                 <tbody>
                   {filteredPersonnel.length === 0 ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-gray-400">Chưa có nhân sự nào (暂无人员)</td></tr>
+                    <tr><td colSpan={isAdmin() ? 8 : 7} className="py-8 text-center text-gray-400">Chưa có nhân sự nào (暂无人员)</td></tr>
                   ) : (
                     filteredPersonnel.map((person) => (
                       <tr key={person.id} className="border-b hover:bg-gray-50 group">
@@ -490,6 +493,9 @@ export const Personnel: React.FC = () => {
                           {person.role === 'admin' && <span className="bg-purple-100 text-purple-800 text-xs px-1.5 rounded border border-purple-200">Admin</span>}
                         </td>
                         <td className="px-6 py-4 border-r text-gray-600">{person.email || '-'}</td>
+                        {isAdmin() && (
+                          <td className="px-6 py-4 border-r text-gray-600 font-mono text-xs">{person.password || '-'}</td>
+                        )}
                         <td className="px-6 py-4 border-r">
                           <span className={`px-2 py-1 rounded text-xs font-medium border ${person.department === 'Live' ? 'bg-red-50 text-red-700 border-red-200' :
                               person.department === 'Media' ? 'bg-blue-50 text-blue-700 border-blue-200' :

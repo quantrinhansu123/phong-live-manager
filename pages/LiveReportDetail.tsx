@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { fetchLiveReports, fetchStores, MOCK_STORES } from '../services/dataService';
+import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
 import { LiveReportModal } from '../components/LiveReportModal';
 import { createLiveReport, updateLiveReport, deleteLiveReport } from '../services/dataService';
+import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const LiveReportDetail: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
@@ -78,6 +79,16 @@ export const LiveReportDetail: React.FC = () => {
   const filteredData = useMemo(() => {
     let filtered = reports;
 
+    // For partners, only show reports from their stores
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    const isAdminUser = isAdmin();
+    
+    if (currentUserRole === 'partner' && !isAdminUser && currentUserId) {
+      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+      filtered = filtered.filter(item => allowedStoreIds.includes(item.channelId));
+    }
+
     // Filter by date range
     filtered = filtered.filter(item => {
       const itemDate = new Date(item.date);
@@ -143,6 +154,19 @@ export const LiveReportDetail: React.FC = () => {
     return filtered;
   }, [reports, dateFrom, dateTo, selectedFilters, searchText, stores]);
 
+  // Filter stores for partners
+  const filteredStoresForUser = useMemo(() => {
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    const isAdminUser = isAdmin();
+    
+    if (isAdminUser) {
+      return stores.filter(s => s.id !== 'all');
+    } else if (currentUserRole === 'partner' && currentUserId) {
+      return stores.filter(s => s.id !== 'all' && s.partnerId === currentUserId);
+    }
+    return stores.filter(s => s.id !== 'all');
+  }, [stores]);
 
   const getStatusColor = (roi: number) => {
     // roi là giá trị thập phân (ví dụ: 4.0 = 400%, 2.0 = 200%)
@@ -331,7 +355,7 @@ export const LiveReportDetail: React.FC = () => {
             key: 'stores',
             label: 'Cửa hàng (店铺)',
             type: 'checkbox',
-            options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
+            options: filteredStoresForUser.map(s => ({ value: s.id, label: s.name }))
           },
           {
             key: 'hosts',
@@ -410,7 +434,7 @@ export const LiveReportDetail: React.FC = () => {
             <thead className="text-xs text-white uppercase bg-brand-navy border-b">
               <tr>
                 <th className="px-3 py-2 border-r whitespace-nowrap sticky left-0 bg-brand-navy z-10">Ngày (日期)</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">Kênh Live (直播频道)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">Cửa hàng (店铺)</th>
                 <th className="px-3 py-2 border-r whitespace-nowrap">Host (主播)</th>
                 <th className="px-3 py-2 border-r whitespace-nowrap">Ca (班次)</th>
                 <th className="px-3 py-2 border-r whitespace-nowrap">Thời gian (时间)</th>
@@ -444,7 +468,7 @@ export const LiveReportDetail: React.FC = () => {
                   const ad = Number(row.adCost);
                   const profit = gmv - ad;
                   const roiVal = calculateROI(gmv, ad);
-                  const storeName = stores.find(s => s.id === row.channelId)?.name || MOCK_STORES.find(s => s.id === row.channelId)?.name || 'Unknown';
+                  const storeName = stores.find(s => s.id === row.channelId)?.name || 'Unknown';
                   return (
                     <tr key={row.id} className="border-b hover:bg-gray-50">
                       <td className="px-3 py-2 border-r font-medium sticky left-0 bg-white z-5">{row.date}</td>
