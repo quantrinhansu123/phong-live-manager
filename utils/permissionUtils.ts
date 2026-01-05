@@ -71,8 +71,8 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
     return true;
   }
 
-  // Partner mặc định có quyền xem "Quản lý Cửa Hàng" (STORE_MGR = 'store_mgr') và "Quản lý Live" (LIVE_ADS = 'live_ads')
-  if (userRole === 'partner' && (menuId === 'store_mgr' || menuId === 'live_ads')) {
+  // Partner có quyền xem tất cả các menu như admin (dữ liệu sẽ được filter ở từng trang)
+  if (userRole === 'partner') {
     return true;
   }
 
@@ -80,8 +80,7 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
   const menuPermission = permissions.find(p => p.menuId === menuId);
   
   if (!menuPermission) {
-    // Nếu không có permission được set, mặc định là không có quyền (cho partner và employee)
-    // Trừ trường hợp đặc biệt đã xử lý ở trên
+    // Nếu không có permission được set, mặc định là không có quyền (cho employee)
     return false;
   }
 
