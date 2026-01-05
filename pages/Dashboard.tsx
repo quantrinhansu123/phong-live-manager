@@ -3,7 +3,7 @@ import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
 import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
-import { isPartner, getPartnerId, isAdmin, getCurrentUserId } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin, getCurrentUserId, getCurrentUserName, isRegularEmployee } from '../utils/permissionUtils';
 
 export const Dashboard: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string>('all');
@@ -50,6 +50,14 @@ export const Dashboard: React.FC = () => {
           filteredStores = storeData.filter(s => s.partnerId === partnerId);
           const allowedStoreIds = filteredStores.map(s => s.id);
           filteredReports = reportData.filter(r => allowedStoreIds.includes(r.channelId));
+        }
+      } else if (isRegularEmployee()) {
+        // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName hoặc reporter)
+        const currentUserName = getCurrentUserName();
+        if (currentUserName) {
+          filteredReports = reportData.filter(r => 
+            r.hostName === currentUserName || r.reporter === currentUserName
+          );
         }
       }
       

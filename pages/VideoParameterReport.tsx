@@ -6,7 +6,7 @@ import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency, parseCurrency, parsePercentage, formatPercentage, formatCurrencyForExcel } from '../utils/formatUtils';
 import { VideoEditModal } from '../components/VideoEditModal';
-import { isPartner, getPartnerId, isAdmin } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee } from '../utils/permissionUtils';
 
 export const VideoParameterReport: React.FC = () => {
   const [videos, setVideos] = useState<VideoMetric[]>([]);
@@ -43,6 +43,12 @@ export const VideoParameterReport: React.FC = () => {
           storeData = storeData.filter(s => s.partnerId === partnerId);
           const allowedStoreIds = storeData.map(s => s.id);
           videoData = videoData.filter(v => allowedStoreIds.includes(v.storeId));
+        }
+      } else if (isRegularEmployee()) {
+        // Nhân viên thường chỉ thấy video của chính mình (dựa trên personInCharge)
+        const currentUserName = getCurrentUserName();
+        if (currentUserName) {
+          videoData = videoData.filter(v => v.personInCharge === currentUserName);
         }
       }
       

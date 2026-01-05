@@ -7,7 +7,7 @@ import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
-import { isPartner, getPartnerId, isAdmin } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee } from '../utils/permissionUtils';
 
 export const LiveSessionReport: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
@@ -64,6 +64,16 @@ export const LiveSessionReport: React.FC = () => {
         // Filter personnel để chỉ hiển thị host từ stores của đối tác
         const allowedHostNames = new Set(reportData.map(r => r.hostName).filter(Boolean));
         personnelData = personnelData.filter(p => allowedHostNames.has(p.fullName));
+      }
+    } else if (isRegularEmployee()) {
+      // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName hoặc reporter)
+      const currentUserName = getCurrentUserName();
+      if (currentUserName) {
+        reportData = reportData.filter(r => 
+          r.hostName === currentUserName || r.reporter === currentUserName
+        );
+        // Chỉ hiện thị chính mình trong danh sách personnel
+        personnelData = personnelData.filter(p => p.fullName === currentUserName);
       }
     }
     

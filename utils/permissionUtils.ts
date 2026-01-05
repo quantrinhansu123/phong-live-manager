@@ -156,3 +156,12 @@ export const getPartnerId = (): string | undefined => {
   return undefined;
 };
 
+// Lấy tên user hiện tại (fullName)
+export const getCurrentUserName = (): string | undefined => {
+  return localStorage.getItem('currentUser') || undefined;
+};
+
+// Kiểm tra user có phải nhân viên thường không (không phải admin, không phải đối tác)
+export const isRegularEmployee = (): boolean => {
+  return !isAdmin() && !isPartner();
+};

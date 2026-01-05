@@ -5,7 +5,7 @@ import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
-import { isPartner, getPartnerId, isAdmin } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee } from '../utils/permissionUtils';
 
 export const CPQC: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
@@ -45,6 +45,14 @@ export const CPQC: React.FC = () => {
           filteredStores = storeData.filter(s => s.partnerId === partnerId);
           const allowedStoreIds = filteredStores.map(s => s.id);
           filteredReports = reportData.filter(r => allowedStoreIds.includes(r.channelId));
+        }
+      } else if (isRegularEmployee()) {
+        // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName hoặc reporter)
+        const currentUserName = getCurrentUserName();
+        if (currentUserName) {
+          filteredReports = reportData.filter(r => 
+            r.hostName === currentUserName || r.reporter === currentUserName
+          );
         }
       }
       

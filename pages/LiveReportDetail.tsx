@@ -6,7 +6,7 @@ import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
 import { LiveReportModal } from '../components/LiveReportModal';
 import { createLiveReport, updateLiveReport, deleteLiveReport } from '../services/dataService';
-import { isPartner, getPartnerId, isAdmin } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee } from '../utils/permissionUtils';
 
 export const LiveReportDetail: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
@@ -59,6 +59,14 @@ export const LiveReportDetail: React.FC = () => {
           filteredStores = storeData.filter(s => s.partnerId === partnerId);
           const allowedStoreIds = filteredStores.map(s => s.id);
           filteredReports = reportData.filter(r => allowedStoreIds.includes(r.channelId));
+        }
+      } else if (isRegularEmployee()) {
+        // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName hoặc reporter)
+        const currentUserName = getCurrentUserName();
+        if (currentUserName) {
+          filteredReports = reportData.filter(r => 
+            r.hostName === currentUserName || r.reporter === currentUserName
+          );
         }
       }
       
