@@ -219,7 +219,7 @@ export const LiveSessionReport: React.FC = () => {
     return 'bg-red-100 text-brand-navy border-red-200';
   };
 
-  // Personnel Summary by Date Range
+  // Personnel Summary by Date Range - tính dựa trên hostName (tên host live)
   const personnelSummary = useMemo(() => {
     const summaryMap: Record<string, {
       person: Personnel;
