@@ -4,7 +4,7 @@ import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency } from '../utils/formatUtils';
 import { Personnel as PersonnelType, LiveReport, ReportType } from '../types';
-import { isAdmin, getCurrentUserId } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin, getCurrentUserId } from '../utils/permissionUtils';
 
 // Menu items list (same as in Sidebar)
 const MENU_ITEMS = [
@@ -86,6 +86,39 @@ export const Personnel: React.FC = () => {
         fetchLiveReports(),
         fetchStores()
       ]);
+      
+      // Nếu là nhân viên có department "Đối tác", chỉ hiển thị personnel từ stores được gán cho họ
+      if (isPartner() && !isAdmin()) {
+        const partnerId = getPartnerId();
+        if (partnerId) {
+          const allowedStores = stores.filter(s => s.partnerId === partnerId);
+          const allowedStoreIds = allowedStores.map(s => s.id);
+          const allowedPersonnelIds = new Set<string>();
+          
+          // Lấy personnelIds từ stores
+          allowedStores.forEach(store => {
+            if (store.personnelIds) {
+              store.personnelIds.forEach(id => allowedPersonnelIds.add(id));
+            }
+          });
+          
+          // Lấy host names từ reports của stores này
+          const allowedHostNames = new Set(
+            reports
+              .filter(r => allowedStoreIds.includes(r.channelId))
+              .map(r => r.hostName)
+              .filter(Boolean)
+          );
+          
+          // Filter personnel: chỉ hiển thị personnel được gán cho stores hoặc là host trong reports
+          people = people.filter(p => 
+            allowedPersonnelIds.has(p.id || '') || 
+            allowedHostNames.has(p.fullName)
+          );
+          
+          reports = reports.filter(r => allowedStoreIds.includes(r.channelId));
+        }
+      }
       
       setPersonnelList(people);
       setLiveReports(reports);

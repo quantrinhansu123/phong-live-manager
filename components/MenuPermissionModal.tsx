@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole, MenuPermission, Personnel } from '../types';
+import { UserRole, MenuPermission } from '../types';
 import { getMenuPermissions, saveMenuPermissions, loadMenuPermissions } from '../utils/permissionUtils';
 import { fetchPersonnel } from '../services/dataService';
 
@@ -31,7 +31,7 @@ export const MenuPermissionModal: React.FC<MenuPermissionModalProps> = ({
       });
       
       // Load danh sách departments từ personnel
-      fetchPersonnel().then((personnel: Personnel[]) => {
+      fetchPersonnel().then(personnel => {
         const departments = Array.from(new Set(personnel.map(p => p.department).filter(Boolean))) as string[];
         setAvailableDepartments(departments.sort());
       });

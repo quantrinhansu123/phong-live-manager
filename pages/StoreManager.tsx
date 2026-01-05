@@ -4,7 +4,7 @@ import { StoreDetailModal } from '../components/StoreDetailModal';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { Store, Personnel } from '../types';
-import { getCurrentUserDepartment, isAdmin } from '../utils/permissionUtils';
+import { getCurrentUserDepartment, isPartner, getPartnerId, isAdmin } from '../utils/permissionUtils';
 
 export const StoreManager: React.FC = () => {
     const [stores, setStores] = useState<Store[]>([]);
@@ -35,6 +35,14 @@ export const StoreManager: React.FC = () => {
                 fetchPersonnel()
             ]);
             let filteredStores = storeData.filter(s => s.id !== 'all');
+            
+            // Nếu là nhân viên có department "Đối tác", chỉ hiển thị stores được gán cho họ
+            if (isPartner() && !isAdmin()) {
+                const partnerId = getPartnerId();
+                if (partnerId) {
+                    filteredStores = filteredStores.filter(s => s.partnerId === partnerId);
+                }
+            }
             
             setStores(filteredStores);
             setPersonnel(personnelData);

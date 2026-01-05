@@ -91,7 +91,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
     const videoViews = storeVideos.reduce((sum, v) => sum + (v.views || 0), 0);
     const videoSales = storeVideos.reduce((sum, v) => sum + (v.sales || 0), 0);
     
-    const roi = totalAdCost > 0 ? (totalGMV - totalAdCost) / totalAdCost : 0;
+    const roi = totalAdCost > 0 ? ((totalGMV - totalAdCost) / totalAdCost) * 100 : 0;
     const avgOrderValue = totalOrders > 0 ? totalGMV / totalOrders : 0;
 
     return {
@@ -151,7 +151,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
     // Calculate ROI and avgOrderValue for each date
     Object.keys(map).forEach(date => {
       const data = map[date];
-      data.roi = data.adCost > 0 ? data.gmv / data.adCost : 0;
+      data.roi = data.adCost > 0 ? ((data.gmv - data.adCost) / data.adCost) * 100 : 0;
       data.avgOrderValue = data.orders > 0 ? data.gmv / data.orders : 0;
     });
     
@@ -354,8 +354,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                     </div>
                     <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded shadow-sm">
                       <p className="text-xs text-gray-600 uppercase font-bold mb-1">ROI</p>
-                      <p className="text-2xl font-bold text-green-600">{storeMetrics.roi.toFixed(2)}</p>
-                      <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
+                      <p className="text-2xl font-bold text-green-600">{storeMetrics.roi.toFixed(1)}%</p>
                     </div>
                   </div>
 
@@ -458,11 +457,11 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                               />
                               <YAxis />
                               <Tooltip 
-                                formatter={(value: number) => value.toFixed(2)}
+                                formatter={(value: number) => `${value.toFixed(1)}%`}
                                 labelFormatter={(label) => `Ngày (日期): ${formatDate(label)}`}
                               />
                               <Legend />
-                              <Line type="monotone" dataKey="roi" name="ROI (投资回报率)" stroke="#10b981" strokeWidth={2} />
+                              <Line type="monotone" dataKey="roi" name="ROI (%) (投资回报率)" stroke="#10b981" strokeWidth={2} />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
@@ -598,14 +597,14 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                       const exportData = filteredRecentHistory.map(report => {
                         const gmv = Number(report.gmv) || 0;
                         const adCost = Number(report.adCost) || 0;
-                        const roi = adCost > 0 ? (gmv - adCost) / adCost : 0;
+                        const roi = adCost > 0 ? ((gmv - adCost) / adCost) * 100 : 0;
                         return {
                           'Ngày': report.date,
                           'Host': report.hostName,
                           'Thời gian': `${report.startTime} - ${report.endTime}`,
                           'GMV': gmv,
                           'Chi phí QC': adCost,
-                          'ROI': roi.toFixed(2),
+                          'ROI (%)': roi.toFixed(2),
                           'Người báo cáo': report.reporter || '',
                           'Ca': report.shift || '',
                         };
@@ -690,7 +689,7 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                             {filteredRecentHistory.map((report) => {
                               const gmv = Number(report.gmv) || 0;
                               const adCost = Number(report.adCost) || 0;
-                              const roi = adCost > 0 ? (gmv - adCost) / adCost : 0;
+                              const roi = adCost > 0 ? ((gmv - adCost) / adCost) * 100 : 0;
                               
                               return (
                                 <tr key={report.id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -703,11 +702,11 @@ export const StoreDetailModal: React.FC<StoreDetailModalProps> = ({ isOpen, onCl
                                   <td className="px-4 py-3 text-right font-bold text-red-600">{formatCurrency(adCost)}</td>
                                   <td className="px-4 py-3 text-right">
                                     <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                      roi >= 4 ? 'bg-green-100 text-green-800' :
-                                      roi >= 2 ? 'bg-yellow-100 text-yellow-800' :
+                                      roi >= 400 ? 'bg-green-100 text-green-800' :
+                                      roi >= 200 ? 'bg-yellow-100 text-yellow-800' :
                                       'bg-red-100 text-red-800'
                                     }`}>
-                                      {roi.toFixed(2)}
+                                      {roi.toFixed(1)}%
                                     </span>
                                   </td>
                                   <td className="px-4 py-3 text-gray-600">{report.reporter || '-'}</td>

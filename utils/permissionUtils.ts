@@ -84,7 +84,7 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
   const menuPermission = permissions.find(p => p.menuId === menuId);
   
   if (!menuPermission) {
-    // Nếu không có permission được set, mặc định là không có quyền
+    // Nếu không có permission được set, mặc định là không có quyền (cho employee)
     return false;
   }
 
@@ -124,20 +124,30 @@ export const getCurrentUserDepartment = (): string | undefined => {
   return localStorage.getItem('currentUserDepartment') || undefined;
 };
 
-// Lấy ID của user hiện tại
-export const getCurrentUserId = (): string | undefined => {
-  return localStorage.getItem('currentUserId') || undefined;
-};
-
 // Lấy role hiện tại của user
 export const getCurrentUserRole = (): UserRole => {
   const role = localStorage.getItem('currentUserRole');
   if (role === 'admin') return 'admin';
+  // Không còn role 'partner', tất cả đều là 'employee'
   return 'employee'; // Default
 };
 
 // Kiểm tra user có phải Admin không
 export const isAdmin = (): boolean => {
   return getCurrentUserRole() === 'admin';
+};
+
+// Kiểm tra user có phải đối tác không (nhân viên có department = 'Đối tác')
+export const isPartner = (): boolean => {
+  const department = getCurrentUserDepartment();
+  return department === 'Đối tác';
+};
+
+// Lấy ID của đối tác (ID của nhân viên có department = 'Đối tác')
+export const getPartnerId = (): string | undefined => {
+  if (isPartner()) {
+    return getCurrentUserId();
+  }
+  return undefined;
 };
 

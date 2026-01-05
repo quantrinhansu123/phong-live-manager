@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MOCK_STORES, fetchStores, fetchPersonnel } from '../services/dataService';
 import { LiveReport, Personnel } from '../types';
-import { isAdmin } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin } from '../utils/permissionUtils';
 
 interface LiveReportModalProps {
   isOpen: boolean;
@@ -36,7 +36,15 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
   React.useEffect(() => {
     if (isOpen) {
       fetchStores().then(data => {
-        setStores(data.length > 0 ? data : MOCK_STORES);
+        // Nếu là nhân viên có department "Đối tác", chỉ hiển thị stores được gán cho họ
+        let filteredStores = data;
+        if (isPartner() && !isAdmin()) {
+          const partnerId = getPartnerId();
+          if (partnerId) {
+            filteredStores = data.filter(s => s.partnerId === partnerId);
+          }
+        }
+        setStores(filteredStores.length > 0 ? filteredStores : MOCK_STORES);
       }).catch(() => {
         setStores(MOCK_STORES);
       });

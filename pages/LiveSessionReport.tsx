@@ -7,6 +7,7 @@ import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
+import { isPartner, getPartnerId, isAdmin } from '../utils/permissionUtils';
 
 export const LiveSessionReport: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
@@ -52,6 +53,19 @@ export const LiveSessionReport: React.FC = () => {
       fetchPersonnel(),
       fetchStores()
     ]);
+    
+    // Nếu là nhân viên có department "Đối tác", chỉ hiển thị stores được gán cho họ
+    if (isPartner() && !isAdmin()) {
+      const partnerId = getPartnerId();
+      if (partnerId) {
+        storeData = storeData.filter(s => s.partnerId === partnerId);
+        const allowedStoreIds = storeData.map(s => s.id);
+        reportData = reportData.filter(r => allowedStoreIds.includes(r.channelId));
+        // Filter personnel để chỉ hiển thị host từ stores của đối tác
+        const allowedHostNames = new Set(reportData.map(r => r.hostName).filter(Boolean));
+        personnelData = personnelData.filter(p => allowedHostNames.has(p.fullName));
+      }
+    }
     
     setReports(reportData);
     setPersonnelList(personnelData);
@@ -170,7 +184,7 @@ export const LiveSessionReport: React.FC = () => {
       totalAdCost += Number(item.adCost);
     });
 
-    const roi = totalAdCost > 0 ? (totalGMV - totalAdCost) / totalAdCost : 0;
+    const roi = totalAdCost > 0 ? ((totalGMV - totalAdCost) / totalAdCost) * 100 : 0;
 
     return { totalGMV, totalAdCost, roi };
   }, [filteredData]);
@@ -189,11 +203,11 @@ export const LiveSessionReport: React.FC = () => {
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
   }, [filteredData]);
 
-  const formatROI = (val: number) => val.toFixed(2);
+  const formatPercent = (val: number) => `${val.toFixed(2)}%`;
 
   const getStatusColor = (roi: number) => {
-    if (roi >= 4) return 'bg-green-100 text-green-800 border-green-200';
-    if (roi >= 2) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    if (roi >= 400) return 'bg-green-100 text-green-800 border-green-200';
+    if (roi >= 200) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     return 'bg-red-100 text-brand-navy border-red-200';
   };
 
@@ -254,7 +268,7 @@ export const LiveSessionReport: React.FC = () => {
     // Calculate average ROI for each person
     return Object.values(summaryMap).map(item => ({
       ...item,
-      avgROI: item.totalAdCost > 0 ? (item.totalGMV - item.totalAdCost) / item.totalAdCost : 0
+      avgROI: item.totalAdCost > 0 ? ((item.totalGMV - item.totalAdCost) / item.totalAdCost) * 100 : 0
     })).sort((a, b) => b.totalGMV - a.totalGMV);
   }, [reports, personnelList, personnelDateFrom, personnelDateTo]);
 
@@ -356,7 +370,7 @@ export const LiveSessionReport: React.FC = () => {
     const hostList = Object.values(hostMap).map(host => ({
       ...host,
       profit: host.totalGMV - host.totalAdCost,
-      avgROI: host.totalAdCost > 0 ? (host.totalGMV - host.totalAdCost) / host.totalAdCost : 0
+      avgROI: host.totalAdCost > 0 ? ((host.totalGMV - host.totalAdCost) / host.totalAdCost) * 100 : 0
     }));
 
     // Sắp xếp theo GMV (doanh số) - cao nhất trước
@@ -479,13 +493,12 @@ export const LiveSessionReport: React.FC = () => {
                     <p className="text-lg font-bold text-gray-800">{formatCurrency(Number(selectedReport.totalGmv))}</p>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-600 uppercase font-bold mb-1">ROI</p>
+                    <p className="text-xs text-gray-600 uppercase font-bold mb-1">ROI (%)</p>
                     <p className="text-lg font-bold text-gray-800">
                       {Number(selectedReport.adCost) > 0 
-                        ? ((Number(selectedReport.gmv) - Number(selectedReport.adCost)) / Number(selectedReport.adCost)).toFixed(2)
-                        : '0'}
+                        ? formatPercent(((Number(selectedReport.gmv) - Number(selectedReport.adCost)) / Number(selectedReport.adCost)) * 100)
+                        : '0%'}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <p className="text-xs text-gray-600 uppercase font-bold mb-1">GPM (直播千次金额)</p>
@@ -647,7 +660,7 @@ export const LiveSessionReport: React.FC = () => {
             'Thời gian': `${report.startTime} - ${report.endTime}`,
             'GMV': report.gmv,
             'Chi phí QC': report.adCost,
-            'ROI': report.adCost > 0 ? ((report.gmv - report.adCost) / report.adCost).toFixed(2) : '0',
+            'ROI': report.adCost > 0 ? (((report.gmv - report.adCost) / report.adCost) * 100).toFixed(2) + '%' : '0%',
             'Đơn hàng': report.orders || 0,
             'Người xem': report.viewers || 0,
             'Người báo cáo': report.reporter || ''
@@ -732,8 +745,7 @@ export const LiveSessionReport: React.FC = () => {
             </div>
             <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
               <p className="text-xs text-gray-500 uppercase font-bold">ROI Tổng (总ROI)</p>
-              <p className="text-xl font-bold text-green-600 mt-1">{formatROI(metrics.roi)}</p>
-              <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
+              <p className="text-xl font-bold text-green-600 mt-1">{formatPercent(metrics.roi)}</p>
             </div>
           </div>
 
@@ -755,7 +767,7 @@ export const LiveSessionReport: React.FC = () => {
                       <th className="px-4 py-3 text-right font-bold">Tổng GMV (总GMV)</th>
                       <th className="px-4 py-3 text-right font-bold">Chi phí QC (广告费)</th>
                       <th className="px-4 py-3 text-right font-bold">Lợi nhuận (利润)</th>
-                      <th className="px-4 py-3 text-right font-bold">ROI</th>
+                      <th className="px-4 py-3 text-right font-bold">ROI (%)</th>
                       <th className="px-4 py-3 text-center font-bold">Số báo cáo (报告数)</th>
                     </tr>
                   </thead>
@@ -791,7 +803,7 @@ export const LiveSessionReport: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(host.avgROI)}`}>
-                              {formatROI(host.avgROI)}
+                              {formatPercent(host.avgROI)}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center text-gray-600">
@@ -821,7 +833,7 @@ export const LiveSessionReport: React.FC = () => {
                       <th className="px-4 py-3 text-right font-bold">Tổng GMV (总GMV)</th>
                       <th className="px-4 py-3 text-right font-bold">Chi phí QC (广告费)</th>
                       <th className="px-4 py-3 text-right font-bold">Lợi nhuận (利润)</th>
-                      <th className="px-4 py-3 text-right font-bold">ROI</th>
+                      <th className="px-4 py-3 text-right font-bold">ROI (%)</th>
                       <th className="px-4 py-3 text-center font-bold">Số báo cáo (报告数)</th>
                     </tr>
                   </thead>
@@ -852,7 +864,7 @@ export const LiveSessionReport: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(host.avgROI)}`}>
-                              {formatROI(host.avgROI)}
+                              {formatPercent(host.avgROI)}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center text-gray-600">
@@ -1052,7 +1064,7 @@ export const LiveSessionReport: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 border-r text-right">
                             <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(item.avgROI)}`}>
-                              {formatROI(item.avgROI)}
+                              {formatPercent(item.avgROI)}
                             </span>
                           </td>
                           <td className="px-6 py-4 border-r text-center font-medium text-gray-600">

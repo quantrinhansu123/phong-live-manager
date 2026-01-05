@@ -6,6 +6,7 @@ import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency, parseCurrency, parsePercentage, formatPercentage, formatCurrencyForExcel } from '../utils/formatUtils';
 import { VideoEditModal } from '../components/VideoEditModal';
+import { isPartner, getPartnerId, isAdmin } from '../utils/permissionUtils';
 
 export const VideoParameterReport: React.FC = () => {
   const [videos, setVideos] = useState<VideoMetric[]>([]);
@@ -34,6 +35,16 @@ export const VideoParameterReport: React.FC = () => {
         fetchVideoMetrics(),
         fetchStores()
       ]);
+      
+      // Nếu là nhân viên có department "Đối tác", chỉ hiển thị stores được gán cho họ
+      if (isPartner() && !isAdmin()) {
+        const partnerId = getPartnerId();
+        if (partnerId) {
+          storeData = storeData.filter(s => s.partnerId === partnerId);
+          const allowedStoreIds = storeData.map(s => s.id);
+          videoData = videoData.filter(v => allowedStoreIds.includes(v.storeId));
+        }
+      }
       
       // Fallback to mock data if DB is empty
       if (videoData.length === 0) {

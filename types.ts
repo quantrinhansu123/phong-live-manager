@@ -165,7 +165,7 @@ export interface Partner {
   updatedAt?: string; // Ngày cập nhật
 }
 
-export type UserRole = 'admin' | 'employee'; // Admin, Nhân viên
+export type UserRole = 'admin' | 'partner' | 'employee'; // Admin, Đối tác, Nhân viên
 
 export interface MenuPermission {
   menuId: string; // ID của menu item

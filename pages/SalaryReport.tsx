@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchPersonnel, fetchStores } from '../services/dataService';
 import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
+import { isPartner, getPartnerId, isAdmin } from '../utils/permissionUtils';
 
 export const SalaryReport: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
@@ -25,6 +26,16 @@ export const SalaryReport: React.FC = () => {
         fetchPersonnel(),
         fetchStores()
       ]);
+      
+      // Nếu là nhân viên có department "Đối tác", chỉ hiển thị stores được gán cho họ
+      if (isPartner() && !isAdmin()) {
+        const partnerId = getPartnerId();
+        if (partnerId) {
+          storeData = storeData.filter(s => s.partnerId === partnerId);
+          const allowedStoreIds = storeData.map(s => s.id);
+          reportData = reportData.filter(r => allowedStoreIds.includes(r.channelId));
+        }
+      }
       
       setReports(reportData);
       setPersonnel(personnelData);

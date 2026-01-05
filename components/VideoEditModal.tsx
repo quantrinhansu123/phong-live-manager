@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MOCK_STORES, fetchStores } from '../services/dataService';
 import { VideoMetric } from '../types';
-import { isAdmin } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin } from '../utils/permissionUtils';
 
 interface VideoEditModalProps {
   isOpen: boolean;
@@ -29,7 +29,15 @@ export const VideoEditModal: React.FC<VideoEditModalProps> = ({ isOpen, onClose,
   useEffect(() => {
     if (isOpen) {
       fetchStores().then(data => {
-        setStores(data.length > 0 ? data : MOCK_STORES);
+        // Nếu là nhân viên có department "Đối tác", chỉ hiển thị stores được gán cho họ
+        let filteredStores = data;
+        if (isPartner() && !isAdmin()) {
+          const partnerId = getPartnerId();
+          if (partnerId) {
+            filteredStores = data.filter(s => s.partnerId === partnerId);
+          }
+        }
+        setStores(filteredStores.length > 0 ? filteredStores : MOCK_STORES);
       }).catch(() => {
         setStores(MOCK_STORES);
       });
