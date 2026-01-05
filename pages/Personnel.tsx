@@ -87,35 +87,16 @@ export const Personnel: React.FC = () => {
         fetchStores()
       ]);
       
-      // Nếu là nhân viên có department "Đối tác", chỉ hiển thị personnel từ stores được gán cho họ
+      // Nếu là nhân viên có department "Đối tác", chỉ hiển thị chính bản thân họ
       if (isPartner() && !isAdmin()) {
         const partnerId = getPartnerId();
         if (partnerId) {
+          // Chỉ hiển thị chính bản thân đối tác (nhân sự có department "Đối tác")
+          people = people.filter(p => p.id === partnerId);
+          
+          // Filter stores và reports của đối tác
           const allowedStores = stores.filter(s => s.partnerId === partnerId);
           const allowedStoreIds = allowedStores.map(s => s.id);
-          const allowedPersonnelIds = new Set<string>();
-          
-          // Lấy personnelIds từ stores
-          allowedStores.forEach(store => {
-            if (store.personnelIds) {
-              store.personnelIds.forEach(id => allowedPersonnelIds.add(id));
-            }
-          });
-          
-          // Lấy host names từ reports của stores này
-          const allowedHostNames = new Set(
-            reports
-              .filter(r => allowedStoreIds.includes(r.channelId))
-              .map(r => r.hostName)
-              .filter(Boolean)
-          );
-          
-          // Filter personnel: chỉ hiển thị personnel được gán cho stores hoặc là host trong reports
-          people = people.filter(p => 
-            allowedPersonnelIds.has(p.id || '') || 
-            allowedHostNames.has(p.fullName)
-          );
-          
           reports = reports.filter(r => allowedStoreIds.includes(r.channelId));
         }
       }
