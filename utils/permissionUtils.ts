@@ -119,6 +119,11 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
   return true;
 };
 
+// Lấy user ID hiện tại
+export const getCurrentUserId = (): string | undefined => {
+  return localStorage.getItem('currentUserId') || undefined;
+};
+
 // Lấy department hiện tại của user
 export const getCurrentUserDepartment = (): string | undefined => {
   return localStorage.getItem('currentUserDepartment') || undefined;
@@ -141,11 +146,6 @@ export const isAdmin = (): boolean => {
 export const isPartner = (): boolean => {
   const department = getCurrentUserDepartment();
   return department === 'Đối tác';
-};
-
-// Lấy user ID hiện tại
-export const getCurrentUserId = (): string | undefined => {
-  return localStorage.getItem('currentUserId') || undefined;
 };
 
 // Lấy ID của đối tác (ID của nhân viên có department = 'Đối tác')
