@@ -143,6 +143,11 @@ export const isPartner = (): boolean => {
   return department === 'Đối tác';
 };
 
+// Lấy user ID hiện tại
+export const getCurrentUserId = (): string | undefined => {
+  return localStorage.getItem('currentUserId') || undefined;
+};
+
 // Lấy ID của đối tác (ID của nhân viên có department = 'Đối tác')
 export const getPartnerId = (): string | undefined => {
   if (isPartner()) {
