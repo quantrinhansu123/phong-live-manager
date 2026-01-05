@@ -11,6 +11,7 @@ import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee
 
 export const LiveSessionReport: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
+  const [allReports, setAllReports] = useState<LiveReport[]>([]); // Lưu toàn bộ reports không filter
   const [personnelList, setPersonnelList] = useState<Personnel[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,6 +54,9 @@ export const LiveSessionReport: React.FC = () => {
       fetchPersonnel(),
       fetchStores()
     ]);
+    
+    // Lưu toàn bộ reports gốc cho báo cáo tổng kết
+    setAllReports(reportData);
     
     // Nếu là nhân viên có department "Đối tác", chỉ hiển thị stores được gán cho họ
     if (isPartner() && !isAdmin()) {
@@ -220,6 +224,7 @@ export const LiveSessionReport: React.FC = () => {
   };
 
   // Personnel Summary by Date Range - tính dựa trên hostName (tên host live)
+  // Sử dụng allReports (không filter) để báo cáo tổng kết hiển thị tất cả nhân viên
   const personnelSummary = useMemo(() => {
     const summaryMap: Record<string, {
       person: Personnel;
@@ -229,8 +234,8 @@ export const LiveSessionReport: React.FC = () => {
       avgROI: number;
     }> = {};
 
-    // Filter reports by date range
-    const dateRangeReports = reports.filter(report => {
+    // Filter reports by date range - lấy từ allReports
+    const dateRangeReports = allReports.filter(report => {
       const reportDate = new Date(report.date);
       const fromDate = new Date(personnelDateFrom);
       const toDate = new Date(personnelDateTo);
@@ -242,8 +247,10 @@ export const LiveSessionReport: React.FC = () => {
     dateRangeReports.forEach(report => {
       if (!report.hostName) return;
 
-      // Find matching personnel
-      const matchingPerson = personnelList.find(person => {
+      // Find matching personnel - lấy từ tất cả personnel
+      const allPersonnel = personnelList.length > 0 ? personnelList : liveReports.map(r => ({ fullName: r.hostName } as Personnel).filter((p, i, arr) => arr.findIndex(item => item.fullName === p.fullName) === i);
+      
+      const matchingPerson = allPersonnel.find(person => {
         const hostName = report.hostName!.toLowerCase();
         const personName = person.fullName.toLowerCase();
         return hostName === personName || 
@@ -277,7 +284,7 @@ export const LiveSessionReport: React.FC = () => {
       ...item,
       avgROI: item.totalAdCost > 0 ? (item.totalGMV - item.totalAdCost) / item.totalAdCost : 0
     })).sort((a, b) => b.totalGMV - a.totalGMV);
-  }, [reports, personnelList, personnelDateFrom, personnelDateTo]);
+  }, [allReports, personnelList, liveReports, personnelDateFrom, personnelDateTo]);
 
   // Weekly Report by Host
   const weeklyReportData = useMemo(() => {
