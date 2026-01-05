@@ -238,18 +238,17 @@ export const LiveSessionReport: React.FC = () => {
       return reportDate >= fromDate && reportDate <= toDate;
     });
 
-    // Group by personnel (reporter)
+    // Group by personnel (hostName - tên host)
     dateRangeReports.forEach(report => {
-      if (!report.reporter) return;
+      if (!report.hostName) return;
 
       // Find matching personnel
       const matchingPerson = personnelList.find(person => {
-        const reporterName = report.reporter!.toLowerCase();
+        const hostName = report.hostName!.toLowerCase();
         const personName = person.fullName.toLowerCase();
-        const personEmail = person.email?.toLowerCase() || '';
-        return reporterName.includes(personName) || 
-               personName.includes(reporterName) ||
-               reporterName === personEmail;
+        return hostName === personName || 
+               hostName.includes(personName) || 
+               personName.includes(hostName);
       });
 
       if (matchingPerson) {
