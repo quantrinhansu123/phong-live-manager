@@ -39,11 +39,21 @@ export const SalaryReport: React.FC = () => {
   // Filter reports by month
   const monthlyReports = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number);
-    return reports.filter(report => {
+    let filtered = reports.filter(report => {
       const reportDate = new Date(report.date);
       return reportDate.getFullYear() === year && reportDate.getMonth() + 1 === month;
     });
-  }, [reports, selectedMonth]);
+
+    // For partners, only show reports from their stores
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+      filtered = filtered.filter(report => allowedStoreIds.includes(report.channelId));
+    }
+
+    return filtered;
+  }, [reports, selectedMonth, stores]);
 
   // Calculate salary and revenue data for each personnel
   const salaryData = useMemo(() => {
@@ -61,12 +71,27 @@ export const SalaryReport: React.FC = () => {
       salaryStatus: 'green' | 'yellow' | 'red';
     }> = {};
 
-    // Filter personnel: employees only see themselves, admin sees all
+    // Filter personnel: employees only see themselves, partners see personnel from their stores, admin sees all
     const currentUserRole = getCurrentUserRole();
     const currentUserId = getCurrentUserId();
-    const filteredPersonnel = isAdmin() 
-      ? personnel 
-      : personnel.filter(person => (person.id || person.fullName) === currentUserId);
+    let filteredPersonnel = personnel;
+    
+    if (!isAdmin()) {
+      if (currentUserRole === 'employee') {
+        // Employees only see themselves
+        filteredPersonnel = personnel.filter(person => (person.id || person.fullName) === currentUserId);
+      } else if (currentUserRole === 'partner' && currentUserId) {
+        // Partners see personnel assigned to their stores
+        const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+        const allowedPersonnelIds = new Set<string>();
+        stores.forEach(store => {
+          if (allowedStoreIds.includes(store.id) && store.personnelIds) {
+            store.personnelIds.forEach(id => allowedPersonnelIds.add(id));
+          }
+        });
+        filteredPersonnel = personnel.filter(p => allowedPersonnelIds.has(p.id || ''));
+      }
+    }
 
     // Initialize with filtered personnel
     filteredPersonnel.forEach(person => {
@@ -152,7 +177,7 @@ export const SalaryReport: React.FC = () => {
     });
 
     return Object.values(dataMap).sort((a, b) => b.totalGMV - a.totalGMV);
-  }, [monthlyReports, personnel]);
+  }, [monthlyReports, personnel, stores]);
 
 
   const getStatusColor = (status: 'green' | 'yellow' | 'red') => {

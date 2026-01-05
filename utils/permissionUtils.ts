@@ -14,20 +14,23 @@ export const getMenuPermissions = (): MenuPermission[] => {
     return menuPermissionsCache;
   }
 
-  // Fallback: Lấy từ localStorage nếu có
-  const stored = localStorage.getItem('menuPermissions');
+  // Fallback: Lấy từ localStorage nếu có (thử cả 2 key để tương thích)
+  const stored = localStorage.getItem('menuPermissions') || localStorage.getItem('local_menu_permissions');
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
       menuPermissionsCache = parsed;
       lastFetchTime = now;
+      // Đồng bộ cả 2 key
+      localStorage.setItem('menuPermissions', stored);
+      localStorage.setItem('local_menu_permissions', stored);
       return parsed;
     } catch (e) {
       console.error('Error parsing menu permissions from localStorage:', e);
     }
   }
 
-  // Default: Tất cả menu cho admin, không có menu nào cho partner và employee
+  // Default: Không có menu nào được cấp quyền (phải được admin cấp quyền thủ công)
   return [];
 };
 
@@ -37,8 +40,10 @@ export const loadMenuPermissions = async (): Promise<MenuPermission[]> => {
     const permissions = await fetchMenuPermissionsFromFirebase();
     menuPermissionsCache = permissions;
     lastFetchTime = Date.now();
-    // Đồng bộ với localStorage để có fallback
-    localStorage.setItem('menuPermissions', JSON.stringify(permissions));
+    // Đồng bộ với localStorage để có fallback (lưu cả 2 key)
+    const permissionsJson = JSON.stringify(permissions);
+    localStorage.setItem('menuPermissions', permissionsJson);
+    localStorage.setItem('local_menu_permissions', permissionsJson);
     return permissions;
   } catch (error) {
     console.error('Error loading menu permissions:', error);
@@ -53,12 +58,16 @@ export const saveMenuPermissions = async (permissions: MenuPermission[]): Promis
     // Cập nhật cache
     menuPermissionsCache = permissions;
     lastFetchTime = Date.now();
-    // Đồng bộ với localStorage
-    localStorage.setItem('menuPermissions', JSON.stringify(permissions));
+    // Đồng bộ với localStorage (lưu cả 2 key để tương thích)
+    const permissionsJson = JSON.stringify(permissions);
+    localStorage.setItem('menuPermissions', permissionsJson);
+    localStorage.setItem('local_menu_permissions', permissionsJson);
   } catch (error) {
     console.error('Error saving menu permissions:', error);
-    // Fallback: Lưu vào localStorage
-    localStorage.setItem('menuPermissions', JSON.stringify(permissions));
+    // Fallback: Lưu vào localStorage (lưu cả 2 key)
+    const permissionsJson = JSON.stringify(permissions);
+    localStorage.setItem('menuPermissions', permissionsJson);
+    localStorage.setItem('local_menu_permissions', permissionsJson);
     menuPermissionsCache = permissions;
     lastFetchTime = Date.now();
   }
@@ -75,7 +84,7 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
   const menuPermission = permissions.find(p => p.menuId === menuId);
   
   if (!menuPermission) {
-    // Nếu không có permission được set, mặc định là không có quyền (cho partner và employee)
+    // Nếu không có permission được set, mặc định là không có quyền
     return false;
   }
 
@@ -98,7 +107,6 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
 
   // Partner: Chỉ cần kiểm tra allowedRoles (không cần kiểm tra department)
   // Nếu đã pass check allowedRoles ở trên thì return true
-
   return true;
 };
 

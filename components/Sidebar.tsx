@@ -14,26 +14,31 @@ const MENU_ITEMS = [
   { id: ReportType.PERSONNEL, label: 'Nhân sự (人事)', path: '/personnel' },
   { id: ReportType.CPQC, label: 'CPQC (成本管理)', path: '/cpqc' },
   { id: ReportType.SALARY_REPORT, label: 'Báo Cáo Lương (工资报告)', path: '/salary-report' },
-  { id: ReportType.PARTNER, label: 'Quản Lý Đối Tác (合作伙伴管理)', path: '/partners' },
 ];
 
 export const Sidebar: React.FC = () => {
   const [permissionMenuId, setPermissionMenuId] = useState<string | null>(null);
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const userRole = getCurrentUserRole();
   const userDepartment = getCurrentUserDepartment();
   const admin = isAdmin();
 
   // Load menu permissions từ Firebase khi component mount
   useEffect(() => {
-    loadMenuPermissions().catch(err => {
-      console.error('Error loading menu permissions:', err);
-    });
+    loadMenuPermissions()
+      .then(() => {
+        setPermissionsLoaded(true);
+      })
+      .catch(err => {
+        console.error('Error loading menu permissions:', err);
+        setPermissionsLoaded(true); // Vẫn set true để không block UI
+      });
   }, []);
 
   // Filter menu items dựa trên quyền (bao gồm cả role và department)
   const visibleMenuItems = useMemo(() => {
     return MENU_ITEMS.filter(item => canAccessMenu(item.id, userRole, userDepartment));
-  }, [userRole, userDepartment]);
+  }, [userRole, userDepartment, permissionsLoaded]);
 
   const handlePermissionClick = (e: React.MouseEvent, menuId: string) => {
     e.preventDefault();
@@ -47,34 +52,41 @@ export const Sidebar: React.FC = () => {
         <h1 className="text-white font-bold text-xl uppercase tracking-wider">Quản Lý Phòng Live (直播间和短视频的数据)</h1>
       </div>
       <nav className="flex-1 overflow-y-auto py-4">
-        <ul className="space-y-1">
-          {visibleMenuItems.map((item) => (
-            <li key={item.id} className="group relative">
-              <NavLink
-                to={item.path}
-                className={({ isActive }) =>
-                  `flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors ${isActive
-                    ? 'bg-blue-50 text-brand-navy border-r-4 border-brand-navy'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`
-                }
-              >
-                <span>{item.label}</span>
-                {admin && (
-                  <button
-                    onClick={(e) => handlePermissionClick(e, item.id)}
-                    className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
-                    title="Phân quyền (权限设置)"
-                  >
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                    </svg>
-                  </button>
-                )}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+        {visibleMenuItems.length === 0 ? (
+          <div className="px-6 py-8 text-center">
+            <p className="text-sm text-gray-500 mb-2">Không có menu nào được cấp quyền</p>
+            <p className="text-xs text-gray-400">Vui lòng liên hệ Admin để được cấp quyền truy cập</p>
+          </div>
+        ) : (
+          <ul className="space-y-1">
+            {visibleMenuItems.map((item) => (
+              <li key={item.id} className="group relative">
+                <NavLink
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors ${isActive
+                      ? 'bg-blue-50 text-brand-navy border-r-4 border-brand-navy'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`
+                  }
+                >
+                  <span>{item.label}</span>
+                  {admin && (
+                    <button
+                      onClick={(e) => handlePermissionClick(e, item.id)}
+                      className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
+                      title="Phân quyền (权限设置)"
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                      </svg>
+                    </button>
+                  )}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        )}
       </nav>
       {permissionMenuId && (
         <MenuPermissionModal

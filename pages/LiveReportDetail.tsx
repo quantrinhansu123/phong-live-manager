@@ -361,7 +361,16 @@ export const LiveReportDetail: React.FC = () => {
             key: 'hosts',
             label: 'Host (主播)',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
+            options: (() => {
+              let availableReports = reports;
+              const currentUserRole = getCurrentUserRole();
+              const currentUserId = getCurrentUserId();
+              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+                const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+                availableReports = reports.filter(r => allowedStoreIds.includes(r.channelId));
+              }
+              return Array.from(new Set(availableReports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }));
+            })()
           },
           {
             key: 'shifts',
@@ -377,37 +386,91 @@ export const LiveReportDetail: React.FC = () => {
             key: 'reporters',
             label: 'Người báo cáo (报告人)',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.reporter).filter(Boolean))).map(reporter => ({ value: reporter!, label: reporter! }))
+            options: (() => {
+              let availableReports = reports;
+              const currentUserRole = getCurrentUserRole();
+              const currentUserId = getCurrentUserId();
+              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+                const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+                availableReports = reports.filter(r => allowedStoreIds.includes(r.channelId));
+              }
+              return Array.from(new Set(availableReports.map(r => r.reporter).filter(Boolean))).map(reporter => ({ value: reporter!, label: reporter! }));
+            })()
           },
           {
             key: 'customerGroups',
             label: 'Nhóm KH (客户群)',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.customerGroup).filter(Boolean))).map(group => ({ value: group!, label: group! }))
+            options: (() => {
+              let availableReports = reports;
+              const currentUserRole = getCurrentUserRole();
+              const currentUserId = getCurrentUserId();
+              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+                const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+                availableReports = reports.filter(r => allowedStoreIds.includes(r.channelId));
+              }
+              return Array.from(new Set(availableReports.map(r => r.customerGroup).filter(Boolean))).map(group => ({ value: group!, label: group! }));
+            })()
           },
           {
             key: 'sources',
             label: 'Nguồn tới (来源)',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.source).filter(Boolean))).map(source => ({ value: source!, label: source! }))
+            options: (() => {
+              let availableReports = reports;
+              const currentUserRole = getCurrentUserRole();
+              const currentUserId = getCurrentUserId();
+              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+                const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+                availableReports = reports.filter(r => allowedStoreIds.includes(r.channelId));
+              }
+              return Array.from(new Set(availableReports.map(r => r.source).filter(Boolean))).map(source => ({ value: source!, label: source! }));
+            })()
           },
           {
             key: 'salesPersons',
             label: 'NV sale (销售员)',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.salesPerson).filter(Boolean))).map(sales => ({ value: sales!, label: sales! }))
+            options: (() => {
+              let availableReports = reports;
+              const currentUserRole = getCurrentUserRole();
+              const currentUserId = getCurrentUserId();
+              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+                const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+                availableReports = reports.filter(r => allowedStoreIds.includes(r.channelId));
+              }
+              return Array.from(new Set(availableReports.map(r => r.salesPerson).filter(Boolean))).map(sales => ({ value: sales!, label: sales! }));
+            })()
           },
           {
             key: 'callCounts',
             label: 'Lần gọi (呼叫次数)',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.callCount).filter(c => c !== undefined))).sort((a, b) => Number(a || 0) - Number(b || 0)).map(count => ({ value: count!.toString(), label: count!.toString() }))
+            options: (() => {
+              let availableReports = reports;
+              const currentUserRole = getCurrentUserRole();
+              const currentUserId = getCurrentUserId();
+              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+                const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+                availableReports = reports.filter(r => allowedStoreIds.includes(r.channelId));
+              }
+              return Array.from(new Set(availableReports.map(r => r.callCount).filter(c => c !== undefined))).sort((a, b) => Number(a || 0) - Number(b || 0)).map(count => ({ value: count!.toString(), label: count!.toString() }));
+            })()
           },
           {
             key: 'statuses',
             label: 'Trạng thái (状态)',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.status).filter(Boolean))).map(status => ({ value: status!, label: status! }))
+            options: (() => {
+              let availableReports = reports;
+              const currentUserRole = getCurrentUserRole();
+              const currentUserId = getCurrentUserId();
+              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+                const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+                availableReports = reports.filter(r => allowedStoreIds.includes(r.channelId));
+              }
+              return Array.from(new Set(availableReports.map(r => r.status).filter(Boolean))).map(status => ({ value: status!, label: status! }));
+            })()
           }
         ]}
         selectedFilters={selectedFilters}

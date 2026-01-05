@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchPersonnel, fetchPartners } from '../services/dataService';
+import { fetchPersonnel } from '../services/dataService';
 
 export const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -15,54 +15,25 @@ export const Login: React.FC = () => {
         setLoading(true);
 
         try {
-            const [personnel, partners] = await Promise.all([
-                fetchPersonnel(),
-                fetchPartners()
-            ]);
+            const personnel = await fetchPersonnel();
 
-            // Tìm user trong Personnel trước
-            let user = personnel.find(p => p.email?.toLowerCase() === email.trim().toLowerCase());
-            let userType: 'personnel' | 'partner' = 'personnel';
-
-            // Nếu không tìm thấy trong Personnel, tìm trong Partners
-            if (!user) {
-                const partner = partners.find(p => p.email?.toLowerCase() === email.trim().toLowerCase());
-                
-                if (partner) {
-                    // Kiểm tra xem partner có password không
-                    if (!partner.password || partner.password.trim() === '') {
-                        setError('Đối tác này chưa có mật khẩu! Vui lòng liên hệ admin để thiết lập mật khẩu. (此合作伙伴尚未设置密码! 请联系管理员设置密码。)');
-                        setLoading(false);
-                        return;
-                    }
-                    user = {
-                        id: partner.id,
-                        fullName: partner.name,
-                        email: partner.email,
-                        password: partner.password,
-                        role: 'partner' as any, // Partner có role là 'partner'
-                        department: '' // Partner không có department
-                    };
-                    userType = 'partner';
-                }
-            }
+            // Tìm user trong Personnel
+            const user = personnel.find(p => p.email?.toLowerCase() === email.trim().toLowerCase());
 
             if (user) {
                 // Check password (trim whitespace for comparison)
                 const userPassword = user.password?.trim() || '';
                 const inputPassword = password.trim();
                 
-                // Debug removed for production
-                
                 if (userPassword === inputPassword && userPassword !== '') {
                     localStorage.setItem('currentUser', user.fullName);
                     localStorage.setItem('currentUserId', user.id || '');
-                    // Map role: 'admin' -> 'admin', 'user' -> 'employee', 'partner' -> 'partner'
+                    // Map role: 'admin' -> 'admin', department "Đối tác" -> 'partner', còn lại -> 'employee'
                     let roleToStore = 'employee';
-                    if (userType === 'partner') {
-                        roleToStore = 'partner';
-                    } else if (user.role === 'admin') {
+                    if (user.role === 'admin') {
                         roleToStore = 'admin';
+                    } else if (user.department === 'Đối tác') {
+                        roleToStore = 'partner';
                     } else {
                         roleToStore = 'employee';
                     }

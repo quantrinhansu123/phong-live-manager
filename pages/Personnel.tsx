@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { fetchPersonnel, createPersonnel, updatePersonnel, deletePersonnel, fetchLiveReports } from '../services/dataService';
+import { fetchPersonnel, createPersonnel, updatePersonnel, deletePersonnel, fetchLiveReports, fetchStores } from '../services/dataService';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency } from '../utils/formatUtils';
-import { Personnel as PersonnelType, LiveReport } from '../types';
-import { isAdmin } from '../utils/permissionUtils';
+import { Personnel as PersonnelType, LiveReport, Store } from '../types';
+import { isAdmin, getCurrentUserRole, getCurrentUserId } from '../utils/permissionUtils';
 
 export const Personnel: React.FC = () => {
   const [personnelList, setPersonnelList] = useState<PersonnelType[]>([]);
   const [liveReports, setLiveReports] = useState<LiveReport[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'list' | 'salary' | 'assignKPI'>('list');
   
@@ -67,12 +68,14 @@ export const Personnel: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [people, reports] = await Promise.all([
+      const [people, reports, storeData] = await Promise.all([
         fetchPersonnel(),
-        fetchLiveReports()
+        fetchLiveReports(),
+        fetchStores()
       ]);
       setPersonnelList(people);
       setLiveReports(reports);
+      setStores(storeData);
     } catch (e) {
       console.error("Failed to load personnel", e);
     } finally {
@@ -184,6 +187,20 @@ export const Personnel: React.FC = () => {
   const filteredPersonnel = useMemo(() => {
     let filtered = personnelList;
 
+    // For partners, only show personnel assigned to their stores
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+      const allowedPersonnelIds = new Set<string>();
+      stores.forEach(store => {
+        if (allowedStoreIds.includes(store.id) && store.personnelIds) {
+          store.personnelIds.forEach(id => allowedPersonnelIds.add(id));
+        }
+      });
+      filtered = filtered.filter(p => allowedPersonnelIds.has(p.id || ''));
+    }
+
     // Filter by selected filters
     if (selectedFilters.departments && selectedFilters.departments.length > 0) {
       filtered = filtered.filter(p => selectedFilters.departments!.includes(p.department));
@@ -208,7 +225,7 @@ export const Personnel: React.FC = () => {
     }
 
     return filtered;
-  }, [personnelList, selectedFilters, searchText]);
+  }, [personnelList, selectedFilters, searchText, stores]);
 
   // --- RENDER ---
   return (
@@ -302,6 +319,7 @@ export const Personnel: React.FC = () => {
                     <option value="Sale">Team Sale</option>
                     <option value="HR">Hành chính/Nhân sự</option>
                     <option value="Management">Ban Giám Đốc</option>
+                    <option value="Đối tác">Đối tác (合作伙伴)</option>
                   </select>
                 </div>
                 <div>

@@ -102,16 +102,6 @@ export const MenuPermissionModal: React.FC<MenuPermissionModalProps> = ({
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
-              checked={allowedRoles.includes('partner')}
-              onChange={() => handleRoleToggle('partner')}
-              className="w-5 h-5 text-brand-navy"
-            />
-            <label className="text-sm font-medium text-gray-700">Đối tác (合作伙伴)</label>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
               checked={allowedRoles.includes('employee')}
               onChange={() => handleRoleToggle('employee')}
               className="w-5 h-5 text-brand-navy"

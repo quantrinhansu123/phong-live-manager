@@ -1,21 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { fetchStores, createStore, updateStore, deleteStore, fetchPartners, fetchPersonnel } from '../services/dataService';
+import { fetchStores, createStore, updateStore, deleteStore, fetchPersonnel } from '../services/dataService';
 import { StoreDetailModal } from '../components/StoreDetailModal';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
-import { Store, Partner, Personnel } from '../types';
+import { Store, Personnel } from '../types';
 import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const StoreManager: React.FC = () => {
     const [stores, setStores] = useState<Store[]>([]);
-    const [partners, setPartners] = useState<Partner[]>([]);
     const [personnel, setPersonnel] = useState<Personnel[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddFormOpen, setIsAddFormOpen] = useState(false);
     const [newStoreName, setNewStoreName] = useState('');
-    const [newStorePartnerId, setNewStorePartnerId] = useState<string>('');
-    const [newStoreType, setNewStoreType] = useState<'own' | 'partner'>('own');
     const [newStorePersonnelIds, setNewStorePersonnelIds] = useState<string[]>([]);
+    const [newStorePartnerId, setNewStorePartnerId] = useState<string>('');
     const [personnelSearchText, setPersonnelSearchText] = useState('');
     const [showPersonnelDropdown, setShowPersonnelDropdown] = useState(false);
     const [editingStore, setEditingStore] = useState<Store | null>(null);
@@ -33,13 +31,11 @@ export const StoreManager: React.FC = () => {
     const loadStores = async () => {
         setIsLoading(true);
         try {
-            const [storeData, partnerData, personnelData] = await Promise.all([
+            const [storeData, personnelData] = await Promise.all([
                 fetchStores(),
-                fetchPartners(),
                 fetchPersonnel()
             ]);
             setStores(storeData.filter(s => s.id !== 'all'));
-            setPartners(partnerData);
             setPersonnel(personnelData);
         } catch (error) {
             console.error('Error loading data:', error);
@@ -56,26 +52,17 @@ export const StoreManager: React.FC = () => {
         
         const storeNameToAdd = newStoreName.trim();
         try {
-            // Nếu là đối tác thì chỉ lưu partnerId, không lưu personnelIds
-            // Nếu là của mình thì chỉ lưu personnelIds, không lưu partnerId
             const storeData: any = {
                 name: storeNameToAdd,
-                storeType: newStoreType
+                storeType: 'own',
+                personnelIds: newStorePersonnelIds.length > 0 ? newStorePersonnelIds : undefined,
+                partnerId: newStorePartnerId || undefined
             };
             
-            if (newStoreType === 'partner') {
-                storeData.partnerId = newStorePartnerId || undefined;
-                storeData.personnelIds = undefined; // Xóa personnelIds nếu là đối tác
-            } else {
-                storeData.personnelIds = newStorePersonnelIds.length > 0 ? newStorePersonnelIds : undefined;
-                storeData.partnerId = undefined; // Xóa partnerId nếu là của mình
-            }
-            
             await createStore(storeData);
-        setNewStoreName('');
-            setNewStorePartnerId('');
-            setNewStoreType('own');
+            setNewStoreName('');
             setNewStorePersonnelIds([]);
+            setNewStorePartnerId('');
             setPersonnelSearchText('');
             setShowPersonnelDropdown(false);
             setIsAddFormOpen(false);
@@ -100,9 +87,8 @@ export const StoreManager: React.FC = () => {
     const handleStartEdit = (store: Store) => {
         setEditingStore(store);
         setNewStoreName(store.name);
-        setNewStorePartnerId(store.partnerId || '');
-        setNewStoreType(store.storeType || 'own');
         setNewStorePersonnelIds(store.personnelIds || []);
+        setNewStorePartnerId(store.partnerId || '');
         setPersonnelSearchText('');
         setShowPersonnelDropdown(false);
     };
@@ -143,9 +129,8 @@ export const StoreManager: React.FC = () => {
     const handleCancelEdit = () => {
         setEditingStore(null);
         setNewStoreName('');
-        setNewStorePartnerId('');
-        setNewStoreType('own');
         setNewStorePersonnelIds([]);
+        setNewStorePartnerId('');
         setPersonnelSearchText('');
         setShowPersonnelDropdown(false);
         setIsAddFormOpen(false);
@@ -159,20 +144,12 @@ export const StoreManager: React.FC = () => {
         
         const storeNameToUpdate = newStoreName.trim();
         try {
-            // Nếu là đối tác thì chỉ lưu partnerId, không lưu personnelIds
-            // Nếu là của mình thì chỉ lưu personnelIds, không lưu partnerId
             const updateData: any = {
                 name: storeNameToUpdate,
-                storeType: newStoreType
+                storeType: 'own',
+                personnelIds: newStorePersonnelIds.length > 0 ? newStorePersonnelIds : undefined,
+                partnerId: newStorePartnerId || undefined
             };
-            
-            if (newStoreType === 'partner') {
-                updateData.partnerId = newStorePartnerId || undefined;
-                updateData.personnelIds = undefined; // Xóa personnelIds nếu là đối tác
-            } else {
-                updateData.personnelIds = newStorePersonnelIds.length > 0 ? newStorePersonnelIds : undefined;
-                updateData.partnerId = undefined; // Xóa partnerId nếu là của mình
-            }
             
             await updateStore(editingStore.id, updateData);
             handleCancelEdit();
@@ -207,7 +184,7 @@ export const StoreManager: React.FC = () => {
     const filteredStores = useMemo(() => {
         let filtered = stores;
 
-        // For partners, only show their stores
+        // For partners, only show stores assigned to them
         const currentUserId = getCurrentUserId();
         if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
             filtered = filtered.filter(store => store.partnerId === currentUserId);
@@ -217,36 +194,18 @@ export const StoreManager: React.FC = () => {
         if (searchText) {
             const searchLower = searchText.toLowerCase();
             filtered = filtered.filter(store => {
-                const partnerName = partners.find(p => p.id === store.partnerId)?.name || '';
                 const personnelNames = (store.personnelIds || [])
                     .map(id => personnel.find(p => p.id === id)?.fullName || '')
                     .join(' ');
                 return (
                     store.name.toLowerCase().includes(searchLower) ||
-                    partnerName.toLowerCase().includes(searchLower) ||
                     personnelNames.toLowerCase().includes(searchLower)
                 );
             });
         }
 
-        // Filter by store type
-        if (selectedFilters.storeTypes && selectedFilters.storeTypes.length > 0) {
-            filtered = filtered.filter(store => {
-                const storeType = store.storeType || 'own';
-                return selectedFilters.storeTypes!.includes(storeType);
-            });
-        }
-
-        // Filter by partner (chỉ áp dụng cho admin)
-        if (currentUserRole === 'admin' && selectedFilters.partners && selectedFilters.partners.length > 0) {
-            filtered = filtered.filter(store => {
-                if (!store.partnerId) return false;
-                return selectedFilters.partners!.includes(store.partnerId);
-            });
-        }
-
         return filtered;
-    }, [stores, partners, personnel, searchText, selectedFilters, currentUserRole]);
+    }, [stores, personnel, searchText, currentUserRole]);
 
     return (
         <div className="p-6 bg-gray-50 min-h-screen font-sans">
@@ -264,9 +223,8 @@ export const StoreManager: React.FC = () => {
                         setIsAddFormOpen(true);
                         setEditingStore(null);
                         setNewStoreName('');
-                        setNewStorePartnerId('');
-                        setNewStoreType('own');
                         setNewStorePersonnelIds([]);
+                        setNewStorePartnerId('');
                         setPersonnelSearchText('');
                         setShowPersonnelDropdown(false);
                     }}
@@ -285,14 +243,11 @@ export const StoreManager: React.FC = () => {
                 onSearch={setSearchText}
                 onExportExcel={() => {
                     const exportData = filteredStores.map(store => {
-                        const partner = partners.find(p => p.id === store.partnerId);
                         const personnelList = (store.personnelIds || [])
                             .map(id => personnel.find(p => p.id === id)?.fullName || '')
                             .join(', ');
                         return {
                             'Tên cửa hàng': store.name,
-                            'Loại': store.storeType === 'own' ? 'Của mình' : 'Đối tác phụ trách',
-                            'Đối tác': partner?.name || '',
                             'Nhân sự phụ trách': personnelList || '',
                         };
                     });
@@ -311,23 +266,7 @@ export const StoreManager: React.FC = () => {
                     setSearchText('');
                     setSelectedFilters({});
                 }}
-                filterFields={[
-                    {
-                        key: 'storeTypes',
-                        label: 'Loại cửa hàng (店铺类型)',
-                        type: 'checkbox',
-                        options: [
-                            { value: 'own', label: 'Của mình (自己的)' },
-                            { value: 'partner', label: 'Đối tác phụ trách (合作伙伴负责)' }
-                        ]
-                    },
-                    {
-                        key: 'partners',
-                        label: 'Đối tác (合作伙伴)',
-                        type: 'checkbox',
-                        options: partners.map(p => ({ value: p.id || '', label: p.name }))
-                    }
-                ]}
+                filterFields={[]}
                 selectedFilters={selectedFilters}
                 onFilterChange={(field, values) => {
                     setSelectedFilters(prev => ({ ...prev, [field]: values }));
@@ -346,7 +285,6 @@ export const StoreManager: React.FC = () => {
                         <thead className="text-xs text-white uppercase bg-brand-navy border-b">
                             <tr>
                                 <th className="px-4 py-3 text-left">Tên cửa hàng (店铺名称)</th>
-                                <th className="px-4 py-3 text-left">Loại (类型)</th>
                                 <th className="px-4 py-3 text-left">Đối tác (合作伙伴)</th>
                                 <th className="px-4 py-3 text-left">Nhân sự phụ trách (负责人事)</th>
                                 <th className="px-4 py-3 text-center">Thao tác (操作)</th>
@@ -356,29 +294,22 @@ export const StoreManager: React.FC = () => {
                             {/* Store Rows */}
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={5} className="py-8 text-center text-gray-500">Đang tải... (正在加载...)</td>
+                                    <td colSpan={4} className="py-8 text-center text-gray-500">Đang tải... (正在加载...)</td>
                                 </tr>
                             ) : filteredStores.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="py-8 text-center text-gray-400">Chưa có cửa hàng nào (暂无店铺)</td>
+                                    <td colSpan={4} className="py-8 text-center text-gray-400">Chưa có cửa hàng nào (暂无店铺)</td>
                                 </tr>
                             ) : (
-                                filteredStores.map(store => (
+                                filteredStores.map(store => {
+                                    const partner = store.partnerId ? personnel.find(p => p.id === store.partnerId) : null;
+                                    return (
                                     <tr key={store.id} className="border-b hover:bg-gray-50">
                                         <td className="px-4 py-3 font-bold text-gray-800">{store.name}</td>
-                                        <td className="px-4 py-3">
-                                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                                store.storeType === 'own' 
-                                                    ? 'bg-green-100 text-green-800 border border-green-300' 
-                                                    : 'bg-blue-100 text-blue-800 border border-blue-300'
-                                            }`}>
-                                                {store.storeType === 'own' ? 'Của mình (自己的)' : 'Đối tác phụ trách (合作伙伴负责)'}
-                                            </span>
-                                        </td>
                                         <td className="px-4 py-3 text-gray-600">
-                                            {store.partnerId ? (
+                                            {partner ? (
                                                 <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs border border-blue-200">
-                                                    {partners.find(p => p.id === store.partnerId)?.name || store.partnerId}
+                                                    {partner.fullName}
                                                 </span>
                                             ) : '-'}
                                         </td>
@@ -422,7 +353,8 @@ export const StoreManager: React.FC = () => {
                                     </div>
                                         </td>
                                     </tr>
-                                ))
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>
@@ -460,46 +392,24 @@ export const StoreManager: React.FC = () => {
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Loại (类型)</label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Đối tác (合作伙伴)</label>
                                 <select
-                                    value={newStoreType}
-                                    onChange={(e) => {
-                                        const newType = e.target.value as 'own' | 'partner';
-                                        setNewStoreType(newType);
-                                        // Reset các trường không phù hợp khi đổi loại
-                                        if (newType === 'partner') {
-                                            setNewStorePersonnelIds([]);
-                                        } else {
-                                            setNewStorePartnerId('');
-                                        }
-                                    }}
+                                    value={newStorePartnerId}
+                                    onChange={(e) => setNewStorePartnerId(e.target.value)}
                                     className="w-full border rounded px-3 py-2 bg-white focus:ring-brand-navy focus:border-brand-navy"
                                 >
-                                    <option value="own">Của mình (自己的)</option>
-                                    <option value="partner">Đối tác phụ trách (合作伙伴负责)</option>
-                                </select>
-                            </div>
-                            {newStoreType === 'partner' && (
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-700 mb-1">Đối tác (合作伙伴) *</label>
-                                    <select
-                                        required={newStoreType === 'partner'}
-                                        value={newStorePartnerId}
-                                        onChange={(e) => setNewStorePartnerId(e.target.value)}
-                                        className="w-full border rounded px-3 py-2 bg-white focus:ring-brand-navy focus:border-brand-navy"
-                                    >
-                                        <option value="">-- Chọn đối tác (选择合作伙伴) --</option>
-                                        {partners.map(partner => (
-                                            <option key={partner.id} value={partner.id}>
-                                                {partner.name}
+                                    <option value="">-- Không chọn (不选择) --</option>
+                                    {personnel
+                                        .filter(p => p.department === 'Đối tác')
+                                        .map(partner => (
+                                            <option key={partner.id} value={partner.id || ''}>
+                                                {partner.fullName}
                                             </option>
                                         ))}
-                                    </select>
-                                </div>
-                            )}
-                            {newStoreType === 'own' && (
-                                <div>
-                                    <label className="block text-xs font-medium text-gray-700 mb-1">Nhân sự phụ trách (负责人事)</label>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">Nhân sự phụ trách (负责人事)</label>
                                 <div className="space-y-3">
                                     {/* Searchable input để tìm và chọn nhân sự */}
                                     <div className="relative">
@@ -572,7 +482,6 @@ export const StoreManager: React.FC = () => {
                                     )}
                                 </div>
                             </div>
-                            )}
 
                             <div className="pt-4 border-t flex justify-end gap-3">
                                 <button 

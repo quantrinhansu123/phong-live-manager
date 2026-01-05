@@ -11,7 +11,6 @@ import { CPQC } from './pages/CPQC';
 import { SalaryReport } from './pages/SalaryReport';
 import { StoreOverviewPage } from './pages/StoreOverview';
 import { LiveReportDetail } from './pages/LiveReportDetail';
-import { PartnerManagement } from './pages/PartnerManagement';
 
 const ProtectedLayout: React.FC = () => {
   const user = localStorage.getItem('currentUser');
@@ -52,7 +51,6 @@ const App: React.FC = () => {
           <Route path="/store-overview" element={<StoreOverviewPage />} />
           <Route path="/personnel" element={<Personnel />} />
           <Route path="/cpqc" element={<CPQC />} />
-          <Route path="/partners" element={<PartnerManagement />} />
           <Route path="/salary-report" element={<SalaryReport />} />
         </Route>
         

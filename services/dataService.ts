@@ -1,4 +1,4 @@
-import { HostRevenue, VideoConfigItem, Store, AdShiftData, VideoMetric, LiveReport, Personnel, Partner, MenuPermission } from '../types';
+import { HostRevenue, VideoConfigItem, Store, AdShiftData, VideoMetric, LiveReport, Personnel, MenuPermission } from '../types';
 
 const FIREBASE_URL = 'https://phonglive-26d30-default-rtdb.asia-southeast1.firebasedatabase.app';
 
@@ -411,111 +411,6 @@ export const VIDEO_CONFIG_DATA: VideoConfigItem[] = [
 
 export const fetchLiveData = async () => {
   return null;
-};
-
-// --- PARTNERS ---
-
-export const fetchPartners = async (): Promise<Partner[]> => {
-  let partners: Partner[] = [];
-  try {
-    const response = await fetch(`${FIREBASE_URL}/partners.json`);
-    if (response.ok) {
-      const data = await response.json();
-      if (data) {
-        partners = Object.keys(data).map(key => ({
-          ...data[key],
-          id: key
-        }));
-      }
-    }
-  } catch (error) {
-    console.warn("API unavailable, checking local storage...");
-  }
-
-  // Merge with Local Storage
-  const localPartners = JSON.parse(localStorage.getItem('local_partners') || '[]');
-  return [...partners, ...localPartners];
-};
-
-export const createPartner = async (partner: Omit<Partner, 'id'>) => {
-  try {
-    const response = await fetch(`${FIREBASE_URL}/partners.json`, {
-      method: 'POST',
-      body: JSON.stringify({
-        ...partner,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }),
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!response.ok) throw new Error('Failed to create partner');
-    return await response.json();
-  } catch (error) {
-    console.warn("API Error, saving to local storage instead:", error);
-    const localPartners = JSON.parse(localStorage.getItem('local_partners') || '[]');
-    const newPartner = { 
-      ...partner, 
-      id: `local_partner_${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    localPartners.push(newPartner);
-    localStorage.setItem('local_partners', JSON.stringify(localPartners));
-    return { name: newPartner.id };
-  }
-};
-
-export const updatePartner = async (id: string, partner: Partial<Partner>) => {
-  if (id.startsWith('local_')) {
-    const localPartners = JSON.parse(localStorage.getItem('local_partners') || '[]');
-    const index = localPartners.findIndex((p: Partner) => p.id === id);
-    if (index !== -1) {
-      localPartners[index] = { 
-        ...localPartners[index], 
-        ...partner,
-        updatedAt: new Date().toISOString()
-      };
-      localStorage.setItem('local_partners', JSON.stringify(localPartners));
-      return localPartners[index];
-    }
-    return null;
-  }
-
-  try {
-    const response = await fetch(`${FIREBASE_URL}/partners/${id}.json`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        ...partner,
-        updatedAt: new Date().toISOString()
-      }),
-      headers: { 'Content-Type': 'application/json' }
-    });
-    if (!response.ok) throw new Error('Failed to update partner');
-    return await response.json();
-  } catch (error) {
-    console.error("Update failed", error);
-    throw error;
-  }
-};
-
-export const deletePartner = async (id: string) => {
-  if (id.startsWith('local_')) {
-    const localPartners = JSON.parse(localStorage.getItem('local_partners') || '[]');
-    const filtered = localPartners.filter((p: Partner) => p.id !== id);
-    localStorage.setItem('local_partners', JSON.stringify(filtered));
-    return true;
-  }
-
-  try {
-    const response = await fetch(`${FIREBASE_URL}/partners/${id}.json`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) throw new Error('Failed to delete partner');
-    return true;
-  } catch (error) {
-    console.error("Delete failed", error);
-    throw error;
-  }
 };
 
 // --- MENU PERMISSIONS ---

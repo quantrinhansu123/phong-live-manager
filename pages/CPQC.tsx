@@ -47,6 +47,14 @@ export const CPQC: React.FC = () => {
   const filteredReports = useMemo(() => {
     let filtered = reports;
 
+    // For partners, only show reports from their stores
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+      filtered = filtered.filter(item => allowedStoreIds.includes(item.channelId));
+    }
+
     // Filter by date range
     filtered = filtered.filter(report => {
       const reportDate = new Date(report.date);
@@ -333,13 +341,30 @@ export const CPQC: React.FC = () => {
             key: 'stores',
             label: 'Cửa hàng',
             type: 'checkbox',
-            options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
+            options: (() => {
+              let availableStores = stores.filter(s => s.id !== 'all');
+              const currentUserRole = getCurrentUserRole();
+              const currentUserId = getCurrentUserId();
+              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+                availableStores = availableStores.filter(s => s.partnerId === currentUserId);
+              }
+              return availableStores.map(s => ({ value: s.id, label: s.name }));
+            })()
           },
           {
             key: 'hosts',
             label: 'Host',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
+            options: (() => {
+              let availableReports = reports;
+              const currentUserRole = getCurrentUserRole();
+              const currentUserId = getCurrentUserId();
+              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+                const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+                availableReports = reports.filter(r => allowedStoreIds.includes(r.channelId));
+              }
+              return Array.from(new Set(availableReports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }));
+            })()
           },
           {
             key: 'shifts',

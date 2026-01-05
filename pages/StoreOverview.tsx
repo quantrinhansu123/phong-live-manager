@@ -3,6 +3,7 @@ import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
 import { LiveReport, Store, StoreOverview } from '../types';
+import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const StoreOverviewPage: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
@@ -29,10 +30,19 @@ export const StoreOverviewPage: React.FC = () => {
         fetchStores(),
         fetchLiveReports()
       ]);
-      setStores(storeData.filter(s => s.id !== 'all'));
+      let filteredStores = storeData.filter(s => s.id !== 'all');
+      
+      // For partners, only show their stores
+      const currentUserRole = getCurrentUserRole();
+      const currentUserId = getCurrentUserId();
+      if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+        filteredStores = filteredStores.filter(s => s.partnerId === currentUserId);
+      }
+      
+      setStores(filteredStores);
       setReports(reportData);
       // Select all stores by default
-      setSelectedStores(storeData.filter(s => s.id !== 'all').map(s => s.id));
+      setSelectedStores(filteredStores.map(s => s.id));
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -42,7 +52,17 @@ export const StoreOverviewPage: React.FC = () => {
 
   // Filter reports by selected stores and date range
   const filteredReports = useMemo(() => {
-    return reports.filter(report => {
+    let filtered = reports;
+
+    // For partners, only show reports from their stores
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+      filtered = filtered.filter(report => allowedStoreIds.includes(report.channelId));
+    }
+
+    return filtered.filter(report => {
       const matchStore = selectedStores.length === 0 || selectedStores.includes(report.channelId);
       const reportDate = new Date(report.date);
       const fromDate = new Date(dateFrom);
@@ -51,7 +71,7 @@ export const StoreOverviewPage: React.FC = () => {
       const matchDate = reportDate >= fromDate && reportDate <= toDate;
       return matchStore && matchDate;
     });
-  }, [reports, selectedStores, dateFrom, dateTo]);
+  }, [reports, selectedStores, dateFrom, dateTo, stores]);
 
   // Calculate overview for each store
   const storeOverviews = useMemo(() => {

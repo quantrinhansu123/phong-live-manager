@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchStores, fetchPersonnel } from '../services/dataService';
 import { LiveReport, Personnel } from '../types';
+import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 interface LiveReportModalProps {
   isOpen: boolean;
@@ -35,7 +36,14 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
   React.useEffect(() => {
     if (isOpen) {
       fetchStores().then(data => {
-        setStores(data);
+        let filteredStores = data.filter(s => s.id !== 'all');
+        // For partners, only show their stores
+        const currentUserRole = getCurrentUserRole();
+        const currentUserId = getCurrentUserId();
+        if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+          filteredStores = filteredStores.filter(s => s.partnerId === currentUserId);
+        }
+        setStores(filteredStores);
       }).catch(() => {
         setStores([]);
       });

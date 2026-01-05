@@ -6,6 +6,7 @@ import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency, parseCurrency, parsePercentage, formatPercentage, formatCurrencyForExcel } from '../utils/formatUtils';
 import { VideoEditModal } from '../components/VideoEditModal';
+import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const VideoParameterReport: React.FC = () => {
   const [videos, setVideos] = useState<VideoMetric[]>([]);
@@ -47,6 +48,14 @@ export const VideoParameterReport: React.FC = () => {
 
   const filteredVideos = useMemo(() => {
     let filtered = videos;
+
+    // For partners, only show videos from their stores
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
+      filtered = filtered.filter(v => allowedStoreIds.includes(v.storeId));
+    }
 
     // Filter by date range
     filtered = filtered.filter(v => {
@@ -495,7 +504,15 @@ export const VideoParameterReport: React.FC = () => {
             key: 'stores',
             label: 'Cửa hàng (店铺)',
             type: 'select',
-            options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
+            options: (() => {
+              let availableStores = stores.filter(s => s.id !== 'all');
+              const currentUserRole = getCurrentUserRole();
+              const currentUserId = getCurrentUserId();
+              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+                availableStores = availableStores.filter(s => s.partnerId === currentUserId);
+              }
+              return availableStores.map(s => ({ value: s.id, label: s.name }));
+            })()
           },
           {
             key: 'platforms',

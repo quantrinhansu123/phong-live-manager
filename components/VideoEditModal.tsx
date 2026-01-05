@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchStores } from '../services/dataService';
 import { VideoMetric, Store } from '../types';
+import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 interface VideoEditModalProps {
   isOpen: boolean;
@@ -26,7 +27,13 @@ export const VideoEditModal: React.FC<VideoEditModalProps> = ({ isOpen, onClose,
   useEffect(() => {
     if (isOpen) {
       fetchStores().then(data => {
-        const filteredStores = data.filter(s => s.id !== 'all');
+        let filteredStores = data.filter(s => s.id !== 'all');
+        // For partners, only show their stores
+        const currentUserRole = getCurrentUserRole();
+        const currentUserId = getCurrentUserId();
+        if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+          filteredStores = filteredStores.filter(s => s.partnerId === currentUserId);
+        }
         setStores(filteredStores);
         if (!initialData && filteredStores.length > 0) {
           setFormData(prev => ({ ...prev, storeId: filteredStores[0].id }));
