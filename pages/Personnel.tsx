@@ -363,6 +363,7 @@ export const Personnel: React.FC = () => {
                     <option value="Sale">Team Sale</option>
                     <option value="HR">Hành chính/Nhân sự</option>
                     <option value="Management">Ban Giám Đốc</option>
+                    <option value="Đối tác">Đối tác (合作伙伴)</option>
                   </select>
                 </div>
                 <div>

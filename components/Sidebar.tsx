@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ReportType } from '../types';
 import { getCurrentUserRole, canAccessMenu, isAdmin, getCurrentUserDepartment, loadMenuPermissions } from '../utils/permissionUtils';
-import { MenuPermissionModal } from './MenuPermissionModal';
 
 const MENU_ITEMS = [
   { id: ReportType.DASHBOARD, label: 'Dashboard (仪表板)', path: '/' },
@@ -17,12 +16,10 @@ const MENU_ITEMS = [
 ];
 
 export const Sidebar: React.FC = () => {
-  const [permissionMenuId, setPermissionMenuId] = useState<string | null>(null);
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const [menuPermissionsCache, setMenuPermissionsCache] = useState<any>(null);
   const userRole = getCurrentUserRole();
   const userDepartment = getCurrentUserDepartment();
-  const admin = isAdmin();
 
   // Load menu permissions từ Firebase khi component mount
   useEffect(() => {
@@ -60,12 +57,6 @@ export const Sidebar: React.FC = () => {
     return MENU_ITEMS.filter(item => canAccessMenu(item.id, userRole, userDepartment));
   }, [userRole, userDepartment, permissionsLoaded, menuPermissionsCache]);
 
-  const handlePermissionClick = (e: React.MouseEvent, menuId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setPermissionMenuId(menuId);
-  };
-
   return (
     <aside className="w-64 bg-white border-r border-gray-200 h-screen flex flex-col fixed left-0 top-0 z-50">
       <div className="h-16 flex items-center justify-center border-b border-brand-navy bg-brand-navy">
@@ -80,42 +71,23 @@ export const Sidebar: React.FC = () => {
         ) : (
           <ul className="space-y-1">
             {visibleMenuItems.map((item) => (
-            <li key={item.id} className="group relative">
+            <li key={item.id}>
               <NavLink
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors ${isActive
+                  `flex items-center px-6 py-3 text-sm font-medium transition-colors ${isActive
                     ? 'bg-blue-50 text-brand-navy border-r-4 border-brand-navy'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`
                 }
               >
                 <span>{item.label}</span>
-                {admin && (
-                  <button
-                    onClick={(e) => handlePermissionClick(e, item.id)}
-                    className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
-                    title="Phân quyền (权限设置)"
-                  >
-                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                    </svg>
-                  </button>
-                )}
               </NavLink>
             </li>
           ))}
           </ul>
         )}
       </nav>
-      {permissionMenuId && (
-        <MenuPermissionModal
-          isOpen={!!permissionMenuId}
-          onClose={() => setPermissionMenuId(null)}
-          menuId={permissionMenuId}
-          menuLabel={MENU_ITEMS.find(m => m.id === permissionMenuId)?.label || ''}
-        />
-      )}
       <div className="p-4 border-t border-gray-200 bg-gray-50">
         <div className="mb-2">
           <p className="text-xs text-gray-500 font-bold uppercase">Người dùng (用户)</p>
