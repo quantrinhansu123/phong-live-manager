@@ -1,15 +1,27 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { fetchPersonnel, createPersonnel, updatePersonnel, deletePersonnel, fetchLiveReports, fetchStores } from '../services/dataService';
+import { fetchPersonnel, createPersonnel, updatePersonnel, deletePersonnel, fetchLiveReports, MOCK_VIDEO_METRICS, fetchStores } from '../services/dataService';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency } from '../utils/formatUtils';
-import { Personnel as PersonnelType, LiveReport, Store } from '../types';
-import { isAdmin, getCurrentUserRole, getCurrentUserId } from '../utils/permissionUtils';
+import { Personnel as PersonnelType, LiveReport, ReportType } from '../types';
+import { isAdmin, getCurrentUserId } from '../utils/permissionUtils';
+
+// Menu items list (same as in Sidebar)
+const MENU_ITEMS = [
+  { id: ReportType.DASHBOARD, label: 'Dashboard (仪表板)' },
+  { id: ReportType.LIVE_ADS, label: 'Quản lý Live (直播管理)' },
+  { id: 'live_report_detail', label: 'Chi tiết Báo Cáo Live (直播报告详情)' },
+  { id: ReportType.VIDEO_PARAM, label: 'Quản lý Video & KPI (视频和KPI管理)' },
+  { id: ReportType.STORE_MGR, label: 'Quản lý Cửa Hàng (店铺管理)' },
+  { id: 'store_overview', label: 'Tổng Quan Cửa Hàng (店铺总览)' },
+  { id: ReportType.PERSONNEL, label: 'Nhân sự (人事)' },
+  { id: ReportType.CPQC, label: 'CPQC (成本管理)' },
+  { id: ReportType.SALARY_REPORT, label: 'Báo Cáo Lương (工资报告)' },
+];
 
 export const Personnel: React.FC = () => {
   const [personnelList, setPersonnelList] = useState<PersonnelType[]>([]);
   const [liveReports, setLiveReports] = useState<LiveReport[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'list' | 'salary' | 'assignKPI'>('list');
   
@@ -57,7 +69,8 @@ export const Personnel: React.FC = () => {
     password: '',
     role: 'user' as 'user' | 'admin',
     baseSalary: 0,
-    monthlyKPITarget: 0
+    monthlyKPITarget: 0,
+    allowedMenuIds: [] as string[]
   };
   const [formData, setFormData] = useState<PersonnelType>(initialFormState);
 
@@ -68,14 +81,14 @@ export const Personnel: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [people, reports, storeData] = await Promise.all([
+      let [people, reports, stores] = await Promise.all([
         fetchPersonnel(),
         fetchLiveReports(),
         fetchStores()
       ]);
+      
       setPersonnelList(people);
       setLiveReports(reports);
-      setStores(storeData);
     } catch (e) {
       console.error("Failed to load personnel", e);
     } finally {
@@ -97,10 +110,22 @@ export const Personnel: React.FC = () => {
   const handleEdit = (person: PersonnelType) => {
     setFormData({
       ...person,
-      password: person.password || '' // Edit mode might blank out password or keep it, simple approach: show it
+      password: person.password || '', // Edit mode might blank out password or keep it, simple approach: show it
+      allowedMenuIds: person.allowedMenuIds || [] // Ensure allowedMenuIds is array
     });
     setIsEditing(true);
     setShowForm(true);
+  };
+
+  const handleMenuToggle = (menuId: string) => {
+    setFormData(prev => {
+      const currentMenus = prev.allowedMenuIds || [];
+      if (currentMenus.includes(menuId)) {
+        return { ...prev, allowedMenuIds: currentMenus.filter(id => id !== menuId) };
+      } else {
+        return { ...prev, allowedMenuIds: [...currentMenus, menuId] };
+      }
+    });
   };
 
   const handleDelete = async (id: string) => {
@@ -187,20 +212,6 @@ export const Personnel: React.FC = () => {
   const filteredPersonnel = useMemo(() => {
     let filtered = personnelList;
 
-    // For partners, only show personnel assigned to their stores
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-      const allowedPersonnelIds = new Set<string>();
-      stores.forEach(store => {
-        if (allowedStoreIds.includes(store.id) && store.personnelIds) {
-          store.personnelIds.forEach(id => allowedPersonnelIds.add(id));
-        }
-      });
-      filtered = filtered.filter(p => allowedPersonnelIds.has(p.id || ''));
-    }
-
     // Filter by selected filters
     if (selectedFilters.departments && selectedFilters.departments.length > 0) {
       filtered = filtered.filter(p => selectedFilters.departments!.includes(p.department));
@@ -225,7 +236,7 @@ export const Personnel: React.FC = () => {
     }
 
     return filtered;
-  }, [personnelList, selectedFilters, searchText, stores]);
+  }, [personnelList, selectedFilters, searchText]);
 
   // --- RENDER ---
   return (
@@ -319,7 +330,6 @@ export const Personnel: React.FC = () => {
                     <option value="Sale">Team Sale</option>
                     <option value="HR">Hành chính/Nhân sự</option>
                     <option value="Management">Ban Giám Đốc</option>
-                    <option value="Đối tác">Đối tác (合作伙伴)</option>
                   </select>
                 </div>
                 <div>
@@ -378,6 +388,41 @@ export const Personnel: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Menu Permissions - Only show for non-admin users */}
+                {formData.role !== 'admin' && (
+                  <div className="col-span-2 mt-2">
+                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                      Phân quyền Menu (菜单权限) - Chọn các hạng mục có thể xem (选择可查看的菜单项)
+                    </label>
+                    <div className="bg-green-50 p-4 rounded border border-green-100">
+                      <p className="text-xs text-gray-600 mb-3">
+                        Tích chọn các menu mà nhân sự này có thể xem. Nếu không chọn, sẽ áp dụng quyền mặc định theo role và phòng ban. (选择此人员可查看的菜单。如果不选择，将应用基于角色和部门的默认权限。)
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                        {MENU_ITEMS.map((menu) => (
+                          <div key={menu.id} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={(formData.allowedMenuIds || []).includes(menu.id)}
+                              onChange={() => handleMenuToggle(menu.id)}
+                              className="w-4 h-4 text-brand-navy rounded"
+                              id={`menu-${menu.id}`}
+                            />
+                            <label htmlFor={`menu-${menu.id}`} className="text-sm text-gray-700 cursor-pointer">
+                              {menu.label}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      {(formData.allowedMenuIds || []).length === 0 && (
+                        <p className="text-xs text-gray-500 mt-2 italic">
+                          Chưa chọn menu nào - sẽ áp dụng quyền mặc định (未选择任何菜单 - 将应用默认权限)
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
@@ -416,7 +461,6 @@ export const Personnel: React.FC = () => {
             const exportData = filteredPersonnel.map(person => ({
               'Họ và tên': person.fullName,
               'Email': person.email || '',
-              ...(isAdmin() ? { 'Mật khẩu': person.password || '' } : {}),
               'Phòng ban': person.department,
               'Vị trí': person.position,
               'SĐT': person.phoneNumber,
@@ -492,7 +536,6 @@ export const Personnel: React.FC = () => {
                   <tr>
                     <th className="px-6 py-3 border-r">Họ và tên (姓名)</th>
                     <th className="px-6 py-3 border-r">Email (登录)</th>
-                    {isAdmin() && <th className="px-6 py-3 border-r">Mật khẩu (密码)</th>}
                     <th className="px-6 py-3 border-r">Phòng ban (部门)</th>
                     <th className="px-6 py-3 border-r">Vị trí (职位)</th>
                     <th className="px-6 py-3 border-r">SĐT (电话)</th>
@@ -502,7 +545,7 @@ export const Personnel: React.FC = () => {
                 </thead>
                 <tbody>
                   {filteredPersonnel.length === 0 ? (
-                    <tr><td colSpan={isAdmin() ? 8 : 7} className="py-8 text-center text-gray-400">Chưa có nhân sự nào (暂无人员)</td></tr>
+                    <tr><td colSpan={7} className="py-8 text-center text-gray-400">Chưa có nhân sự nào (暂无人员)</td></tr>
                   ) : (
                     filteredPersonnel.map((person) => (
                       <tr key={person.id} className="border-b hover:bg-gray-50 group">
@@ -511,9 +554,6 @@ export const Personnel: React.FC = () => {
                           {person.role === 'admin' && <span className="bg-purple-100 text-purple-800 text-xs px-1.5 rounded border border-purple-200">Admin</span>}
                         </td>
                         <td className="px-6 py-4 border-r text-gray-600">{person.email || '-'}</td>
-                        {isAdmin() && (
-                          <td className="px-6 py-4 border-r text-gray-600 font-mono text-xs">{person.password || '-'}</td>
-                        )}
                         <td className="px-6 py-4 border-r">
                           <span className={`px-2 py-1 rounded text-xs font-medium border ${person.department === 'Live' ? 'bg-red-50 text-red-700 border-red-200' :
                               person.department === 'Media' ? 'bg-blue-50 text-blue-700 border-blue-200' :

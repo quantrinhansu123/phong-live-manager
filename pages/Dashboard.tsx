@@ -1,9 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
-import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
+import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
-import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const Dashboard: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string>('all');
@@ -39,6 +38,7 @@ export const Dashboard: React.FC = () => {
         fetchStores(),
         fetchLiveReports()
       ]);
+      
       setStores(storeData);
       setReports(reportData);
     } catch (error) {
@@ -50,21 +50,7 @@ export const Dashboard: React.FC = () => {
 
   // Filter reports by store and date range
   const filteredReports = useMemo(() => {
-    // For partners, only show reports from their stores
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    let allowedStoreIds: string[] | null = null;
-    
-    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-      allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-    }
-    
     return reports.filter(report => {
-      // Partner filter: only show reports from partner's stores
-      if (allowedStoreIds !== null && !allowedStoreIds.includes(report.channelId)) {
-        return false;
-      }
-      
       const matchStore = selectedStore === 'all' || report.channelId === selectedStore;
       const reportDate = new Date(report.date);
       const fromDate = new Date(dateFrom);
@@ -73,7 +59,7 @@ export const Dashboard: React.FC = () => {
       const matchDate = reportDate >= fromDate && reportDate <= toDate;
       return matchStore && matchDate;
     });
-  }, [reports, selectedStore, dateFrom, dateTo, stores]);
+  }, [reports, selectedStore, dateFrom, dateTo]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -81,28 +67,14 @@ export const Dashboard: React.FC = () => {
     const totalAdCost = filteredReports.reduce((sum, r) => sum + (Number(r.adCost) || 0), 0);
     const totalOrders = filteredReports.reduce((sum, r) => sum + (Number(r.orders) || 0), 0);
     const totalViews = filteredReports.reduce((sum, r) => sum + (Number(r.totalViews) || 0), 0);
-    const roi = calculateROI(totalGMV, totalAdCost);
+    const roi = totalAdCost > 0 ? (totalGMV - totalAdCost) / totalAdCost : 0;
     return { totalGMV, totalAdCost, totalOrders, totalViews, roi };
   }, [filteredReports]);
 
   // Chart data by date (for GMV chart with separate date filter)
   const gmvChartData = useMemo(() => {
-    // For partners, only show reports from their stores
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    let allowedStoreIds: string[] | null = null;
-    
-    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-      allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-    }
-    
     // Filter reports by chart date range
     const chartFilteredReports = reports.filter(report => {
-      // Partner filter: only show reports from partner's stores
-      if (allowedStoreIds !== null && !allowedStoreIds.includes(report.channelId)) {
-        return false;
-      }
-      
       const matchStore = selectedStore === 'all' || report.channelId === selectedStore;
       const reportDate = new Date(report.date);
       const fromDate = new Date(chartDateFrom);
@@ -127,7 +99,7 @@ export const Dashboard: React.FC = () => {
     });
     
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
-  }, [reports, selectedStore, chartDateFrom, chartDateTo, stores]);
+  }, [reports, selectedStore, chartDateFrom, chartDateTo]);
 
   // Chart data by date (for other charts)
   const chartData = useMemo(() => {
@@ -159,14 +131,7 @@ export const Dashboard: React.FC = () => {
     const map: Record<string, { storeName: string; gmv: number; adCost: number; roi: number }> = {};
     
     filteredReports.forEach(report => {
-      // For partners, only use stores they have access to
-      const currentUserRole = getCurrentUserRole();
-      const currentUserId = getCurrentUserId();
-      let availableStores = stores;
-      if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-        availableStores = stores.filter(s => s.partnerId === currentUserId);
-      }
-      const store = availableStores.find(s => s.id === report.channelId);
+      const store = stores.find(s => s.id === report.channelId);
       const storeName = store?.name || 'Unknown';
       
       if (!map[report.channelId]) {
@@ -184,7 +149,7 @@ export const Dashboard: React.FC = () => {
     // Calculate ROI for each store
     Object.keys(map).forEach(storeId => {
       const data = map[storeId];
-      data.roi = calculateROI(data.gmv, data.adCost);
+      data.roi = data.adCost > 0 ? data.gmv / data.adCost : 0;
     });
     
     return Object.values(map).sort((a, b) => b.gmv - a.gmv);
@@ -216,17 +181,9 @@ export const Dashboard: React.FC = () => {
             onChange={(e) => setSelectedStore(e.target.value)}
           >
             <option value="all">Tất cả cửa hàng (所有店铺)</option>
-            {(() => {
-              const currentUserRole = getCurrentUserRole();
-              const currentUserId = getCurrentUserId();
-              let availableStores = stores.filter(s => s.id !== 'all');
-              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-                availableStores = availableStores.filter(s => s.partnerId === currentUserId);
-              }
-              return availableStores.map(store => (
-                <option key={store.id} value={store.id}>{store.name}</option>
-              ));
-            })()}
+            {stores.filter(s => s.id !== 'all').map(store => (
+              <option key={store.id} value={store.id}>{store.name}</option>
+            ))}
           </select>
           <input
             type="date"
@@ -256,7 +213,8 @@ export const Dashboard: React.FC = () => {
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
           <p className="text-xs text-gray-500 uppercase font-bold">ROI (投资回报率)</p>
-          <p className="text-xl font-bold text-green-600 mt-1">{formatROI(totals.roi)}</p>
+          <p className="text-xl font-bold text-green-600 mt-1">{totals.roi.toFixed(2)}</p>
+          <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
           <p className="text-xs text-gray-500 uppercase font-bold">Tổng Đơn Hàng (总订单)</p>

@@ -1,9 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
+import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Store, StoreOverview } from '../types';
-import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const StoreOverviewPage: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
@@ -26,19 +25,12 @@ export const StoreOverviewPage: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [storeData, reportData] = await Promise.all([
+      let [storeData, reportData] = await Promise.all([
         fetchStores(),
         fetchLiveReports()
       ]);
-      let filteredStores = storeData.filter(s => s.id !== 'all');
       
-      // For partners, only show their stores
-      const currentUserRole = getCurrentUserRole();
-      const currentUserId = getCurrentUserId();
-      if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-        filteredStores = filteredStores.filter(s => s.partnerId === currentUserId);
-      }
-      
+      const filteredStores = storeData.filter(s => s.id !== 'all');
       setStores(filteredStores);
       setReports(reportData);
       // Select all stores by default
@@ -52,17 +44,7 @@ export const StoreOverviewPage: React.FC = () => {
 
   // Filter reports by selected stores and date range
   const filteredReports = useMemo(() => {
-    let filtered = reports;
-
-    // For partners, only show reports from their stores
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-      filtered = filtered.filter(report => allowedStoreIds.includes(report.channelId));
-    }
-
-    return filtered.filter(report => {
+    return reports.filter(report => {
       const matchStore = selectedStores.length === 0 || selectedStores.includes(report.channelId);
       const reportDate = new Date(report.date);
       const fromDate = new Date(dateFrom);
@@ -71,7 +53,7 @@ export const StoreOverviewPage: React.FC = () => {
       const matchDate = reportDate >= fromDate && reportDate <= toDate;
       return matchStore && matchDate;
     });
-  }, [reports, selectedStores, dateFrom, dateTo, stores]);
+  }, [reports, selectedStores, dateFrom, dateTo]);
 
   // Calculate overview for each store
   const storeOverviews = useMemo(() => {
@@ -106,7 +88,9 @@ export const StoreOverviewPage: React.FC = () => {
 
     // Calculate ROI and conversion rate
     Object.values(overviewMap).forEach(overview => {
-      overview.roi = calculateROI(overview.totalGMV, overview.totalAdCost);
+      overview.roi = overview.totalAdCost > 0 
+        ? (overview.totalGMV - overview.totalAdCost) / overview.totalAdCost 
+        : 0;
       
       const storeReports = filteredReports.filter(r => r.channelId === overview.storeId);
       const totalClicks = storeReports.reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0);
@@ -226,7 +210,8 @@ export const StoreOverviewPage: React.FC = () => {
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
           <p className="text-xs text-gray-500 uppercase font-bold">ROI Trung Bình (平均ROI)</p>
-          <p className="text-xl font-bold text-green-600 mt-1">{formatROI(avgROI)}</p>
+          <p className="text-xl font-bold text-green-600 mt-1">{avgROI.toFixed(2)}</p>
+          <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
           <p className="text-xs text-gray-500 uppercase font-bold">Tổng Đơn Hàng (总订单)</p>
@@ -264,9 +249,9 @@ export const StoreOverviewPage: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
               <YAxis />
-              <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Tooltip formatter={(value: number) => value.toFixed(2)} />
               <Legend />
-              <Bar dataKey="roi" name="ROI (%)" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="roi" name="ROI" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -349,11 +334,11 @@ export const StoreOverviewPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold border ${
-                        overview.roi >= 4.0 ? 'bg-green-100 text-green-800 border-green-300' :
-                        overview.roi >= 2.0 ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                        overview.roi >= 4 ? 'bg-green-100 text-green-800 border-green-300' :
+                        overview.roi >= 2 ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
                         'bg-red-100 text-red-800 border-red-300'
                       }`}>
-                        {formatROI(overview.roi)}
+                        {overview.roi.toFixed(2)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">

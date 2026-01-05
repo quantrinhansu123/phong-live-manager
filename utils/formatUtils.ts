@@ -54,25 +54,5 @@ export const formatCurrencyForExcel = (val: number): string => {
   return `${formatted}₫`;
 };
 
-/**
- * Tính ROI theo công thức: (GMV - Chi phí quảng cáo) / Chi phí quảng cáo
- * @param gmv - Gross Merchandise Value (Tổng giá trị đơn hàng)
- * @param adCost - Chi phí quảng cáo
- * @returns Giá trị ROI dạng thập phân (ví dụ: 2.83 = 283%)
- */
-export const calculateROI = (gmv: number, adCost: number): number => {
-  if (adCost <= 0) return 0;
-  return (gmv - adCost) / adCost;
-};
-
-/**
- * Format ROI thành số để hiển thị
- * @param roi - Giá trị ROI dạng thập phân (ví dụ: 2.83)
- * @returns Chuỗi đã format (ví dụ: "2.83")
- */
-export const formatROI = (roi: number): string => {
-  return roi.toFixed(2);
-};
-
 
 

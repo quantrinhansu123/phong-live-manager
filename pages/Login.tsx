@@ -21,22 +21,13 @@ export const Login: React.FC = () => {
             const user = personnel.find(p => p.email?.toLowerCase() === email.trim().toLowerCase());
 
             if (user) {
-                // Check password (trim whitespace for comparison)
-                const userPassword = user.password?.trim() || '';
-                const inputPassword = password.trim();
-                
-                if (userPassword === inputPassword && userPassword !== '') {
+                // Check password (simple verification for this demo)
+                if (user.password === password) {
                     localStorage.setItem('currentUser', user.fullName);
                     localStorage.setItem('currentUserId', user.id || '');
-                    // Map role: 'admin' -> 'admin', department "Đối tác" -> 'partner', còn lại -> 'employee'
-                    let roleToStore = 'employee';
-                    if (user.role === 'admin') {
-                        roleToStore = 'admin';
-                    } else if (user.department === 'Đối tác') {
-                        roleToStore = 'partner';
-                    } else {
-                        roleToStore = 'employee';
-                    }
+                    // Map role: 'admin' -> 'admin', còn lại -> 'employee'
+                    // Nếu department = 'Đối tác' thì vẫn là employee nhưng có department 'Đối tác'
+                    const roleToStore = user.role === 'admin' ? 'admin' : 'employee';
                     localStorage.setItem('currentUserRole', roleToStore);
                     localStorage.setItem('currentUserDepartment', user.department || '');
                     navigate('/');
@@ -103,6 +94,10 @@ export const Login: React.FC = () => {
                         {loading ? 'Đang kiểm tra... (检查中...)' : 'Vào hệ thống (进入系统)'}
                     </button>
                 </form>
+
+                <div className="mt-4 text-center text-xs text-gray-500">
+                    <p>Admin mặc định (默认管理员): admin@phonglive.com / password</p>
+                </div>
             </div>
         </div>
     );

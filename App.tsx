@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, Outlet, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { HashRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { LiveSessionReport } from './pages/LiveSessionReport';
 import { VideoParameterReport } from './pages/VideoParameterReport';
@@ -14,16 +14,8 @@ import { LiveReportDetail } from './pages/LiveReportDetail';
 
 const ProtectedLayout: React.FC = () => {
   const user = localStorage.getItem('currentUser');
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    if (!user) {
-      navigate('/login', { replace: true });
-    }
-  }, [user, navigate]);
-  
   if (!user) {
-    return null; // Return null while redirecting
+    return <Navigate to="/login" replace />;
   }
 
   return (
@@ -51,11 +43,8 @@ const App: React.FC = () => {
           <Route path="/store-overview" element={<StoreOverviewPage />} />
           <Route path="/personnel" element={<Personnel />} />
           <Route path="/cpqc" element={<CPQC />} />
-          <Route path="/salary-report" element={<SalaryReport />} />
         </Route>
-        
-        {/* Catch-all route */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/salary-report" element={<SalaryReport />} />
       </Routes>
     </Router>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { fetchStores } from '../services/dataService';
-import { VideoMetric, Store } from '../types';
-import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
+import { MOCK_STORES, fetchStores } from '../services/dataService';
+import { VideoMetric } from '../types';
+import { isAdmin } from '../utils/permissionUtils';
 
 interface VideoEditModalProps {
   isOpen: boolean;
@@ -11,53 +11,40 @@ interface VideoEditModalProps {
 }
 
 export const VideoEditModal: React.FC<VideoEditModalProps> = ({ isOpen, onClose, onSubmit, initialData }) => {
-  const [stores, setStores] = useState<Store[]>([]);
-  const [formData, setFormData] = useState<VideoMetric>({
+  const [stores, setStores] = useState(MOCK_STORES);
+  const defaultFormData: VideoMetric = {
     id: '',
     title: '',
-    storeId: '',
+    storeId: MOCK_STORES.find(s => s.id !== 'all')?.id || '',
     platform: 'TikTok',
     uploadDate: new Date().toISOString().split('T')[0],
     views: 0,
     personInCharge: '',
     sales: 0
-  });
-  const [loading, setLoading] = useState(false);
+  };
 
+  const [formData, setFormData] = useState<VideoMetric>(defaultFormData);
+  const [loading, setLoading] = useState(false);
+  
   useEffect(() => {
     if (isOpen) {
       fetchStores().then(data => {
-        let filteredStores = data.filter(s => s.id !== 'all');
-        // For partners, only show their stores
-        const currentUserRole = getCurrentUserRole();
-        const currentUserId = getCurrentUserId();
-        if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-          filteredStores = filteredStores.filter(s => s.partnerId === currentUserId);
-        }
-        setStores(filteredStores);
-        if (!initialData && filteredStores.length > 0) {
-          setFormData(prev => ({ ...prev, storeId: filteredStores[0].id }));
-        }
+        setStores(data.length > 0 ? data : MOCK_STORES);
       }).catch(() => {
-        setStores([]);
+        setStores(MOCK_STORES);
       });
-      
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
       if (initialData) {
         setFormData(initialData);
       } else {
-        setFormData({
-          id: '',
-          title: '',
-          storeId: stores.length > 0 ? stores[0].id : '',
-          platform: 'TikTok',
-          uploadDate: new Date().toISOString().split('T')[0],
-          views: 0,
-          personInCharge: '',
-          sales: 0
-        });
+        setFormData(defaultFormData);
       }
     }
-  }, [isOpen, initialData, stores.length]);
+  }, [isOpen, initialData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -116,7 +103,7 @@ export const VideoEditModal: React.FC<VideoEditModalProps> = ({ isOpen, onClose,
                 className="w-full border rounded px-3 py-2 bg-white"
                 required
               >
-                {stores.map(s => (
+                {stores.filter(s => s.id !== 'all').map(s => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
@@ -207,3 +194,4 @@ export const VideoEditModal: React.FC<VideoEditModalProps> = ({ isOpen, onClose,
     </div>
   );
 };
+

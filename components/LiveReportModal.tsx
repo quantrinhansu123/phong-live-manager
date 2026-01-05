@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { fetchStores, fetchPersonnel } from '../services/dataService';
+import { MOCK_STORES, fetchStores, fetchPersonnel } from '../services/dataService';
 import { LiveReport, Personnel } from '../types';
-import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
+import { isAdmin } from '../utils/permissionUtils';
 
 interface LiveReportModalProps {
   isOpen: boolean;
@@ -30,22 +30,15 @@ const calculateDuration = (startTime: string, endTime: string): string => {
 };
 
 export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClose, onSubmit, initialData, isEdit = false, reports: propReports }) => {
-  const [stores, setStores] = React.useState<Store[]>([]);
+  const [stores, setStores] = React.useState(MOCK_STORES);
   const [personnel, setPersonnel] = React.useState<Personnel[]>([]);
 
   React.useEffect(() => {
     if (isOpen) {
       fetchStores().then(data => {
-        let filteredStores = data.filter(s => s.id !== 'all');
-        // For partners, only show their stores
-        const currentUserRole = getCurrentUserRole();
-        const currentUserId = getCurrentUserId();
-        if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-          filteredStores = filteredStores.filter(s => s.partnerId === currentUserId);
-        }
-        setStores(filteredStores);
+        setStores(data.length > 0 ? data : MOCK_STORES);
       }).catch(() => {
-        setStores([]);
+        setStores(MOCK_STORES);
       });
       
       // Load personnel để lấy danh sách host
@@ -241,7 +234,7 @@ export const LiveReportModal: React.FC<LiveReportModalProps> = ({ isOpen, onClos
                 <input required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full border rounded px-3 py-2 focus:ring-brand-navy focus:border-brand-navy" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Cửa hàng (店铺)</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Kênh Live (KÊNH LIVE)</label>
                 <select name="channelId" value={formData.channelId} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-white">
                   {stores.filter(s => s.id !== 'all').map(s => (
                     <option key={s.id} value={s.id}>{s.name}</option>

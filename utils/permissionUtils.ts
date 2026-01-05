@@ -83,43 +83,39 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
   const permissions = getMenuPermissions();
   const menuPermission = permissions.find(p => p.menuId === menuId);
   
-  // Nếu không có permission được set, mặc định là không có quyền
   if (!menuPermission) {
-    if (userRole === 'partner') {
-      console.log(`[Permission] Partner không có quyền truy cập menu: ${menuId} (không có permission)`);
-    }
+    // Nếu không có permission được set, mặc định là không có quyền
     return false;
   }
 
   // Kiểm tra role - phải có allowedRoles và phải chứa userRole
   if (!menuPermission.allowedRoles || !Array.isArray(menuPermission.allowedRoles) || menuPermission.allowedRoles.length === 0) {
-    if (userRole === 'partner') {
-      console.log(`[Permission] Partner không có quyền truy cập menu: ${menuId} (allowedRoles rỗng hoặc không hợp lệ)`);
-    }
     return false;
   }
   
   if (!menuPermission.allowedRoles.includes(userRole)) {
-    if (userRole === 'partner') {
-      console.log(`[Permission] Partner không có quyền truy cập menu: ${menuId} (allowedRoles: ${JSON.stringify(menuPermission.allowedRoles)}, không chứa 'partner')`);
-    }
     return false;
   }
 
   // Nếu là employee, cần kiểm tra thêm department
   if (userRole === 'employee') {
-    // Nếu có allowedDepartments và không rỗng, thì phải kiểm tra department
-    if (menuPermission.allowedDepartments && menuPermission.allowedDepartments.length > 0) {
+    // Nếu có allowedDepartments (dù rỗng hay không), thì phải kiểm tra department
+    if (menuPermission.allowedDepartments !== undefined) {
+      // Nếu allowedDepartments rỗng, thì không employee nào có quyền
+      if (menuPermission.allowedDepartments.length === 0) {
+        return false;
+      }
       // Nếu user không có department hoặc department không trong danh sách allowed
       if (!userDepartment || !menuPermission.allowedDepartments.includes(userDepartment)) {
         return false;
       }
+    } else {
+      // Nếu allowedDepartments là undefined (chưa được set), thì không employee nào có quyền
+      // Để đảm bảo phải chọn department cụ thể
+      return false;
     }
-    // Nếu không có allowedDepartments (undefined hoặc rỗng), thì employee có role 'employee' là đủ
   }
 
-  // Partner: Chỉ cần kiểm tra allowedRoles (không cần kiểm tra department)
-  // Nếu đã pass check allowedRoles ở trên (allowedRoles có chứa 'partner') thì return true
   return true;
 };
 
@@ -128,44 +124,20 @@ export const getCurrentUserDepartment = (): string | undefined => {
   return localStorage.getItem('currentUserDepartment') || undefined;
 };
 
+// Lấy ID của user hiện tại
+export const getCurrentUserId = (): string | undefined => {
+  return localStorage.getItem('currentUserId') || undefined;
+};
+
 // Lấy role hiện tại của user
 export const getCurrentUserRole = (): UserRole => {
   const role = localStorage.getItem('currentUserRole');
   if (role === 'admin') return 'admin';
-  if (role === 'partner') return 'partner';
-  if (role === 'employee') return 'employee';
   return 'employee'; // Default
-};
-
-// Lấy ID hiện tại của user
-export const getCurrentUserId = (): string | undefined => {
-  return localStorage.getItem('currentUserId') || undefined;
 };
 
 // Kiểm tra user có phải Admin không
 export const isAdmin = (): boolean => {
   return getCurrentUserRole() === 'admin';
-};
-
-// Utility function để xóa tất cả menu permissions của đối tác (chỉ dùng cho admin)
-export const removePartnerPermissions = async (): Promise<void> => {
-  if (!isAdmin()) {
-    throw new Error('Chỉ Admin mới có quyền thực hiện thao tác này');
-  }
-  
-  const permissions = getMenuPermissions();
-  // Xóa 'partner' khỏi allowedRoles của tất cả menu permissions
-  const updatedPermissions = permissions.map(perm => {
-    if (perm.allowedRoles && perm.allowedRoles.includes('partner')) {
-      return {
-        ...perm,
-        allowedRoles: perm.allowedRoles.filter(role => role !== 'partner')
-      };
-    }
-    return perm;
-  }).filter(perm => perm.allowedRoles && perm.allowedRoles.length > 0); // Xóa các permission không còn allowedRoles nào
-  
-  await saveMenuPermissions(updatedPermissions);
-  console.log('Đã xóa tất cả menu permissions của đối tác');
 };
 

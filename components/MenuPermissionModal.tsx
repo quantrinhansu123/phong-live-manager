@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { UserRole, MenuPermission } from '../types';
-import { getMenuPermissions, saveMenuPermissions } from '../utils/permissionUtils';
+import { UserRole, MenuPermission, Personnel } from '../types';
+import { getMenuPermissions, saveMenuPermissions, loadMenuPermissions } from '../utils/permissionUtils';
 import { fetchPersonnel } from '../services/dataService';
 
 interface MenuPermissionModalProps {
@@ -22,13 +22,16 @@ export const MenuPermissionModal: React.FC<MenuPermissionModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      const permissions = getMenuPermissions();
-      const menuPermission = permissions.find(p => p.menuId === menuId);
-      setAllowedRoles(menuPermission?.allowedRoles || []);
-      setAllowedDepartments(menuPermission?.allowedDepartments || []);
+      // Load permissions từ Firebase trước
+      loadMenuPermissions().then(() => {
+        const permissions = getMenuPermissions();
+        const menuPermission = permissions.find(p => p.menuId === menuId);
+        setAllowedRoles(menuPermission?.allowedRoles || []);
+        setAllowedDepartments(menuPermission?.allowedDepartments || []);
+      });
       
       // Load danh sách departments từ personnel
-      fetchPersonnel().then(personnel => {
+      fetchPersonnel().then((personnel: Personnel[]) => {
         const departments = Array.from(new Set(personnel.map(p => p.department).filter(Boolean))) as string[];
         setAvailableDepartments(departments.sort());
       });
@@ -62,7 +65,11 @@ export const MenuPermissionModal: React.FC<MenuPermissionModalProps> = ({
     const newPermission: MenuPermission = {
       menuId,
       allowedRoles,
-      allowedDepartments: allowedDepartments.length > 0 ? allowedDepartments : undefined
+      // Nếu có chọn employee nhưng không chọn department nào, set thành mảng rỗng để không employee nào có quyền
+      // Nếu không chọn employee, thì không cần allowedDepartments
+      allowedDepartments: allowedRoles.includes('employee') 
+        ? (allowedDepartments.length > 0 ? allowedDepartments : [])
+        : undefined
     };
 
     if (existingIndex >= 0) {
@@ -72,6 +79,8 @@ export const MenuPermissionModal: React.FC<MenuPermissionModalProps> = ({
     }
 
     await saveMenuPermissions(permissions);
+    // Trigger custom event để Sidebar re-render
+    window.dispatchEvent(new Event('menuPermissionsUpdated'));
     onClose();
     // Reload page để cập nhật menu
     window.location.reload();
@@ -134,8 +143,8 @@ export const MenuPermissionModal: React.FC<MenuPermissionModalProps> = ({
               )}
             </div>
             {allowedRoles.includes('employee') && allowedDepartments.length === 0 && (
-              <p className="text-xs text-gray-500 mt-2">
-                Lưu ý: Nếu không chọn phòng ban nào, tất cả nhân viên có role "employee" đều có thể truy cập.
+              <p className="text-xs text-orange-600 mt-2">
+                ⚠️ Lưu ý: Nếu không chọn phòng ban nào, KHÔNG nhân viên nào có thể truy cập menu này. Vui lòng chọn ít nhất một phòng ban.
               </p>
             )}
           </div>

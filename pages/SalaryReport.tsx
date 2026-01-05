@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchPersonnel, fetchStores } from '../services/dataService';
-import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
+import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
-import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const SalaryReport: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
@@ -21,11 +20,12 @@ export const SalaryReport: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [reportData, personnelData, storeData] = await Promise.all([
+      let [reportData, personnelData, storeData] = await Promise.all([
         fetchLiveReports(),
         fetchPersonnel(),
         fetchStores()
       ]);
+      
       setReports(reportData);
       setPersonnel(personnelData);
       setStores(storeData);
@@ -39,21 +39,11 @@ export const SalaryReport: React.FC = () => {
   // Filter reports by month
   const monthlyReports = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number);
-    let filtered = reports.filter(report => {
+    return reports.filter(report => {
       const reportDate = new Date(report.date);
       return reportDate.getFullYear() === year && reportDate.getMonth() + 1 === month;
     });
-
-    // For partners, only show reports from their stores
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-      filtered = filtered.filter(report => allowedStoreIds.includes(report.channelId));
-    }
-
-    return filtered;
-  }, [reports, selectedMonth, stores]);
+  }, [reports, selectedMonth]);
 
   // Calculate salary and revenue data for each personnel
   const salaryData = useMemo(() => {
@@ -71,30 +61,8 @@ export const SalaryReport: React.FC = () => {
       salaryStatus: 'green' | 'yellow' | 'red';
     }> = {};
 
-    // Filter personnel: employees only see themselves, partners see personnel from their stores, admin sees all
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    let filteredPersonnel = personnel;
-    
-    if (!isAdmin()) {
-      if (currentUserRole === 'employee') {
-        // Employees only see themselves
-        filteredPersonnel = personnel.filter(person => (person.id || person.fullName) === currentUserId);
-      } else if (currentUserRole === 'partner' && currentUserId) {
-        // Partners see personnel assigned to their stores
-        const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-        const allowedPersonnelIds = new Set<string>();
-        stores.forEach(store => {
-          if (allowedStoreIds.includes(store.id) && store.personnelIds) {
-            store.personnelIds.forEach(id => allowedPersonnelIds.add(id));
-          }
-        });
-        filteredPersonnel = personnel.filter(p => allowedPersonnelIds.has(p.id || ''));
-      }
-    }
-
-    // Initialize with filtered personnel
-    filteredPersonnel.forEach(person => {
+    // Initialize with all personnel
+    personnel.forEach(person => {
       dataMap[person.id || person.fullName] = {
         person,
         totalGMV: 0,
@@ -114,8 +82,8 @@ export const SalaryReport: React.FC = () => {
     monthlyReports.forEach(report => {
       if (!report.reporter) return;
 
-      // Find matching personnel (only from filtered list)
-      const matchingPerson = filteredPersonnel.find(person => {
+      // Find matching personnel
+      const matchingPerson = personnel.find(person => {
         const reporterName = report.reporter!.toLowerCase();
         const personName = person.fullName.toLowerCase();
         const personEmail = person.email?.toLowerCase() || '';
@@ -154,7 +122,7 @@ export const SalaryReport: React.FC = () => {
     // Calculate metrics and status
     Object.values(dataMap).forEach(item => {
       item.profit = item.totalGMV - item.totalAdCost;
-      item.roi = calculateROI(item.totalGMV, item.totalAdCost);
+      item.roi = item.totalAdCost > 0 ? ((item.totalGMV - item.totalAdCost) / item.totalAdCost) * 100 : 0;
       item.kpiAchievement = item.kpiTarget > 0 ? (item.totalGMV / item.kpiTarget) * 100 : 0;
 
       // KPI Status: Green >= 100%, Yellow >= 80%, Red < 80%
@@ -166,10 +134,10 @@ export const SalaryReport: React.FC = () => {
         item.kpiStatus = 'red';
       }
 
-      // Salary Status: Green (ROI >= 400% = 4.0), Yellow (ROI >= 200% = 2.0), Red (< 200% = 2.0)
-      if (item.roi >= 4.0) {
+      // Salary Status: Green (ROI >= 400%), Yellow (ROI >= 200%), Red (< 200%)
+      if (item.roi >= 400) {
         item.salaryStatus = 'green';
-      } else if (item.roi >= 2.0) {
+      } else if (item.roi >= 200) {
         item.salaryStatus = 'yellow';
       } else {
         item.salaryStatus = 'red';
@@ -177,7 +145,7 @@ export const SalaryReport: React.FC = () => {
     });
 
     return Object.values(dataMap).sort((a, b) => b.totalGMV - a.totalGMV);
-  }, [monthlyReports, personnel, stores]);
+  }, [monthlyReports, personnel]);
 
 
   const getStatusColor = (status: 'green' | 'yellow' | 'red') => {
@@ -333,7 +301,7 @@ export const SalaryReport: React.FC = () => {
                     <td className="px-4 py-3 text-right font-bold text-green-600">{formatCurrency(item.profit)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(item.salaryStatus)}`}>
-                        {formatROI(item.roi)}
+                        {item.roi.toFixed(1)}%
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center font-medium">

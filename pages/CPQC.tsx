@@ -3,9 +3,8 @@ import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ComposedChart } from 'recharts';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
-import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
+import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
-import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const CPQC: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
@@ -34,6 +33,7 @@ export const CPQC: React.FC = () => {
         fetchStores(),
         fetchLiveReports()
       ]);
+      
       setStores(storeData);
       setReports(reportData);
     } catch (error) {
@@ -46,14 +46,6 @@ export const CPQC: React.FC = () => {
   // Filter reports
   const filteredReports = useMemo(() => {
     let filtered = reports;
-
-    // For partners, only show reports from their stores
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-      filtered = filtered.filter(item => allowedStoreIds.includes(item.channelId));
-    }
 
     // Filter by date range
     filtered = filtered.filter(report => {
@@ -94,7 +86,7 @@ export const CPQC: React.FC = () => {
     if (searchText) {
       const searchLower = searchText.toLowerCase();
       filtered = filtered.filter(item => {
-        const storeName = filteredStoresForUser.find(s => s.id === item.channelId)?.name || '';
+        const storeName = stores.find(s => s.id === item.channelId)?.name || '';
         return (
           item.date.toLowerCase().includes(searchLower) ||
           storeName.toLowerCase().includes(searchLower) ||
@@ -111,20 +103,6 @@ export const CPQC: React.FC = () => {
 
     return filtered;
   }, [reports, dateFrom, dateTo, selectedFilters, searchText, stores]);
-
-  // Filter stores for partners
-  const filteredStoresForUser = useMemo(() => {
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    const isAdminUser = isAdmin();
-    
-    if (isAdminUser) {
-      return stores.filter(s => s.id !== 'all');
-    } else if (currentUserRole === 'partner' && currentUserId) {
-      return stores.filter(s => s.id !== 'all' && s.partnerId === currentUserId);
-    }
-    return stores.filter(s => s.id !== 'all');
-  }, [stores]);
 
   // CPQC Data by Day
   const cpqcByDay = useMemo(() => {
@@ -158,7 +136,7 @@ export const CPQC: React.FC = () => {
 
     // Calculate ROI and conversion rate
     Object.values(map).forEach(day => {
-      day.roi = calculateROI(day.gmv, day.adCost);
+      day.roi = day.adCost > 0 ? day.gmv / day.adCost : 0;
       day.conversionRate = day.orders > 0 && filteredReports.length > 0 
         ? (day.orders / filteredReports.filter(r => r.date === day.date).reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0)) * 100 
         : 0;
@@ -200,7 +178,7 @@ export const CPQC: React.FC = () => {
 
     // Calculate ROI and conversion rate
     Object.values(map).forEach(shiftData => {
-      shiftData.roi = calculateROI(shiftData.gmv, shiftData.adCost);
+      shiftData.roi = shiftData.adCost > 0 ? shiftData.gmv / shiftData.adCost : 0;
       const shiftReports = filteredReports.filter(r => (r.shift || 'Chưa xác định') === shiftData.shift);
       const totalClicks = shiftReports.reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0);
       shiftData.conversionRate = totalClicks > 0 ? (shiftData.orders / totalClicks) * 100 : 0;
@@ -229,7 +207,7 @@ export const CPQC: React.FC = () => {
     filteredReports.forEach(report => {
       const key = `${report.hostName}_${report.channelId}`;
       if (!map[key]) {
-        const store = filteredStoresForUser.find(s => s.id === report.channelId);
+        const store = stores.find(s => s.id === report.channelId);
         map[key] = {
           hostName: report.hostName,
           storeName: store?.name || 'Unknown',
@@ -250,13 +228,13 @@ export const CPQC: React.FC = () => {
 
     // Calculate metrics and score
     Object.values(map).forEach(item => {
-      item.roi = calculateROI(item.totalGMV, item.totalAdCost);
+      item.roi = item.totalAdCost > 0 ? (item.totalGMV - item.totalAdCost) / item.totalAdCost : 0;
       const hostReports = filteredReports.filter(r => r.hostName === item.hostName && r.channelId === item.storeName);
       const totalClicks = hostReports.reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0);
       item.conversionRate = totalClicks > 0 ? (item.totalOrders / totalClicks) * 100 : 0;
       
       // Score = ROI * 0.4 + ConversionRate * 0.3 + (GMV/1000000) * 0.3
-      item.score = (item.roi * 0.4) + (item.conversionRate * 0.3) + ((item.totalGMV / 1000000) * 0.3);
+      item.score = (item.roi * 40) + (item.conversionRate * 0.3) + ((item.totalGMV / 1000000) * 0.3);
     });
 
     return Object.values(map)
@@ -319,7 +297,7 @@ export const CPQC: React.FC = () => {
                 'Chi phí QC': item.adCost,
                 'GMV': item.gmv,
                 'Đơn hàng': item.orders,
-                'ROI': formatROI(item.roi),
+                'ROI': item.roi.toFixed(2),
                 'Tỉ lệ chuyển đổi': item.conversionRate.toFixed(2) + '%',
                 'Số báo cáo': item.reportCount
               }))
@@ -328,7 +306,7 @@ export const CPQC: React.FC = () => {
                 'Chi phí QC': item.adCost,
                 'GMV': item.gmv,
                 'Đơn hàng': item.orders,
-                'ROI': formatROI(item.roi),
+                'ROI': item.roi.toFixed(2),
                 'Tỉ lệ chuyển đổi': item.conversionRate.toFixed(2) + '%',
                 'Số báo cáo': item.reportCount
               }));
@@ -355,30 +333,13 @@ export const CPQC: React.FC = () => {
             key: 'stores',
             label: 'Cửa hàng',
             type: 'checkbox',
-            options: (() => {
-              let availableStores = stores.filter(s => s.id !== 'all');
-              const currentUserRole = getCurrentUserRole();
-              const currentUserId = getCurrentUserId();
-              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-                availableStores = availableStores.filter(s => s.partnerId === currentUserId);
-              }
-              return availableStores.map(s => ({ value: s.id, label: s.name }));
-            })()
+            options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
           },
           {
             key: 'hosts',
             label: 'Host',
             type: 'checkbox',
-            options: (() => {
-              let availableReports = reports;
-              const currentUserRole = getCurrentUserRole();
-              const currentUserId = getCurrentUserId();
-              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-                const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-                availableReports = reports.filter(r => allowedStoreIds.includes(r.channelId));
-              }
-              return Array.from(new Set(availableReports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }));
-            })()
+            options: Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
           },
           {
             key: 'shifts',
@@ -453,10 +414,11 @@ export const CPQC: React.FC = () => {
           <p className="text-xs text-gray-500 uppercase font-bold">ROI Trung Bình (平均ROI)</p>
           <p className="text-xl font-bold text-green-600 mt-1">
             {currentData.length > 0 
-              ? formatROI(currentData.reduce((sum, item) => sum + item.roi, 0) / currentData.length)
-              : '0.00'
+              ? (currentData.reduce((sum, item) => sum + item.roi, 0) / currentData.length).toFixed(2)
+              : '0'
             }
           </p>
+          <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
           <p className="text-xs text-gray-500 uppercase font-bold">Tỉ Lệ Chuyển Đổi TB (平均转化率)</p>
@@ -506,9 +468,9 @@ export const CPQC: React.FC = () => {
                 height={viewMode === 'day' ? 80 : 40}
               />
               <YAxis />
-              <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Tooltip formatter={(value: number) => value.toFixed(2)} />
               <Legend />
-              <Line type="monotone" dataKey="roi" name="ROI (%) (投资回报率)" stroke="#10b981" strokeWidth={2} />
+              <Line type="monotone" dataKey="roi" name="ROI (投资回报率)" stroke="#10b981" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -552,13 +514,14 @@ export const CPQC: React.FC = () => {
               <Tooltip 
                 formatter={(value: number, name: string) => {
                   if (name === 'Chi phí QC' || name === 'GMV') return formatCurrency(value);
+                  if (name.includes('ROI')) return value.toFixed(2);
                   return `${value.toFixed(2)}%`;
                 }}
               />
               <Legend />
               <Bar yAxisId="left" dataKey="adCost" name="Chi phí QC (广告费)" fill="#ef4444" radius={[4, 4, 0, 0]} />
               <Bar yAxisId="left" dataKey="gmv" name="GMV (交易额)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Line yAxisId="right" type="monotone" dataKey="roi" name="ROI (%) (投资回报率)" stroke="#10b981" strokeWidth={2} />
+              <Line yAxisId="right" type="monotone" dataKey="roi" name="ROI (投资回报率)" stroke="#10b981" strokeWidth={2} />
               <Line yAxisId="right" type="monotone" dataKey="conversionRate" name="Tỉ lệ chuyển đổi (%) (转化率)" stroke="#8b5cf6" strokeWidth={2} />
             </ComposedChart>
           </ResponsiveContainer>
@@ -610,11 +573,11 @@ export const CPQC: React.FC = () => {
                     <td className="px-4 py-3 text-right font-bold text-red-600">{formatCurrency(item.totalAdCost)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        item.roi >= 4.0 ? 'bg-green-100 text-green-800' :
-                        item.roi >= 2.0 ? 'bg-yellow-100 text-yellow-800' :
+                        item.roi >= 4 ? 'bg-green-100 text-green-800' :
+                        item.roi >= 2 ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {formatROI(item.roi)}
+                        {item.roi.toFixed(2)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -667,11 +630,11 @@ export const CPQC: React.FC = () => {
                     <td className="px-4 py-3 text-right">{item.orders.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        item.roi >= 4.0 ? 'bg-green-100 text-green-800' :
-                        item.roi >= 2.0 ? 'bg-yellow-100 text-yellow-800' :
+                        item.roi >= 4 ? 'bg-green-100 text-green-800' :
+                        item.roi >= 2 ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {formatROI(item.roi)}
+                        {item.roi.toFixed(2)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">

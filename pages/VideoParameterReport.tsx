@@ -6,7 +6,6 @@ import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency, parseCurrency, parsePercentage, formatPercentage, formatCurrencyForExcel } from '../utils/formatUtils';
 import { VideoEditModal } from '../components/VideoEditModal';
-import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const VideoParameterReport: React.FC = () => {
   const [videos, setVideos] = useState<VideoMetric[]>([]);
@@ -31,16 +30,23 @@ export const VideoParameterReport: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [videoData, storeData] = await Promise.all([
+      let [videoData, storeData] = await Promise.all([
         fetchVideoMetrics(),
         fetchStores()
       ]);
-      setVideos(videoData);
-      setStores(storeData);
+      
+      // Fallback to mock data if DB is empty
+      if (videoData.length === 0) {
+        console.warn("Using Mock Data because DB returned empty");
+        setVideos(MOCK_VIDEO_METRICS);
+      } else {
+        setVideos(videoData);
+      }
+      setStores(storeData.length > 0 ? storeData : MOCK_STORES);
     } catch (error) {
       console.error('Error loading data:', error);
-      setVideos([]);
-      setStores([]);
+      setVideos(MOCK_VIDEO_METRICS);
+      setStores(MOCK_STORES);
     } finally {
       setIsLoading(false);
     }
@@ -48,14 +54,6 @@ export const VideoParameterReport: React.FC = () => {
 
   const filteredVideos = useMemo(() => {
     let filtered = videos;
-
-    // For partners, only show videos from their stores
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-      filtered = filtered.filter(v => allowedStoreIds.includes(v.storeId));
-    }
 
     // Filter by date range
     filtered = filtered.filter(v => {
@@ -85,7 +83,7 @@ export const VideoParameterReport: React.FC = () => {
     if (searchText.trim()) {
       const searchLower = searchText.toLowerCase();
       filtered = filtered.filter(v => {
-        const storeName = filteredStoresForUser.find(s => s.id === v.storeId)?.name || '';
+        const storeName = stores.find(s => s.id === v.storeId)?.name || '';
         return (
           v.title.toLowerCase().includes(searchLower) ||
           v.platform.toLowerCase().includes(searchLower) ||
@@ -100,20 +98,6 @@ export const VideoParameterReport: React.FC = () => {
 
     return filtered;
   }, [videos, selectedFilters, searchText, dateFrom, dateTo, stores]);
-
-  // Filter stores for partners
-  const filteredStoresForUser = useMemo(() => {
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    const isAdminUser = isAdmin();
-    
-    if (isAdminUser) {
-      return stores.filter(s => s.id !== 'all');
-    } else if (currentUserRole === 'partner' && currentUserId) {
-      return stores.filter(s => s.id !== 'all' && s.partnerId === currentUserId);
-    }
-    return stores.filter(s => s.id !== 'all');
-  }, [stores]);
 
   const handleExportExcel = () => {
     const exportData = filteredVideos.map(video => {
@@ -518,15 +502,7 @@ export const VideoParameterReport: React.FC = () => {
             key: 'stores',
             label: 'Cửa hàng (店铺)',
             type: 'select',
-            options: (() => {
-              let availableStores = stores.filter(s => s.id !== 'all');
-              const currentUserRole = getCurrentUserRole();
-              const currentUserId = getCurrentUserId();
-              if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-                availableStores = availableStores.filter(s => s.partnerId === currentUserId);
-              }
-              return availableStores.map(s => ({ value: s.id, label: s.name }));
-            })()
+            options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
           },
           {
             key: 'platforms',

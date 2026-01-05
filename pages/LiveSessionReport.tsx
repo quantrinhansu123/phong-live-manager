@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchLiveReports, createLiveReport, updateLiveReport, deleteLiveReport, fetchPersonnel, fetchStores } from '../services/dataService';
+import { MOCK_STORES, fetchLiveReports, createLiveReport, updateLiveReport, deleteLiveReport, fetchPersonnel, fetchStores } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Line } from 'recharts';
 import { LiveReportModal } from '../components/LiveReportModal';
 import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
-import { formatCurrency, calculateROI, formatROI } from '../utils/formatUtils';
+import { formatCurrency } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
-import { getCurrentUserRole, getCurrentUserId, isAdmin } from '../utils/permissionUtils';
 
 export const LiveSessionReport: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
@@ -48,11 +47,12 @@ export const LiveSessionReport: React.FC = () => {
   // Fetch data on mount
   const loadData = async () => {
     setIsLoading(true);
-    const [reportData, personnelData, storeData] = await Promise.all([
+    let [reportData, personnelData, storeData] = await Promise.all([
       fetchLiveReports(),
       fetchPersonnel(),
       fetchStores()
     ]);
+    
     setReports(reportData);
     setPersonnelList(personnelData);
     setStores(storeData);
@@ -94,14 +94,6 @@ export const LiveSessionReport: React.FC = () => {
   // Filter Data with search and filters
   const filteredData = useMemo(() => {
     let filtered = reports;
-
-    // For partners, only show reports from their stores
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
-      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-      filtered = filtered.filter(item => allowedStoreIds.includes(item.channelId));
-    }
 
     // Filter by date range
     filtered = filtered.filter(item => {
@@ -145,7 +137,7 @@ export const LiveSessionReport: React.FC = () => {
     if (searchText) {
       const searchLower = searchText.toLowerCase();
       filtered = filtered.filter(item => {
-        const storeName = filteredStoresForUser.find(s => s.id === item.channelId)?.name || '';
+        const storeName = stores.find(s => s.id === item.channelId)?.name || '';
         return (
           item.date.toLowerCase().includes(searchLower) ||
           storeName.toLowerCase().includes(searchLower) ||
@@ -168,35 +160,6 @@ export const LiveSessionReport: React.FC = () => {
     return filtered;
   }, [reports, dateFrom, dateTo, selectedFilters, searchText, stores]);
 
-  // Filter stores and reports for partners (for filter options)
-  const filteredStoresForUser = useMemo(() => {
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    const isAdminUser = isAdmin();
-    
-    if (isAdminUser) {
-      return stores.filter(s => s.id !== 'all');
-    } else if (currentUserRole === 'partner' && currentUserId) {
-      return stores.filter(s => s.id !== 'all' && s.partnerId === currentUserId);
-    }
-    return stores.filter(s => s.id !== 'all');
-  }, [stores]);
-
-  // Filter reports for host options (only from partner's stores)
-  const filteredReportsForOptions = useMemo(() => {
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    const isAdminUser = isAdmin();
-    
-    if (isAdminUser) {
-      return reports;
-    } else if (currentUserRole === 'partner' && currentUserId) {
-      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-      return reports.filter(report => allowedStoreIds.includes(report.channelId));
-    }
-    return reports;
-  }, [reports, stores]);
-
   // Calculations for KPI Cards
   const metrics = useMemo(() => {
     let totalGMV = 0;
@@ -207,7 +170,7 @@ export const LiveSessionReport: React.FC = () => {
       totalAdCost += Number(item.adCost);
     });
 
-    const roi = calculateROI(totalGMV, totalAdCost);
+    const roi = totalAdCost > 0 ? (totalGMV - totalAdCost) / totalAdCost : 0;
 
     return { totalGMV, totalAdCost, roi };
   }, [filteredData]);
@@ -226,12 +189,11 @@ export const LiveSessionReport: React.FC = () => {
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
   }, [filteredData]);
 
-  const formatPercent = (val: number) => formatROI(val);
+  const formatROI = (val: number) => val.toFixed(2);
 
   const getStatusColor = (roi: number) => {
-    // roi là giá trị thập phân (ví dụ: 4.0 = 400%, 2.0 = 200%)
-    if (roi >= 4.0) return 'bg-green-100 text-green-800 border-green-200';
-    if (roi >= 2.0) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    if (roi >= 4) return 'bg-green-100 text-green-800 border-green-200';
+    if (roi >= 2) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     return 'bg-red-100 text-brand-navy border-red-200';
   };
 
@@ -245,19 +207,8 @@ export const LiveSessionReport: React.FC = () => {
       avgROI: number;
     }> = {};
 
-    // For partners, only use reports from their stores
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    const isAdminUser = isAdmin();
-    
-    let reportsToUse = reports;
-    if (currentUserRole === 'partner' && !isAdminUser && currentUserId) {
-      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-      reportsToUse = reports.filter(report => allowedStoreIds.includes(report.channelId));
-    }
-
     // Filter reports by date range
-    const dateRangeReports = reportsToUse.filter(report => {
+    const dateRangeReports = reports.filter(report => {
       const reportDate = new Date(report.date);
       const fromDate = new Date(personnelDateFrom);
       const toDate = new Date(personnelDateTo);
@@ -303,28 +254,17 @@ export const LiveSessionReport: React.FC = () => {
     // Calculate average ROI for each person
     return Object.values(summaryMap).map(item => ({
       ...item,
-      avgROI: calculateROI(item.totalGMV, item.totalAdCost)
+      avgROI: item.totalAdCost > 0 ? (item.totalGMV - item.totalAdCost) / item.totalAdCost : 0
     })).sort((a, b) => b.totalGMV - a.totalGMV);
-  }, [reports, stores, personnelList, personnelDateFrom, personnelDateTo]);
+  }, [reports, personnelList, personnelDateFrom, personnelDateTo]);
 
   // Weekly Report by Host
   const weeklyReportData = useMemo(() => {
-    // For partners, only use reports from their stores
-    const currentUserRole = getCurrentUserRole();
-    const currentUserId = getCurrentUserId();
-    const isAdminUser = isAdmin();
-    
-    let reportsToUse = reports;
-    if (currentUserRole === 'partner' && !isAdminUser && currentUserId) {
-      const allowedStoreIds = stores.filter(s => s.partnerId === currentUserId).map(s => s.id);
-      reportsToUse = reports.filter(report => allowedStoreIds.includes(report.channelId));
-    }
-    
-    // Get all unique hosts from filtered reports
-    const allHosts = Array.from(new Set(reportsToUse.map(r => r.hostName).filter(Boolean))).sort();
+    // Get all unique hosts from reports
+    const allHosts = Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).sort();
     
     // Filter reports by week date range
-    const weekReports = reportsToUse.filter(report => {
+    const weekReports = reports.filter(report => {
       const reportDate = new Date(report.date);
       const fromDate = new Date(weekStartDate);
       const toDate = new Date(weekEndDate);
@@ -375,9 +315,9 @@ export const LiveSessionReport: React.FC = () => {
       grandTotal,
       weekRange: `${new Date(weekStartDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric' })} - ${new Date(weekEndDate).toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric' })}`
     };
-  }, [reports, stores, weekStartDate, weekEndDate]);
+  }, [reports, weekStartDate, weekEndDate]);
 
-  // Host Ranking (BXH) - Sắp xếp từ trên xuống dưới
+  // Host Ranking (BXH) - Top 5 tốt nhất và Top 3 tệ nhất
   const hostRanking = useMemo(() => {
     const hostMap: Record<string, {
       hostName: string;
@@ -416,13 +356,20 @@ export const LiveSessionReport: React.FC = () => {
     const hostList = Object.values(hostMap).map(host => ({
       ...host,
       profit: host.totalGMV - host.totalAdCost,
-      avgROI: calculateROI(host.totalGMV, host.totalAdCost)
+      avgROI: host.totalAdCost > 0 ? (host.totalGMV - host.totalAdCost) / host.totalAdCost : 0
     }));
 
     // Sắp xếp theo GMV (doanh số) - cao nhất trước
     const sortedByGMV = [...hostList].sort((a, b) => b.totalGMV - a.totalGMV);
+    
+    // Top 5 tốt nhất (GMV cao nhất)
+    const top5 = sortedByGMV.slice(0, 5);
+    
+    // Top 3 tệ nhất (GMV thấp nhất, nhưng phải có ít nhất 1 báo cáo)
+    const sortedWorst = [...hostList].filter(h => h.reportCount > 0).sort((a, b) => a.totalGMV - b.totalGMV);
+    const top3Worst = sortedWorst.slice(0, 3);
 
-    return sortedByGMV;
+    return { top5, top3Worst };
   }, [filteredData]);
 
   return (
@@ -485,7 +432,7 @@ export const LiveSessionReport: React.FC = () => {
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                     <p className="text-xs text-gray-500 uppercase font-bold mb-1">Kênh Live (直播频道)</p>
-                    <p className="text-lg font-bold text-gray-800">{filteredStoresForUser.find(s => s.id === selectedReport.channelId)?.name || 'Unknown'}</p>
+                    <p className="text-lg font-bold text-gray-800">{MOCK_STORES.find(s => s.id === selectedReport.channelId)?.name || 'Unknown'}</p>
                   </div>
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <p className="text-xs text-gray-500 uppercase font-bold mb-1">Host (主播)</p>
@@ -532,12 +479,13 @@ export const LiveSessionReport: React.FC = () => {
                     <p className="text-lg font-bold text-gray-800">{formatCurrency(Number(selectedReport.totalGmv))}</p>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-600 uppercase font-bold mb-1">ROI (%)</p>
+                    <p className="text-xs text-gray-600 uppercase font-bold mb-1">ROI</p>
                     <p className="text-lg font-bold text-gray-800">
                       {Number(selectedReport.adCost) > 0 
-                        ? formatROI(calculateROI(Number(selectedReport.gmv), Number(selectedReport.adCost)))
-                        : '0.00'}
+                        ? ((Number(selectedReport.gmv) - Number(selectedReport.adCost)) / Number(selectedReport.adCost)).toFixed(2)
+                        : '0'}
                     </p>
+                    <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <p className="text-xs text-gray-600 uppercase font-bold mb-1">GPM (直播千次金额)</p>
@@ -693,13 +641,13 @@ export const LiveSessionReport: React.FC = () => {
         onExportExcel={() => {
           const exportData = filteredData.map(report => ({
             'Ngày': report.date,
-            'Cửa hàng': filteredStoresForUser.find(s => s.id === report.channelId)?.name || '',
+            'Cửa hàng': stores.find(s => s.id === report.channelId)?.name || '',
             'Host': report.hostName,
             'Ca': report.shift || '',
             'Thời gian': `${report.startTime} - ${report.endTime}`,
             'GMV': report.gmv,
             'Chi phí QC': report.adCost,
-            'ROI': report.adCost > 0 ? formatROI(calculateROI(Number(report.gmv), Number(report.adCost))) : '0.00',
+            'ROI': report.adCost > 0 ? ((report.gmv - report.adCost) / report.adCost).toFixed(2) : '0',
             'Đơn hàng': report.orders || 0,
             'Người xem': report.viewers || 0,
             'Người báo cáo': report.reporter || ''
@@ -729,13 +677,13 @@ export const LiveSessionReport: React.FC = () => {
             key: 'stores',
             label: 'Cửa hàng',
             type: 'checkbox',
-            options: filteredStoresForUser.map(s => ({ value: s.id, label: s.name }))
+            options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
           },
           {
             key: 'hosts',
             label: 'Host',
             type: 'checkbox',
-            options: Array.from(new Set(filteredReportsForOptions.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
+            options: Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
           },
           {
             key: 'shifts',
@@ -751,7 +699,7 @@ export const LiveSessionReport: React.FC = () => {
             key: 'reporters',
             label: 'Người báo cáo',
             type: 'checkbox',
-            options: Array.from(new Set(filteredReportsForOptions.map(r => r.reporter).filter(Boolean))).map(reporter => ({ value: reporter!, label: reporter! }))
+            options: Array.from(new Set(reports.map(r => r.reporter).filter(Boolean))).map(reporter => ({ value: reporter!, label: reporter! }))
           }
         ]}
         selectedFilters={selectedFilters}
@@ -784,73 +732,138 @@ export const LiveSessionReport: React.FC = () => {
             </div>
             <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
               <p className="text-xs text-gray-500 uppercase font-bold">ROI Tổng (总ROI)</p>
-              <p className="text-xl font-bold text-green-600 mt-1">{formatPercent(metrics.roi)}</p>
+              <p className="text-xl font-bold text-green-600 mt-1">{formatROI(metrics.roi)}</p>
+              <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
             </div>
           </div>
 
           {/* Host Ranking (BXH) */}
-          <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 to-green-700 p-4 border-b border-gray-200">
-              <h3 className="text-lg font-bold text-white">
-                🏆 BXH Host Live (主播排行榜)
-              </h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-green-50 text-xs text-gray-700 uppercase border-b">
-                  <tr>
-                    <th className="px-4 py-3 text-center font-bold w-12">#</th>
-                    <th className="px-4 py-3 text-left font-bold">Host (主播)</th>
-                    <th className="px-4 py-3 text-right font-bold">Tổng GMV (总GMV)</th>
-                    <th className="px-4 py-3 text-right font-bold">Chi phí QC (广告费)</th>
-                    <th className="px-4 py-3 text-right font-bold">Lợi nhuận (利润)</th>
-                    <th className="px-4 py-3 text-right font-bold">ROI</th>
-                    <th className="px-4 py-3 text-center font-bold">Số báo cáo (报告数)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {hostRanking.length === 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Top 5 Host Tốt Nhất */}
+            <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-green-600 to-green-700 p-4 border-b border-gray-200">
+                <h3 className="text-lg font-bold text-white">
+                  🏆 BXH Top 5 Host Tốt Nhất (最佳主播排行榜 Top 5)
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-green-50 text-xs text-gray-700 uppercase border-b">
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-400">
-                        Chưa có dữ liệu (暂无数据)
-                      </td>
+                      <th className="px-4 py-3 text-center font-bold w-12">#</th>
+                      <th className="px-4 py-3 text-left font-bold">Host (主播)</th>
+                      <th className="px-4 py-3 text-right font-bold">Tổng GMV (总GMV)</th>
+                      <th className="px-4 py-3 text-right font-bold">Chi phí QC (广告费)</th>
+                      <th className="px-4 py-3 text-right font-bold">Lợi nhuận (利润)</th>
+                      <th className="px-4 py-3 text-right font-bold">ROI</th>
+                      <th className="px-4 py-3 text-center font-bold">Số báo cáo (报告数)</th>
                     </tr>
-                  ) : (
-                    hostRanking.map((host, index) => (
-                      <tr key={host.hostName} className="border-b hover:bg-green-50">
-                        <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white ${
-                            index === 0 ? 'bg-yellow-500' :
-                            index === 1 ? 'bg-gray-400' :
-                            index === 2 ? 'bg-orange-600' :
-                            'bg-gray-300'
-                          }`}>
-                            {index + 1}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 font-bold text-gray-800">{host.hostName}</td>
-                        <td className="px-4 py-3 text-right font-bold text-blue-600">
-                          {formatCurrency(host.totalGMV)}
-                        </td>
-                        <td className="px-4 py-3 text-right text-red-600">
-                          {formatCurrency(host.totalAdCost)}
-                        </td>
-                        <td className="px-4 py-3 text-right font-bold text-green-600">
-                          {formatCurrency(host.profit)}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(host.avgROI)}`}>
-                            {formatPercent(host.avgROI)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center text-gray-600">
-                          {host.reportCount}
+                  </thead>
+                  <tbody>
+                    {hostRanking.top5.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-gray-400">
+                          Chưa có dữ liệu (暂无数据)
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      hostRanking.top5.map((host, index) => (
+                        <tr key={host.hostName} className="border-b hover:bg-green-50">
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white ${
+                              index === 0 ? 'bg-yellow-500' :
+                              index === 1 ? 'bg-gray-400' :
+                              index === 2 ? 'bg-orange-600' :
+                              'bg-gray-300'
+                            }`}>
+                              {index + 1}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-gray-800">{host.hostName}</td>
+                          <td className="px-4 py-3 text-right font-bold text-blue-600">
+                            {formatCurrency(host.totalGMV)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-red-600">
+                            {formatCurrency(host.totalAdCost)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-green-600">
+                            {formatCurrency(host.profit)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(host.avgROI)}`}>
+                              {formatROI(host.avgROI)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-gray-600">
+                            {host.reportCount}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Top 3 Host Tệ Nhất */}
+            <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-red-600 to-red-700 p-4 border-b border-gray-200">
+                <h3 className="text-lg font-bold text-white">
+                  ⚠️ BXH Top 3 Host Tệ Nhất (最差主播排行榜 Top 3)
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-red-50 text-xs text-gray-700 uppercase border-b">
+                    <tr>
+                      <th className="px-4 py-3 text-center font-bold w-12">#</th>
+                      <th className="px-4 py-3 text-left font-bold">Host (主播)</th>
+                      <th className="px-4 py-3 text-right font-bold">Tổng GMV (总GMV)</th>
+                      <th className="px-4 py-3 text-right font-bold">Chi phí QC (广告费)</th>
+                      <th className="px-4 py-3 text-right font-bold">Lợi nhuận (利润)</th>
+                      <th className="px-4 py-3 text-right font-bold">ROI</th>
+                      <th className="px-4 py-3 text-center font-bold">Số báo cáo (报告数)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hostRanking.top3Worst.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-gray-400">
+                          Chưa có dữ liệu (暂无数据)
+                        </td>
+                      </tr>
+                    ) : (
+                      hostRanking.top3Worst.map((host, index) => (
+                        <tr key={host.hostName} className="border-b hover:bg-red-50">
+                          <td className="px-4 py-3 text-center">
+                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white bg-red-500">
+                              {index + 1}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 font-bold text-gray-800">{host.hostName}</td>
+                          <td className="px-4 py-3 text-right font-bold text-blue-600">
+                            {formatCurrency(host.totalGMV)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-red-600">
+                            {formatCurrency(host.totalAdCost)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-green-600">
+                            {formatCurrency(host.profit)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(host.avgROI)}`}>
+                              {formatROI(host.avgROI)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-gray-600">
+                            {host.reportCount}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -1039,7 +1052,7 @@ export const LiveSessionReport: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 border-r text-right">
                             <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(item.avgROI)}`}>
-                              {formatPercent(item.avgROI)}
+                              {formatROI(item.avgROI)}
                             </span>
                           </td>
                           <td className="px-6 py-4 border-r text-center font-medium text-gray-600">

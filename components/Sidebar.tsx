@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ReportType } from '../types';
-import { getCurrentUserRole, canAccessMenu, isAdmin, getCurrentUserDepartment, loadMenuPermissions, removePartnerPermissions } from '../utils/permissionUtils';
+import { getCurrentUserRole, canAccessMenu, isAdmin, getCurrentUserDepartment, loadMenuPermissions } from '../utils/permissionUtils';
 import { MenuPermissionModal } from './MenuPermissionModal';
 
 const MENU_ITEMS = [
@@ -19,6 +19,7 @@ const MENU_ITEMS = [
 export const Sidebar: React.FC = () => {
   const [permissionMenuId, setPermissionMenuId] = useState<string | null>(null);
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+  const [menuPermissionsCache, setMenuPermissionsCache] = useState<any>(null);
   const userRole = getCurrentUserRole();
   const userDepartment = getCurrentUserDepartment();
   const admin = isAdmin();
@@ -28,11 +29,27 @@ export const Sidebar: React.FC = () => {
     loadMenuPermissions()
       .then(() => {
         setPermissionsLoaded(true);
+        // Trigger re-render bằng cách update cache state
+        setMenuPermissionsCache(localStorage.getItem('menuPermissions'));
       })
       .catch(err => {
         console.error('Error loading menu permissions:', err);
         setPermissionsLoaded(true); // Vẫn set true để không block UI
       });
+  }, []);
+
+  // Listen for storage changes (khi permissions được update từ modal)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setMenuPermissionsCache(localStorage.getItem('menuPermissions'));
+    };
+    window.addEventListener('storage', handleStorageChange);
+    // Also listen for custom event khi save permissions
+    window.addEventListener('menuPermissionsUpdated', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('menuPermissionsUpdated', handleStorageChange);
+    };
   }, []);
 
   // Filter menu items dựa trên quyền (bao gồm cả role và department)
@@ -41,7 +58,7 @@ export const Sidebar: React.FC = () => {
       return []; // Không hiển thị menu nào cho đến khi permissions được load
     }
     return MENU_ITEMS.filter(item => canAccessMenu(item.id, userRole, userDepartment));
-  }, [userRole, userDepartment, permissionsLoaded]);
+  }, [userRole, userDepartment, permissionsLoaded, menuPermissionsCache]);
 
   const handlePermissionClick = (e: React.MouseEvent, menuId: string) => {
     e.preventDefault();
@@ -63,31 +80,31 @@ export const Sidebar: React.FC = () => {
         ) : (
           <ul className="space-y-1">
             {visibleMenuItems.map((item) => (
-              <li key={item.id} className="group relative">
-                <NavLink
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors ${isActive
-                      ? 'bg-blue-50 text-brand-navy border-r-4 border-brand-navy'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`
-                  }
-                >
-                  <span>{item.label}</span>
-                  {admin && (
-                    <button
-                      onClick={(e) => handlePermissionClick(e, item.id)}
-                      className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
-                      title="Phân quyền (权限设置)"
-                    >
-                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
-                    </button>
-                  )}
-                </NavLink>
-              </li>
-            ))}
+            <li key={item.id} className="group relative">
+              <NavLink
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-6 py-3 text-sm font-medium transition-colors ${isActive
+                    ? 'bg-blue-50 text-brand-navy border-r-4 border-brand-navy'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`
+                }
+              >
+                <span>{item.label}</span>
+                {admin && (
+                  <button
+                    onClick={(e) => handlePermissionClick(e, item.id)}
+                    className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded"
+                    title="Phân quyền (权限设置)"
+                  >
+                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                  </button>
+                )}
+              </NavLink>
+            </li>
+          ))}
           </ul>
         )}
       </nav>
@@ -104,25 +121,6 @@ export const Sidebar: React.FC = () => {
           <p className="text-xs text-gray-500 font-bold uppercase">Người dùng (用户)</p>
           <p className="text-sm font-medium text-gray-800 truncate">{localStorage.getItem('currentUser') || 'Unknown'}</p>
         </div>
-        {admin && (
-          <button
-            onClick={async () => {
-              if (window.confirm('Bạn có chắc chắn muốn xóa tất cả menu permissions của đối tác? (确定要删除所有合作伙伴的菜单权限吗?)')) {
-                try {
-                  await removePartnerPermissions();
-                  alert('Đã xóa tất cả menu permissions của đối tác. Vui lòng refresh trang.');
-                  window.location.reload();
-                } catch (error) {
-                  alert('Lỗi: ' + (error as Error).message);
-                }
-              }
-            }}
-            className="w-full text-xs text-red-600 hover:text-red-800 font-medium py-1 text-left mb-2"
-            title="Xóa tất cả menu permissions của đối tác"
-          >
-            Xóa quyền đối tác (删除合作伙伴权限)
-          </button>
-        )}
         <button
           onClick={() => {
             localStorage.removeItem('currentUser');
