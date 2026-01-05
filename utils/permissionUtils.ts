@@ -71,16 +71,11 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
     return true;
   }
 
-  // Partner có quyền xem tất cả các menu như admin (dữ liệu sẽ được filter ở từng trang)
-  if (userRole === 'partner') {
-    return true;
-  }
-
   const permissions = getMenuPermissions();
   const menuPermission = permissions.find(p => p.menuId === menuId);
   
   if (!menuPermission) {
-    // Nếu không có permission được set, mặc định là không có quyền (cho employee)
+    // Nếu không có permission được set, mặc định là không có quyền (cho partner và employee)
     return false;
   }
 
@@ -100,6 +95,9 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
     }
     // Nếu không có allowedDepartments (undefined hoặc rỗng), thì employee có role 'employee' là đủ
   }
+
+  // Partner: Chỉ cần kiểm tra allowedRoles (không cần kiểm tra department)
+  // Nếu đã pass check allowedRoles ở trên thì return true
 
   return true;
 };
