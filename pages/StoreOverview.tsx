@@ -100,7 +100,7 @@ export const StoreOverviewPage: React.FC = () => {
     // Calculate ROI and conversion rate
     Object.values(overviewMap).forEach(overview => {
       overview.roi = overview.totalAdCost > 0 
-        ? ((overview.totalGMV - overview.totalAdCost) / overview.totalAdCost) * 100 
+        ? (overview.totalGMV - overview.totalAdCost) / overview.totalAdCost 
         : 0;
       
       const storeReports = filteredReports.filter(r => r.channelId === overview.storeId);
@@ -221,7 +221,8 @@ export const StoreOverviewPage: React.FC = () => {
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
           <p className="text-xs text-gray-500 uppercase font-bold">ROI Trung Bình (平均ROI)</p>
-          <p className="text-xl font-bold text-green-600 mt-1">{avgROI.toFixed(1)}%</p>
+          <p className="text-xl font-bold text-green-600 mt-1">{avgROI.toFixed(2)}</p>
+          <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
           <p className="text-xs text-gray-500 uppercase font-bold">Tổng Đơn Hàng (总订单)</p>
@@ -259,9 +260,9 @@ export const StoreOverviewPage: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
               <YAxis />
-              <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Tooltip formatter={(value: number) => value.toFixed(2)} />
               <Legend />
-              <Bar dataKey="roi" name="ROI (%)" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="roi" name="ROI" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -344,11 +345,11 @@ export const StoreOverviewPage: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold border ${
-                        overview.roi >= 400 ? 'bg-green-100 text-green-800 border-green-300' :
-                        overview.roi >= 200 ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                        overview.roi >= 4 ? 'bg-green-100 text-green-800 border-green-300' :
+                        overview.roi >= 2 ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
                         'bg-red-100 text-red-800 border-red-300'
                       }`}>
-                        {overview.roi.toFixed(1)}%
+                        {overview.roi.toFixed(2)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">

@@ -150,7 +150,7 @@ export const CPQC: React.FC = () => {
 
     // Calculate ROI and conversion rate
     Object.values(map).forEach(day => {
-      day.roi = day.adCost > 0 ? ((day.gmv - day.adCost) / day.adCost) * 100 : 0;
+      day.roi = day.adCost > 0 ? (day.gmv - day.adCost) / day.adCost : 0;
       day.conversionRate = day.orders > 0 && filteredReports.length > 0 
         ? (day.orders / filteredReports.filter(r => r.date === day.date).reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0)) * 100 
         : 0;
@@ -192,7 +192,7 @@ export const CPQC: React.FC = () => {
 
     // Calculate ROI and conversion rate
     Object.values(map).forEach(shiftData => {
-      shiftData.roi = shiftData.adCost > 0 ? ((shiftData.gmv - shiftData.adCost) / shiftData.adCost) * 100 : 0;
+      shiftData.roi = shiftData.adCost > 0 ? (shiftData.gmv - shiftData.adCost) / shiftData.adCost : 0;
       const shiftReports = filteredReports.filter(r => (r.shift || 'Chưa xác định') === shiftData.shift);
       const totalClicks = shiftReports.reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0);
       shiftData.conversionRate = totalClicks > 0 ? (shiftData.orders / totalClicks) * 100 : 0;
@@ -242,7 +242,7 @@ export const CPQC: React.FC = () => {
 
     // Calculate metrics and score
     Object.values(map).forEach(item => {
-      item.roi = item.totalAdCost > 0 ? ((item.totalGMV - item.totalAdCost) / item.totalAdCost) * 100 : 0;
+      item.roi = item.totalAdCost > 0 ? (item.totalGMV - item.totalAdCost) / item.totalAdCost : 0;
       const hostReports = filteredReports.filter(r => r.hostName === item.hostName && r.channelId === item.storeName);
       const totalClicks = hostReports.reduce((sum, r) => sum + (Number(r.productClicks) || Number(r.viewers) || 0), 0);
       item.conversionRate = totalClicks > 0 ? (item.totalOrders / totalClicks) * 100 : 0;
@@ -311,7 +311,7 @@ export const CPQC: React.FC = () => {
                 'Chi phí QC': item.adCost,
                 'GMV': item.gmv,
                 'Đơn hàng': item.orders,
-                'ROI': item.roi.toFixed(2) + '%',
+                'ROI': item.roi.toFixed(2),
                 'Tỉ lệ chuyển đổi': item.conversionRate.toFixed(2) + '%',
                 'Số báo cáo': item.reportCount
               }))
@@ -320,7 +320,7 @@ export const CPQC: React.FC = () => {
                 'Chi phí QC': item.adCost,
                 'GMV': item.gmv,
                 'Đơn hàng': item.orders,
-                'ROI': item.roi.toFixed(2) + '%',
+                'ROI': item.roi.toFixed(2),
                 'Tỉ lệ chuyển đổi': item.conversionRate.toFixed(2) + '%',
                 'Số báo cáo': item.reportCount
               }));
@@ -428,10 +428,11 @@ export const CPQC: React.FC = () => {
           <p className="text-xs text-gray-500 uppercase font-bold">ROI Trung Bình (平均ROI)</p>
           <p className="text-xl font-bold text-green-600 mt-1">
             {currentData.length > 0 
-              ? (currentData.reduce((sum, item) => sum + item.roi, 0) / currentData.length).toFixed(1)
+              ? (currentData.reduce((sum, item) => sum + item.roi, 0) / currentData.length).toFixed(2)
               : '0'
-            }%
+            }
           </p>
+          <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
         </div>
         <div className="bg-white p-4 rounded shadow-sm border-l-4 border-purple-500">
           <p className="text-xs text-gray-500 uppercase font-bold">Tỉ Lệ Chuyển Đổi TB (平均转化率)</p>
@@ -481,9 +482,9 @@ export const CPQC: React.FC = () => {
                 height={viewMode === 'day' ? 80 : 40}
               />
               <YAxis />
-              <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+              <Tooltip formatter={(value: number) => value.toFixed(2)} />
               <Legend />
-              <Line type="monotone" dataKey="roi" name="ROI (%) (投资回报率)" stroke="#10b981" strokeWidth={2} />
+              <Line type="monotone" dataKey="roi" name="ROI (投资回报率)" stroke="#10b981" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -533,7 +534,7 @@ export const CPQC: React.FC = () => {
               <Legend />
               <Bar yAxisId="left" dataKey="adCost" name="Chi phí QC (广告费)" fill="#ef4444" radius={[4, 4, 0, 0]} />
               <Bar yAxisId="left" dataKey="gmv" name="GMV (交易额)" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Line yAxisId="right" type="monotone" dataKey="roi" name="ROI (%) (投资回报率)" stroke="#10b981" strokeWidth={2} />
+              <Line yAxisId="right" type="monotone" dataKey="roi" name="ROI (投资回报率)" stroke="#10b981" strokeWidth={2} />
               <Line yAxisId="right" type="monotone" dataKey="conversionRate" name="Tỉ lệ chuyển đổi (%) (转化率)" stroke="#8b5cf6" strokeWidth={2} />
             </ComposedChart>
           </ResponsiveContainer>
@@ -585,11 +586,11 @@ export const CPQC: React.FC = () => {
                     <td className="px-4 py-3 text-right font-bold text-red-600">{formatCurrency(item.totalAdCost)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        item.roi >= 400 ? 'bg-green-100 text-green-800' :
-                        item.roi >= 200 ? 'bg-yellow-100 text-yellow-800' :
+                        item.roi >= 4 ? 'bg-green-100 text-green-800' :
+                        item.roi >= 2 ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {item.roi.toFixed(1)}%
+                        {item.roi.toFixed(2)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -642,11 +643,11 @@ export const CPQC: React.FC = () => {
                     <td className="px-4 py-3 text-right">{item.orders.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold ${
-                        item.roi >= 400 ? 'bg-green-100 text-green-800' :
-                        item.roi >= 200 ? 'bg-yellow-100 text-yellow-800' :
+                        item.roi >= 4 ? 'bg-green-100 text-green-800' :
+                        item.roi >= 2 ? 'bg-yellow-100 text-yellow-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {item.roi.toFixed(1)}%
+                        {item.roi.toFixed(2)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">

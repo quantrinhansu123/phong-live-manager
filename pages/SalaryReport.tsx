@@ -133,7 +133,7 @@ export const SalaryReport: React.FC = () => {
     // Calculate metrics and status
     Object.values(dataMap).forEach(item => {
       item.profit = item.totalGMV - item.totalAdCost;
-      item.roi = item.totalAdCost > 0 ? ((item.totalGMV - item.totalAdCost) / item.totalAdCost) * 100 : 0;
+      item.roi = item.totalAdCost > 0 ? (item.totalGMV - item.totalAdCost) / item.totalAdCost : 0;
       item.kpiAchievement = item.kpiTarget > 0 ? (item.totalGMV / item.kpiTarget) * 100 : 0;
 
       // KPI Status: Green >= 100%, Yellow >= 80%, Red < 80%
@@ -145,10 +145,10 @@ export const SalaryReport: React.FC = () => {
         item.kpiStatus = 'red';
       }
 
-      // Salary Status: Green (ROI >= 400%), Yellow (ROI >= 200%), Red (< 200%)
-      if (item.roi >= 400) {
+      // Salary Status: Green (ROI >= 4), Yellow (ROI >= 2), Red (< 2)
+      if (item.roi >= 4) {
         item.salaryStatus = 'green';
-      } else if (item.roi >= 200) {
+      } else if (item.roi >= 2) {
         item.salaryStatus = 'yellow';
       } else {
         item.salaryStatus = 'red';
@@ -244,15 +244,15 @@ export const SalaryReport: React.FC = () => {
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-green-100 border-2 border-green-300"></div>
-            <span className="text-sm text-gray-700">Xanh: Tốt (绿色: 良好) (KPI ≥ 100% hoặc ROI ≥ 400%)</span>
+            <span className="text-sm text-gray-700">Xanh: Tốt (绿色: 良好) (KPI ≥ 100% hoặc ROI ≥ 4)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-yellow-100 border-2 border-yellow-300"></div>
-            <span className="text-sm text-gray-700">Vàng: Khá (黄色: 一般) (KPI ≥ 80% hoặc ROI ≥ 200%)</span>
+            <span className="text-sm text-gray-700">Vàng: Khá (黄色: 一般) (KPI ≥ 80% hoặc ROI ≥ 2)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-red-100 border-2 border-red-300"></div>
-            <span className="text-sm text-gray-700">Đỏ: Cần cải thiện (红色: 需改进) (KPI &lt; 80% hoặc ROI &lt; 200%)</span>
+            <span className="text-sm text-gray-700">Đỏ: Cần cải thiện (红色: 需改进) (KPI &lt; 80% hoặc ROI &lt; 2)</span>
           </div>
         </div>
       </div>
@@ -312,7 +312,7 @@ export const SalaryReport: React.FC = () => {
                     <td className="px-4 py-3 text-right font-bold text-green-600">{formatCurrency(item.profit)}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(item.salaryStatus)}`}>
-                        {item.roi.toFixed(1)}%
+                        {item.roi.toFixed(2)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center font-medium">

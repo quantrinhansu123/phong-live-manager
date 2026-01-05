@@ -184,7 +184,7 @@ export const LiveSessionReport: React.FC = () => {
       totalAdCost += Number(item.adCost);
     });
 
-    const roi = totalAdCost > 0 ? ((totalGMV - totalAdCost) / totalAdCost) * 100 : 0;
+    const roi = totalAdCost > 0 ? (totalGMV - totalAdCost) / totalAdCost : 0;
 
     return { totalGMV, totalAdCost, roi };
   }, [filteredData]);
@@ -203,11 +203,11 @@ export const LiveSessionReport: React.FC = () => {
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
   }, [filteredData]);
 
-  const formatPercent = (val: number) => `${val.toFixed(2)}%`;
+  const formatROI = (val: number) => val.toFixed(2);
 
   const getStatusColor = (roi: number) => {
-    if (roi >= 400) return 'bg-green-100 text-green-800 border-green-200';
-    if (roi >= 200) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    if (roi >= 4) return 'bg-green-100 text-green-800 border-green-200';
+    if (roi >= 2) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     return 'bg-red-100 text-brand-navy border-red-200';
   };
 
@@ -268,7 +268,7 @@ export const LiveSessionReport: React.FC = () => {
     // Calculate average ROI for each person
     return Object.values(summaryMap).map(item => ({
       ...item,
-      avgROI: item.totalAdCost > 0 ? ((item.totalGMV - item.totalAdCost) / item.totalAdCost) * 100 : 0
+      avgROI: item.totalAdCost > 0 ? (item.totalGMV - item.totalAdCost) / item.totalAdCost : 0
     })).sort((a, b) => b.totalGMV - a.totalGMV);
   }, [reports, personnelList, personnelDateFrom, personnelDateTo]);
 
@@ -331,7 +331,7 @@ export const LiveSessionReport: React.FC = () => {
     };
   }, [reports, weekStartDate, weekEndDate]);
 
-  // Host Ranking (BXH) - Top 5 tốt nhất và Top 3 tệ nhất
+  // Host Ranking (BXH) - Top 5 tốt nhất
   const hostRanking = useMemo(() => {
     const hostMap: Record<string, {
       hostName: string;
@@ -370,7 +370,7 @@ export const LiveSessionReport: React.FC = () => {
     const hostList = Object.values(hostMap).map(host => ({
       ...host,
       profit: host.totalGMV - host.totalAdCost,
-      avgROI: host.totalAdCost > 0 ? ((host.totalGMV - host.totalAdCost) / host.totalAdCost) * 100 : 0
+      avgROI: host.totalAdCost > 0 ? (host.totalGMV - host.totalAdCost) / host.totalAdCost : 0
     }));
 
     // Sắp xếp theo GMV (doanh số) - cao nhất trước
@@ -378,12 +378,8 @@ export const LiveSessionReport: React.FC = () => {
     
     // Top 5 tốt nhất (GMV cao nhất)
     const top5 = sortedByGMV.slice(0, 5);
-    
-    // Top 3 tệ nhất (GMV thấp nhất, nhưng phải có ít nhất 1 báo cáo)
-    const sortedWorst = [...hostList].filter(h => h.reportCount > 0).sort((a, b) => a.totalGMV - b.totalGMV);
-    const top3Worst = sortedWorst.slice(0, 3);
 
-    return { top5, top3Worst };
+    return { top5 };
   }, [filteredData]);
 
   return (
@@ -493,12 +489,13 @@ export const LiveSessionReport: React.FC = () => {
                     <p className="text-lg font-bold text-gray-800">{formatCurrency(Number(selectedReport.totalGmv))}</p>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-600 uppercase font-bold mb-1">ROI (%)</p>
+                    <p className="text-xs text-gray-600 uppercase font-bold mb-1">ROI</p>
                     <p className="text-lg font-bold text-gray-800">
                       {Number(selectedReport.adCost) > 0 
-                        ? formatPercent(((Number(selectedReport.gmv) - Number(selectedReport.adCost)) / Number(selectedReport.adCost)) * 100)
-                        : '0%'}
+                        ? ((Number(selectedReport.gmv) - Number(selectedReport.adCost)) / Number(selectedReport.adCost)).toFixed(2)
+                        : '0'}
                     </p>
+                    <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <p className="text-xs text-gray-600 uppercase font-bold mb-1">GPM (直播千次金额)</p>
@@ -660,7 +657,7 @@ export const LiveSessionReport: React.FC = () => {
             'Thời gian': `${report.startTime} - ${report.endTime}`,
             'GMV': report.gmv,
             'Chi phí QC': report.adCost,
-            'ROI': report.adCost > 0 ? (((report.gmv - report.adCost) / report.adCost) * 100).toFixed(2) + '%' : '0%',
+            'ROI': report.adCost > 0 ? ((report.gmv - report.adCost) / report.adCost).toFixed(2) : '0',
             'Đơn hàng': report.orders || 0,
             'Người xem': report.viewers || 0,
             'Người báo cáo': report.reporter || ''
@@ -745,29 +742,28 @@ export const LiveSessionReport: React.FC = () => {
             </div>
             <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
               <p className="text-xs text-gray-500 uppercase font-bold">ROI Tổng (总ROI)</p>
-              <p className="text-xl font-bold text-green-600 mt-1">{formatPercent(metrics.roi)}</p>
+              <p className="text-xl font-bold text-green-600 mt-1">{formatROI(metrics.roi)}</p>
+              <p className="text-xs text-gray-400 mt-1">= (GMV - CPQC) / CPQC</p>
             </div>
           </div>
 
           {/* Host Ranking (BXH) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top 5 Host Tốt Nhất */}
-            <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-green-600 to-green-700 p-4 border-b border-gray-200">
-                <h3 className="text-lg font-bold text-white">
-                  🏆 BXH Top 5 Host Tốt Nhất (最佳主播排行榜 Top 5)
-                </h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-green-50 text-xs text-gray-700 uppercase border-b">
-                    <tr>
+          <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-600 to-green-700 p-4 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-white">
+                🏆 BXH Top 5 Host Tốt Nhất (最佳主播排行榜 Top 5)
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-green-50 text-xs text-gray-700 uppercase border-b">
+                  <tr>
                       <th className="px-4 py-3 text-center font-bold w-12">#</th>
                       <th className="px-4 py-3 text-left font-bold">Host (主播)</th>
                       <th className="px-4 py-3 text-right font-bold">Tổng GMV (总GMV)</th>
                       <th className="px-4 py-3 text-right font-bold">Chi phí QC (广告费)</th>
                       <th className="px-4 py-3 text-right font-bold">Lợi nhuận (利润)</th>
-                      <th className="px-4 py-3 text-right font-bold">ROI (%)</th>
+                      <th className="px-4 py-3 text-right font-bold">ROI</th>
                       <th className="px-4 py-3 text-center font-bold">Số báo cáo (报告数)</th>
                     </tr>
                   </thead>
@@ -803,7 +799,7 @@ export const LiveSessionReport: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(host.avgROI)}`}>
-                              {formatPercent(host.avgROI)}
+                              {formatROI(host.avgROI)}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center text-gray-600">
@@ -816,68 +812,6 @@ export const LiveSessionReport: React.FC = () => {
                 </table>
               </div>
             </div>
-
-            {/* Top 3 Host Tệ Nhất */}
-            <div className="bg-white rounded shadow-sm border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-red-600 to-red-700 p-4 border-b border-gray-200">
-                <h3 className="text-lg font-bold text-white">
-                  ⚠️ BXH Top 3 Host Tệ Nhất (最差主播排行榜 Top 3)
-                </h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-red-50 text-xs text-gray-700 uppercase border-b">
-                    <tr>
-                      <th className="px-4 py-3 text-center font-bold w-12">#</th>
-                      <th className="px-4 py-3 text-left font-bold">Host (主播)</th>
-                      <th className="px-4 py-3 text-right font-bold">Tổng GMV (总GMV)</th>
-                      <th className="px-4 py-3 text-right font-bold">Chi phí QC (广告费)</th>
-                      <th className="px-4 py-3 text-right font-bold">Lợi nhuận (利润)</th>
-                      <th className="px-4 py-3 text-right font-bold">ROI (%)</th>
-                      <th className="px-4 py-3 text-center font-bold">Số báo cáo (报告数)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {hostRanking.top3Worst.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-8 text-center text-gray-400">
-                          Chưa có dữ liệu (暂无数据)
-                        </td>
-                      </tr>
-                    ) : (
-                      hostRanking.top3Worst.map((host, index) => (
-                        <tr key={host.hostName} className="border-b hover:bg-red-50">
-                          <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white bg-red-500">
-                              {index + 1}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-bold text-gray-800">{host.hostName}</td>
-                          <td className="px-4 py-3 text-right font-bold text-blue-600">
-                            {formatCurrency(host.totalGMV)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-red-600">
-                            {formatCurrency(host.totalAdCost)}
-                          </td>
-                          <td className="px-4 py-3 text-right font-bold text-green-600">
-                            {formatCurrency(host.profit)}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(host.avgROI)}`}>
-                              {formatPercent(host.avgROI)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center text-gray-600">
-                            {host.reportCount}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
 
           {/* Charts */}
           <div className="bg-white p-4 rounded shadow-sm border border-gray-200 h-80">
@@ -1064,7 +998,7 @@ export const LiveSessionReport: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 border-r text-right">
                             <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(item.avgROI)}`}>
-                              {formatPercent(item.avgROI)}
+                              {formatROI(item.avgROI)}
                             </span>
                           </td>
                           <td className="px-6 py-4 border-r text-center font-medium text-gray-600">

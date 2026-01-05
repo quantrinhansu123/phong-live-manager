@@ -171,8 +171,8 @@ export const LiveReportDetail: React.FC = () => {
 
 
   const getStatusColor = (roi: number) => {
-    if (roi >= 400) return 'bg-green-100 text-green-800 border-green-200';
-    if (roi >= 200) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    if (roi >= 4) return 'bg-green-100 text-green-800 border-green-200';
+    if (roi >= 2) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     return 'bg-red-100 text-red-800 border-red-200';
   };
 
@@ -324,7 +324,7 @@ export const LiveReportDetail: React.FC = () => {
                   'Tổng GMV': report.totalGmv || 0,
                   'Chi phí QC': report.adCost,
                   'GPM': report.gpm || 0,
-                  'ROI': report.adCost > 0 ? (((report.gmv - report.adCost) / report.adCost) * 100).toFixed(2) + '%' : '0%',
+                  'ROI': report.adCost > 0 ? ((report.gmv - report.adCost) / report.adCost).toFixed(2) : '0',
                   'Đơn hàng': report.orders || 0,
                   'Giá TB': report.averagePrice || 0,
                   'Tỉ lệ chuyển đổi': report.conversionRate ? Number(report.conversionRate).toFixed(2) + '%' : '',
@@ -652,7 +652,7 @@ export const LiveReportDetail: React.FC = () => {
             'Tổng GMV': report.totalGmv || 0,
             'Chi phí QC': report.adCost,
             'GPM': report.gpm || 0,
-            'ROI': report.adCost > 0 ? (((report.gmv - report.adCost) / report.adCost) * 100).toFixed(2) + '%' : '0%',
+            'ROI': report.adCost > 0 ? ((report.gmv - report.adCost) / report.adCost).toFixed(2) : '0',
             'Đơn hàng': report.orders || 0,
             'Giá TB': report.averagePrice || 0,
             'Tỉ lệ chuyển đổi': report.conversionRate ? Number(report.conversionRate).toFixed(2) + '%' : '',
@@ -776,7 +776,7 @@ export const LiveReportDetail: React.FC = () => {
                 <th className="px-3 py-2 border-r whitespace-nowrap">Tổng GMV (总交易额)</th>
                 <th className="px-3 py-2 border-r whitespace-nowrap text-red-200">CPQC (广告费)</th>
                 <th className="px-3 py-2 border-r whitespace-nowrap">GPM (每千次展示费用)</th>
-                <th className="px-3 py-2 border-r whitespace-nowrap">ROI (%) (投资回报率)</th>
+                <th className="px-3 py-2 border-r whitespace-nowrap">ROI (投资回报率)</th>
                 <th className="px-3 py-2 border-r whitespace-nowrap">Đơn hàng (订单数)</th>
                 <th className="px-3 py-2 border-r whitespace-nowrap">Giá TB (平均价格)</th>
                 <th className="px-3 py-2 border-r whitespace-nowrap">Tỉ lệ chuyển đổi (%) (转化率)</th>
@@ -799,7 +799,7 @@ export const LiveReportDetail: React.FC = () => {
                   const gmv = Number(row.gmv);
                   const ad = Number(row.adCost);
                   const profit = gmv - ad;
-                  const roiVal = ad > 0 ? (profit / ad) * 100 : 0;
+                  const roiVal = ad > 0 ? profit / ad : 0;
                   const storeName = stores.find(s => s.id === row.channelId)?.name || MOCK_STORES.find(s => s.id === row.channelId)?.name || 'Unknown';
                   return (
                     <tr key={row.id} className="border-b hover:bg-gray-50">
@@ -826,7 +826,7 @@ export const LiveReportDetail: React.FC = () => {
                       <td className="px-3 py-2 border-r font-medium text-xs">{formatCurrency(Number(row.totalGmv) || 0)}</td>
                       <td className="px-3 py-2 border-r font-bold text-red-600 text-xs">{formatCurrency(ad)}</td>
                       <td className="px-3 py-2 border-r text-xs">{row.gpm ? formatCurrency(Number(row.gpm)) : '-'}</td>
-                      <td className="px-3 py-2 border-r font-medium text-xs">{roiVal.toFixed(1)}%</td>
+                      <td className="px-3 py-2 border-r font-medium text-xs">{roiVal.toFixed(2)}</td>
                       <td className="px-3 py-2 border-r text-xs">{row.orders || '-'}</td>
                       <td className="px-3 py-2 border-r text-xs">{row.averagePrice ? formatCurrency(Number(row.averagePrice)) : '-'}</td>
                       <td className="px-3 py-2 border-r text-xs">{row.conversionRate ? Number(row.conversionRate).toFixed(2) + '%' : '-'}</td>
@@ -839,7 +839,7 @@ export const LiveReportDetail: React.FC = () => {
                       <td className="px-3 py-2 border-r text-xs">{row.newFollowers ? Number(row.newFollowers).toLocaleString() : '-'}</td>
                       <td className="px-3 py-2 border-r">
                         <span className={`px-2 py-1 rounded text-xs font-bold border ${getStatusColor(roiVal)}`}>
-                          {roiVal >= 400 ? 'TỐT (良好)' : roiVal >= 200 ? 'KHÁ (一般)' : 'CẦN TỐI ƯU (需优化)'}
+                          {roiVal >= 4 ? 'TỐT (良好)' : roiVal >= 2 ? 'KHÁ (一般)' : 'CẦN TỐI ƯU (需优化)'}
                         </span>
                       </td>
                       <td className="px-3 py-2 sticky right-0 bg-white z-5">
