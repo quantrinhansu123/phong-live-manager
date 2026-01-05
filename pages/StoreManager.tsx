@@ -34,7 +34,7 @@ export const StoreManager: React.FC = () => {
 
     useEffect(() => {
         loadStores();
-    }, []);;
+    }, []);
 
     const loadStores = async () => {
         setIsLoading(true);
