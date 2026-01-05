@@ -4,7 +4,7 @@ import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency } from '../utils/formatUtils';
 import { Personnel as PersonnelType, LiveReport, ReportType } from '../types';
-import { isPartner, getPartnerId, isAdmin, getCurrentUserId } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin, getCurrentUserId, isRegularEmployee, getCurrentUserName } from '../utils/permissionUtils';
 
 // Menu items list (same as in Sidebar)
 const MENU_ITEMS = [
@@ -98,6 +98,13 @@ export const Personnel: React.FC = () => {
           const allowedStores = stores.filter(s => s.partnerId === partnerId);
           const allowedStoreIds = allowedStores.map(s => s.id);
           reports = reports.filter(r => allowedStoreIds.includes(r.channelId));
+        }
+      } else if (isRegularEmployee()) {
+        // Nhân viên thường chỉ xem được chính mình
+        const currentUserId = getCurrentUserId();
+        const currentUserName = getCurrentUserName();
+        if (currentUserId || currentUserName) {
+          people = people.filter(p => p.id === currentUserId || p.fullName === currentUserName);
         }
       }
       
