@@ -312,7 +312,7 @@ export const StoreManager: React.FC = () => {
                         key: 'partners',
                         label: 'Đối tác (合作伙伴)',
                         type: 'checkbox',
-                        options: partners.map(p => ({ value: p.id || '', label: p.name }))
+                        options: (partners || []).map(p => ({ value: p.id || '', label: p.name }))
                     }
                 ]}
                 selectedFilters={selectedFilters}
