@@ -13,6 +13,7 @@ export const StoreManager: React.FC = () => {
     const [isAddFormOpen, setIsAddFormOpen] = useState(false);
     const [newStoreName, setNewStoreName] = useState('');
     const [newStorePartnerId, setNewStorePartnerId] = useState<string>('');
+    const [newStoreType, setNewStoreType] = useState<'own' | 'partner'>('own');
     const [newStorePersonnelIds, setNewStorePersonnelIds] = useState<string[]>([]);
     const [personnelSearchText, setPersonnelSearchText] = useState('');
     const [showPersonnelDropdown, setShowPersonnelDropdown] = useState(false);
@@ -23,9 +24,17 @@ export const StoreManager: React.FC = () => {
     const [searchText, setSearchText] = useState('');
     const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
 
+    // Lọc danh sách đối tác từ personnel có department là 'Đối tác'
+    const partners = useMemo(() => {
+        return personnel.filter(p => p.department === 'Đối tác').map(p => ({
+            id: p.id || '',
+            name: p.fullName
+        }));
+    }, [personnel]);
+
     useEffect(() => {
         loadStores();
-    }, []);
+    }, []);;
 
     const loadStores = async () => {
         setIsLoading(true);
@@ -147,6 +156,7 @@ export const StoreManager: React.FC = () => {
         setEditingStore(null);
         setNewStoreName('');
         setNewStorePartnerId('');
+        setNewStoreType('own');
         setNewStorePersonnelIds([]);
         setPersonnelSearchText('');
         setShowPersonnelDropdown(false);
