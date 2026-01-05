@@ -66,12 +66,10 @@ export const LiveSessionReport: React.FC = () => {
         personnelData = personnelData.filter(p => allowedHostNames.has(p.fullName));
       }
     } else if (isRegularEmployee()) {
-      // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName hoặc reporter)
+      // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName)
       const currentUserName = getCurrentUserName();
       if (currentUserName) {
-        reportData = reportData.filter(r => 
-          r.hostName === currentUserName || r.reporter === currentUserName
-        );
+        reportData = reportData.filter(r => r.hostName === currentUserName);
         // Chỉ hiện thị chính mình trong danh sách personnel
         personnelData = personnelData.filter(p => p.fullName === currentUserName);
       }

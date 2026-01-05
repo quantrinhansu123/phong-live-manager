@@ -40,12 +40,10 @@ export const StoreOverviewPage: React.FC = () => {
           reportData = reportData.filter(r => allowedStoreIds.includes(r.channelId));
         }
       } else if (isRegularEmployee()) {
-        // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName hoặc reporter)
+        // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName)
         const currentUserName = getCurrentUserName();
         if (currentUserName) {
-          reportData = reportData.filter(r => 
-            r.hostName === currentUserName || r.reporter === currentUserName
-          );
+          reportData = reportData.filter(r => r.hostName === currentUserName);
         }
       }
       
