@@ -94,7 +94,7 @@ export const CPQC: React.FC = () => {
     if (searchText) {
       const searchLower = searchText.toLowerCase();
       filtered = filtered.filter(item => {
-        const storeName = stores.find(s => s.id === item.channelId)?.name || '';
+        const storeName = filteredStoresForUser.find(s => s.id === item.channelId)?.name || '';
         return (
           item.date.toLowerCase().includes(searchLower) ||
           storeName.toLowerCase().includes(searchLower) ||
@@ -111,6 +111,20 @@ export const CPQC: React.FC = () => {
 
     return filtered;
   }, [reports, dateFrom, dateTo, selectedFilters, searchText, stores]);
+
+  // Filter stores for partners
+  const filteredStoresForUser = useMemo(() => {
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    const isAdminUser = isAdmin();
+    
+    if (isAdminUser) {
+      return stores.filter(s => s.id !== 'all');
+    } else if (currentUserRole === 'partner' && currentUserId) {
+      return stores.filter(s => s.id !== 'all' && s.partnerId === currentUserId);
+    }
+    return stores.filter(s => s.id !== 'all');
+  }, [stores]);
 
   // CPQC Data by Day
   const cpqcByDay = useMemo(() => {
@@ -215,7 +229,7 @@ export const CPQC: React.FC = () => {
     filteredReports.forEach(report => {
       const key = `${report.hostName}_${report.channelId}`;
       if (!map[key]) {
-        const store = stores.find(s => s.id === report.channelId);
+        const store = filteredStoresForUser.find(s => s.id === report.channelId);
         map[key] = {
           hostName: report.hostName,
           storeName: store?.name || 'Unknown',

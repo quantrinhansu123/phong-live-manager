@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { ReportType } from '../types';
-import { getCurrentUserRole, canAccessMenu, isAdmin, getCurrentUserDepartment, loadMenuPermissions } from '../utils/permissionUtils';
+import { getCurrentUserRole, canAccessMenu, isAdmin, getCurrentUserDepartment, loadMenuPermissions, removePartnerPermissions } from '../utils/permissionUtils';
 import { MenuPermissionModal } from './MenuPermissionModal';
 
 const MENU_ITEMS = [
@@ -37,6 +37,9 @@ export const Sidebar: React.FC = () => {
 
   // Filter menu items dựa trên quyền (bao gồm cả role và department)
   const visibleMenuItems = useMemo(() => {
+    if (!permissionsLoaded) {
+      return []; // Không hiển thị menu nào cho đến khi permissions được load
+    }
     return MENU_ITEMS.filter(item => canAccessMenu(item.id, userRole, userDepartment));
   }, [userRole, userDepartment, permissionsLoaded]);
 
@@ -101,6 +104,25 @@ export const Sidebar: React.FC = () => {
           <p className="text-xs text-gray-500 font-bold uppercase">Người dùng (用户)</p>
           <p className="text-sm font-medium text-gray-800 truncate">{localStorage.getItem('currentUser') || 'Unknown'}</p>
         </div>
+        {admin && (
+          <button
+            onClick={async () => {
+              if (window.confirm('Bạn có chắc chắn muốn xóa tất cả menu permissions của đối tác? (确定要删除所有合作伙伴的菜单权限吗?)')) {
+                try {
+                  await removePartnerPermissions();
+                  alert('Đã xóa tất cả menu permissions của đối tác. Vui lòng refresh trang.');
+                  window.location.reload();
+                } catch (error) {
+                  alert('Lỗi: ' + (error as Error).message);
+                }
+              }
+            }}
+            className="w-full text-xs text-red-600 hover:text-red-800 font-medium py-1 text-left mb-2"
+            title="Xóa tất cả menu permissions của đối tác"
+          >
+            Xóa quyền đối tác (删除合作伙伴权限)
+          </button>
+        )}
         <button
           onClick={() => {
             localStorage.removeItem('currentUser');

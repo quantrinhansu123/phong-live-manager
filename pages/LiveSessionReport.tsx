@@ -145,7 +145,7 @@ export const LiveSessionReport: React.FC = () => {
     if (searchText) {
       const searchLower = searchText.toLowerCase();
       filtered = filtered.filter(item => {
-        const storeName = stores.find(s => s.id === item.channelId)?.name || '';
+        const storeName = filteredStoresForUser.find(s => s.id === item.channelId)?.name || '';
         return (
           item.date.toLowerCase().includes(searchLower) ||
           storeName.toLowerCase().includes(searchLower) ||
@@ -485,7 +485,7 @@ export const LiveSessionReport: React.FC = () => {
                   </div>
                   <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                     <p className="text-xs text-gray-500 uppercase font-bold mb-1">Kênh Live (直播频道)</p>
-                    <p className="text-lg font-bold text-gray-800">{stores.find(s => s.id === selectedReport.channelId)?.name || 'Unknown'}</p>
+                    <p className="text-lg font-bold text-gray-800">{filteredStoresForUser.find(s => s.id === selectedReport.channelId)?.name || 'Unknown'}</p>
                   </div>
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <p className="text-xs text-gray-500 uppercase font-bold mb-1">Host (主播)</p>
@@ -693,7 +693,7 @@ export const LiveSessionReport: React.FC = () => {
         onExportExcel={() => {
           const exportData = filteredData.map(report => ({
             'Ngày': report.date,
-            'Cửa hàng': stores.find(s => s.id === report.channelId)?.name || '',
+            'Cửa hàng': filteredStoresForUser.find(s => s.id === report.channelId)?.name || '',
             'Host': report.hostName,
             'Ca': report.shift || '',
             'Thời gian': `${report.startTime} - ${report.endTime}`,

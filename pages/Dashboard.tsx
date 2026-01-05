@@ -159,7 +159,14 @@ export const Dashboard: React.FC = () => {
     const map: Record<string, { storeName: string; gmv: number; adCost: number; roi: number }> = {};
     
     filteredReports.forEach(report => {
-      const store = stores.find(s => s.id === report.channelId);
+      // For partners, only use stores they have access to
+      const currentUserRole = getCurrentUserRole();
+      const currentUserId = getCurrentUserId();
+      let availableStores = stores;
+      if (currentUserRole === 'partner' && !isAdmin() && currentUserId) {
+        availableStores = stores.filter(s => s.partnerId === currentUserId);
+      }
+      const store = availableStores.find(s => s.id === report.channelId);
       const storeName = store?.name || 'Unknown';
       
       if (!map[report.channelId]) {

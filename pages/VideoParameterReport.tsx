@@ -85,7 +85,7 @@ export const VideoParameterReport: React.FC = () => {
     if (searchText.trim()) {
       const searchLower = searchText.toLowerCase();
       filtered = filtered.filter(v => {
-        const storeName = stores.find(s => s.id === v.storeId)?.name || '';
+        const storeName = filteredStoresForUser.find(s => s.id === v.storeId)?.name || '';
         return (
           v.title.toLowerCase().includes(searchLower) ||
           v.platform.toLowerCase().includes(searchLower) ||
@@ -100,6 +100,20 @@ export const VideoParameterReport: React.FC = () => {
 
     return filtered;
   }, [videos, selectedFilters, searchText, dateFrom, dateTo, stores]);
+
+  // Filter stores for partners
+  const filteredStoresForUser = useMemo(() => {
+    const currentUserRole = getCurrentUserRole();
+    const currentUserId = getCurrentUserId();
+    const isAdminUser = isAdmin();
+    
+    if (isAdminUser) {
+      return stores.filter(s => s.id !== 'all');
+    } else if (currentUserRole === 'partner' && currentUserId) {
+      return stores.filter(s => s.id !== 'all' && s.partnerId === currentUserId);
+    }
+    return stores.filter(s => s.id !== 'all');
+  }, [stores]);
 
   const handleExportExcel = () => {
     const exportData = filteredVideos.map(video => {

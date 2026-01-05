@@ -131,7 +131,7 @@ export const LiveReportDetail: React.FC = () => {
     if (searchText) {
       const searchLower = searchText.toLowerCase();
       filtered = filtered.filter(item => {
-        const storeName = stores.find(s => s.id === item.channelId)?.name || '';
+        const storeName = filteredStoresForUser.find(s => s.id === item.channelId)?.name || '';
         return (
           item.date.toLowerCase().includes(searchLower) ||
           storeName.toLowerCase().includes(searchLower) ||
@@ -233,7 +233,7 @@ export const LiveReportDetail: React.FC = () => {
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                   <p className="text-xs text-gray-500 uppercase font-bold mb-1">Cửa hàng (店铺)</p>
-                  <p className="text-lg font-bold text-gray-800">{stores.find(s => s.id === selectedReport.channelId)?.name || 'Unknown'}</p>
+                  <p className="text-lg font-bold text-gray-800">{filteredStoresForUser.find(s => s.id === selectedReport.channelId)?.name || 'Unknown'}</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                   <p className="text-xs text-gray-500 uppercase font-bold mb-1">Host (主播)</p>
@@ -305,7 +305,7 @@ export const LiveReportDetail: React.FC = () => {
         onExportExcel={() => {
           const exportData = filteredData.map(report => ({
             'Ngày': report.date,
-            'Cửa hàng': stores.find(s => s.id === report.channelId)?.name || '',
+            'Cửa hàng': filteredStoresForUser.find(s => s.id === report.channelId)?.name || '',
             'Host': report.hostName,
             'Ca': report.shift || '',
             'Thời gian': `${report.startTime} - ${report.endTime}`,
@@ -531,7 +531,7 @@ export const LiveReportDetail: React.FC = () => {
                   const ad = Number(row.adCost);
                   const profit = gmv - ad;
                   const roiVal = calculateROI(gmv, ad);
-                  const storeName = stores.find(s => s.id === row.channelId)?.name || 'Unknown';
+                  const storeName = filteredStoresForUser.find(s => s.id === row.channelId)?.name || 'Unknown';
                   return (
                     <tr key={row.id} className="border-b hover:bg-gray-50">
                       <td className="px-3 py-2 border-r font-medium sticky left-0 bg-white z-5">{row.date}</td>
