@@ -125,7 +125,18 @@ export const Personnel: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      // Nếu chọn Department = 'Đối tác', tự động set role = 'partner'
+      if (name === 'department' && value === 'Đối tác') {
+        updated.role = 'partner';
+      }
+      // Nếu đổi Department khác 'Đối tác' và role hiện tại là 'partner', đổi về 'user'
+      if (name === 'department' && value !== 'Đối tác' && prev.role === 'partner') {
+        updated.role = 'user';
+      }
+      return updated;
+    });
   };
 
   const handleEdit = (person: PersonnelType) => {
@@ -396,14 +407,24 @@ export const Personnel: React.FC = () => {
                       <label className="block text-sm font-medium text-gray-700">Mật khẩu (密码) <span className="text-red-500">*</span></label>
                       <input required type="text" name="password" value={formData.password || ''} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1 bg-white" placeholder="Nhập mật khẩu (输入密码)" />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Phân quyền (权限)</label>
-                      <select name="role" value={formData.role || 'user'} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1 bg-white">
-                        <option value="user">Nhân viên (员工) (User)</option>
-                        <option value="partner">Đối tác (合作伙伴) (Partner)</option>
-                        <option value="admin">Quản trị viên (管理员) (Admin)</option>
-                      </select>
-                    </div>
+                    {/* Ẩn trường role nếu Department = 'Đối tác' (tự động set role = 'partner') */}
+                    {formData.department !== 'Đối tác' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Phân quyền (权限)</label>
+                        <select name="role" value={formData.role || 'user'} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1 bg-white">
+                          <option value="user">Nhân viên (员工) (User)</option>
+                          <option value="admin">Quản trị viên (管理员) (Admin)</option>
+                        </select>
+                      </div>
+                    )}
+                    {/* Hiển thị thông báo nếu là Đối tác */}
+                    {formData.department === 'Đối tác' && (
+                      <div className="col-span-2">
+                        <div className="bg-blue-100 border border-blue-300 rounded px-3 py-2 text-sm text-blue-800">
+                          <span className="font-medium">Đối tác (合作伙伴):</span> Phân quyền tự động được set là "Đối tác" khi chọn Department = "Đối tác"
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -488,8 +509,9 @@ export const Personnel: React.FC = () => {
               label: 'Vai trò (角色)',
               type: 'checkbox',
               options: [
-                { value: 'admin', label: 'Admin' },
-                { value: 'user', label: 'User' }
+                { value: 'admin', label: 'Admin (管理员)' },
+                { value: 'user', label: 'Nhân viên (员工) (User)' },
+                { value: 'partner', label: 'Đối tác (合作伙伴) (Partner)' }
               ]
             }
           ]}

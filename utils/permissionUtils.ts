@@ -142,10 +142,14 @@ export const isAdmin = (): boolean => {
   return getCurrentUserRole() === 'admin';
 };
 
-// Kiểm tra user có phải đối tác không (nhân viên có department = 'Đối tác')
+// Kiểm tra user có phải đối tác không
+// Logic: Kiểm tra cả role = 'partner' HOẶC department = 'Đối tác'
+// (Để đảm bảo tương thích với cả 2 cách thiết lập)
 export const isPartner = (): boolean => {
+  const role = getCurrentUserRole();
   const department = getCurrentUserDepartment();
-  return department === 'Đối tác';
+  // Đối tác nếu role = 'partner' HOẶC department = 'Đối tác'
+  return role === 'partner' || department === 'Đối tác';
 };
 
 // Lấy ID của đối tác (ID của nhân viên có department = 'Đối tác')

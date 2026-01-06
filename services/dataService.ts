@@ -117,24 +117,6 @@ export const fetchPersonnel = async (): Promise<Personnel[]> => {
   // Combine lists, preferring local adjustments if IDs conflict (simplistic merge)
   const allPersonnel = [...personnel, ...localPersonnel];
 
-  // Seed Admin if list is empty (or just ensure it exists in local for demo)
-  if (!allPersonnel.find(p => p.email === 'admin@phonglive.com')) {
-    const adminUser: Personnel = {
-      id: 'admin_seed',
-      fullName: 'Admin User',
-      department: 'Management',
-      position: 'Admin',
-      phoneNumber: '0900000000',
-      email: 'admin@phonglive.com',
-      password: 'password', // Default password
-      role: 'admin'
-    };
-    // Save seed to local storage so it persists
-    localPersonnel.push(adminUser);
-    localStorage.setItem('local_personnel', JSON.stringify(localPersonnel));
-    allPersonnel.push(adminUser);
-  }
-
   // Remove duplicates by ID (if any)
   const uniquePersonnel = Array.from(new Map(allPersonnel.map(item => [item.id, item])).values());
 
@@ -162,16 +144,13 @@ export const createPersonnel = async (person: Omit<Personnel, 'id'>) => {
 
 export const updatePersonnel = async (id: string, person: Partial<Personnel>) => {
   // If it's a local ID, update locally
-  if (id.startsWith('local_') || id === 'admin_seed') {
+  if (id.startsWith('local_')) {
     const localPersonnel = JSON.parse(localStorage.getItem('local_personnel') || '[]');
     const index = localPersonnel.findIndex((p: Personnel) => p.id === id);
     if (index !== -1) {
       localPersonnel[index] = { ...localPersonnel[index], ...person };
       localStorage.setItem('local_personnel', JSON.stringify(localPersonnel));
       return localPersonnel[index];
-    } else if (id === 'admin_seed') {
-      // Re-seed if missing but requested? Should be handled by fetch.
-      // Assume exists if we are updating it.
     }
     return null;
   }
@@ -192,7 +171,7 @@ export const updatePersonnel = async (id: string, person: Partial<Personnel>) =>
 };
 
 export const deletePersonnel = async (id: string) => {
-  if (id.startsWith('local_') || id === 'admin_seed') {
+  if (id.startsWith('local_')) {
     const localPersonnel = JSON.parse(localStorage.getItem('local_personnel') || '[]');
     const filtered = localPersonnel.filter((p: Personnel) => p.id !== id);
     localStorage.setItem('local_personnel', JSON.stringify(filtered));

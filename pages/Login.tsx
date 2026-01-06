@@ -73,7 +73,7 @@ export const Login: React.FC = () => {
                             type="email"
                             id="email"
                             className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy"
-                            placeholder="admin@phonglive.com"
+                            placeholder="email@phonglive.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
@@ -102,8 +102,13 @@ export const Login: React.FC = () => {
                     </button>
                 </form>
 
-                <div className="mt-4 text-center text-xs text-gray-500">
-                    <p>Admin mặc định (默认管理员): admin@phonglive.com / password</p>
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h3 className="text-sm font-bold text-blue-900 mb-2">Gợi ý đăng nhập (登录提示):</h3>
+                    <ul className="text-xs text-blue-800 space-y-1">
+                        <li>• Sử dụng Email và Mật khẩu đã được tạo trong phần "Nhân sự" (使用在"人事"部分创建的邮箱和密码)</li>
+                        <li>• Nếu chưa có tài khoản, vui lòng liên hệ Admin để được tạo tài khoản (如果没有账户，请联系管理员创建账户)</li>
+                        <li>• Email đăng nhập là Email được nhập trong thông tin nhân sự (登录邮箱是在人员信息中输入的邮箱)</li>
+                    </ul>
                 </div>
             </div>
         </div>
