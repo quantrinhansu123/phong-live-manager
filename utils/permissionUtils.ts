@@ -171,8 +171,21 @@ export const getCurrentUserPosition = (): string | undefined => {
   return localStorage.getItem('currentUserPosition') || undefined;
 };
 
-// Kiểm tra user có phải TRỢ LIVE 中控 không
+// Kiểm tra user có phải TRỢ LIVE 中控 không (phải chứa cả "TRỢ LIVE" và "中控")
 export const isTrungKhong = (): boolean => {
   const position = getCurrentUserPosition();
-  return position === 'TRỢ LIVE 中控' || position === 'Trợ Live 中控' || position?.includes('中控') || false;
+  if (!position) return false;
+  
+  // Normalize khoảng trắng và chuyển về lowercase để xử lý các trường hợp khác nhau về khoảng trắng
+  const normalizedPosition = position
+    .trim()
+    .replace(/\s+/g, ' ') // Normalize nhiều khoảng trắng thành 1 khoảng trắng
+    .toLowerCase();
+  
+  // Phải chứa cả "trợ live" (hoặc "tro live") VÀ "中控"
+  // Sử dụng regex để tìm không phân biệt khoảng trắng
+  const hasTroLive = /\btr[oợ]\s*live\b/i.test(position) || normalizedPosition.includes('trợ live') || normalizedPosition.includes('tro live');
+  const hasZhongKong = position.includes('中控');
+  
+  return hasTroLive && hasZhongKong;
 };
