@@ -179,17 +179,18 @@ export const Personnel: React.FC = () => {
     const [year, month] = selectedMonth.split('-').map(Number);
     
     return personnelList.map(person => {
-      // Lấy doanh số thực từ LiveReport dựa trên reporter
+      // Lấy doanh số thực từ LiveReport dựa trên hostName (tên host) thay vì reporter (người nhập)
       const personReports = liveReports.filter(report => {
-        if (!report.reporter) return false;
-        // So khớp theo tên hoặc email
-        const reporterName = report.reporter.toLowerCase();
+        if (!report.hostName) return false;
+        // So khớp theo tên host hoặc email
+        const hostName = report.hostName.toLowerCase();
         const personName = person.fullName.toLowerCase();
         const personEmail = person.email?.toLowerCase() || '';
         
-        return reporterName.includes(personName) || 
-               personName.includes(reporterName) ||
-               reporterName === personEmail;
+        return hostName === personName || 
+               hostName.includes(personName) || 
+               personName.includes(hostName) ||
+               hostName === personEmail;
       });
 
       // Lọc theo tháng được chọn
