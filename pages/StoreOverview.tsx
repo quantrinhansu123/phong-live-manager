@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, matchNames } from '../utils/formatUtils';
 import { LiveReport, Store, StoreOverview } from '../types';
-import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee, isTrungKhong } from '../utils/permissionUtils';
 
 export const StoreOverviewPage: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
@@ -40,10 +40,16 @@ export const StoreOverviewPage: React.FC = () => {
           reportData = reportData.filter(r => allowedStoreIds.includes(r.channelId));
         }
       } else if (isRegularEmployee()) {
-        // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName)
-        const currentUserName = getCurrentUserName();
-        if (currentUserName) {
-          reportData = reportData.filter(r => r.hostName === currentUserName);
+        // Nếu là TRỢ LIVE 中控 thì xem tất cả data được cấp quyền, không filter theo hostName
+        if (isTrungKhong()) {
+          // TRỢ LIVE 中控 xem tất cả data (không filter theo hostName)
+          // Data đã được filter theo menu permissions và department/store permissions
+        } else {
+          // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName)
+          const currentUserName = getCurrentUserName();
+          if (currentUserName) {
+            reportData = reportData.filter(r => matchNames(r.hostName, currentUserName));
+          }
         }
       }
       

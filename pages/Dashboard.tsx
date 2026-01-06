@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchStores } from '../services/dataService';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart } from 'recharts';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, matchNames } from '../utils/formatUtils';
 import { LiveReport, Store } from '../types';
-import { isPartner, getPartnerId, isAdmin, getCurrentUserId, getCurrentUserName, isRegularEmployee } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin, getCurrentUserId, getCurrentUserName, isRegularEmployee, isTrungKhong } from '../utils/permissionUtils';
 
 export const Dashboard: React.FC = () => {
   const [selectedStore, setSelectedStore] = useState<string>('all');
@@ -52,17 +52,19 @@ export const Dashboard: React.FC = () => {
           filteredReports = reportData.filter(r => allowedStoreIds.includes(r.channelId));
         }
       } else if (isRegularEmployee()) {
-        // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName)
-        const currentUserName = getCurrentUserName();
-        if (currentUserName) {
-          filteredReports = reportData.filter(r => {
-            if (!r.hostName) return false;
-            const hostName = r.hostName.toLowerCase();
-            const personName = currentUserName.toLowerCase();
-            return hostName === personName || 
-                   hostName.includes(personName) || 
-                   personName.includes(hostName);
-          });
+        // Nếu là TRỢ LIVE 中控 thì xem tất cả data được cấp quyền, không filter theo hostName
+        if (isTrungKhong()) {
+          // TRỢ LIVE 中控 xem tất cả data (không filter theo hostName)
+          // Data đã được filter theo menu permissions và department/store permissions
+        } else {
+          // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName)
+          const currentUserName = getCurrentUserName();
+          if (currentUserName) {
+            filteredReports = reportData.filter(r => {
+              // Sử dụng matchNames để xử lý khoảng trắng và ký tự đặc biệt
+              return matchNames(r.hostName, currentUserName);
+            });
+          }
         }
       }
       

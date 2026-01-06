@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { fetchLiveReports, fetchStores } from '../services/dataService';
+import { fetchLiveReports, fetchStores, fetchPersonnel } from '../services/dataService';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, ComposedChart } from 'recharts';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
@@ -10,6 +10,8 @@ import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee
 export const CPQC: React.FC = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [reports, setReports] = useState<LiveReport[]>([]);
+  const [allReports, setAllReports] = useState<LiveReport[]>([]); // Lưu toàn bộ reports không filter
+  const [personnelList, setPersonnelList] = useState<Personnel[]>([]);
   const [dateFrom, setDateFrom] = useState<string>(() => {
     const date = new Date();
     date.setDate(date.getDate() - 30);
@@ -30,10 +32,15 @@ export const CPQC: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [storeData, reportData] = await Promise.all([
+      const [storeData, reportData, personnelData] = await Promise.all([
         fetchStores(),
-        fetchLiveReports()
+        fetchLiveReports(),
+        fetchPersonnel()
       ]);
+      
+      // Lưu toàn bộ reports không filter
+      setAllReports(reportData);
+      setPersonnelList(personnelData);
       
       // Nếu là nhân viên có department "Đối tác", chỉ hiển thị stores được gán cho họ
       let filteredStores = storeData;
@@ -359,7 +366,11 @@ export const CPQC: React.FC = () => {
             key: 'hosts',
             label: 'Host',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
+            // Lấy từ allReports và personnelList để có đầy đủ danh sách host, không phụ thuộc vào reports đã filter
+            options: Array.from(new Set([
+              ...allReports.map(r => r.hostName).filter(Boolean),
+              ...personnelList.map(p => p.fullName).filter(Boolean)
+            ])).sort().map(host => ({ value: host, label: host }))
           },
           {
             key: 'shifts',

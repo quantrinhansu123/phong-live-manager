@@ -99,6 +99,7 @@ export const Sidebar: React.FC = () => {
             localStorage.removeItem('currentUserId');
             localStorage.removeItem('currentUserRole');
             localStorage.removeItem('currentUserDepartment');
+            localStorage.removeItem('currentUserPosition');
             window.location.reload();
           }}
           className="w-full text-xs text-brand-navy hover:text-blue-800 font-medium py-1 text-left"

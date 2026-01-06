@@ -165,3 +165,14 @@ export const getCurrentUserName = (): string | undefined => {
 export const isRegularEmployee = (): boolean => {
   return !isAdmin() && !isPartner();
 };
+
+// Lấy position hiện tại của user
+export const getCurrentUserPosition = (): string | undefined => {
+  return localStorage.getItem('currentUserPosition') || undefined;
+};
+
+// Kiểm tra user có phải TRỢ LIVE 中控 không
+export const isTrungKhong = (): boolean => {
+  const position = getCurrentUserPosition();
+  return position === 'TRỢ LIVE 中控' || position === 'Trợ Live 中控' || position?.includes('中控') || false;
+};

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchPersonnel, fetchStores } from '../services/dataService';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, matchNames } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
 import { isPartner, getPartnerId, isAdmin } from '../utils/permissionUtils';
 
@@ -93,15 +93,10 @@ export const SalaryReport: React.FC = () => {
     monthlyReports.forEach(report => {
       if (!report.hostName) return;
 
-      // Find matching personnel - tìm theo hostName
+      // Find matching personnel - tìm theo hostName (sử dụng matchNames để xử lý khoảng trắng và ký tự đặc biệt)
       const matchingPerson = personnel.find(person => {
-        const hostName = report.hostName!.toLowerCase();
-        const personName = person.fullName.toLowerCase();
-        const personEmail = person.email?.toLowerCase() || '';
-        return hostName === personName || 
-               hostName.includes(personName) || 
-               personName.includes(hostName) ||
-               hostName === personEmail;
+        return matchNames(report.hostName, person.fullName) || 
+               matchNames(report.hostName, person.email);
       });
 
       if (matchingPerson) {

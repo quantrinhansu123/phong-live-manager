@@ -5,9 +5,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { LiveReportModal } from '../components/LiveReportModal';
 import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, matchNames } from '../utils/formatUtils';
 import { LiveReport, Personnel, Store } from '../types';
-import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee, isTrungKhong } from '../utils/permissionUtils';
 
 export const LiveSessionReport: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
@@ -65,17 +65,25 @@ export const LiveSessionReport: React.FC = () => {
         storeData = storeData.filter(s => s.partnerId === partnerId);
         const allowedStoreIds = storeData.map(s => s.id);
         reportData = reportData.filter(r => allowedStoreIds.includes(r.channelId));
-        // Filter personnel để chỉ hiển thị host từ stores của đối tác
-        const allowedHostNames = new Set(reportData.map(r => r.hostName).filter(Boolean));
-        personnelData = personnelData.filter(p => allowedHostNames.has(p.fullName));
+        // Filter personnel để chỉ hiển thị host từ stores của đối tác (sử dụng matchNames để xử lý khoảng trắng)
+        const allowedHostNames = reportData.map(r => r.hostName).filter(Boolean);
+        personnelData = personnelData.filter(p => 
+          allowedHostNames.some(hostName => matchNames(hostName, p.fullName))
+        );
       }
     } else if (isRegularEmployee()) {
-      // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName)
-      const currentUserName = getCurrentUserName();
-      if (currentUserName) {
-        reportData = reportData.filter(r => r.hostName === currentUserName);
-        // Chỉ hiện thị chính mình trong danh sách personnel
-        personnelData = personnelData.filter(p => p.fullName === currentUserName);
+      // Nếu là TRỢ LIVE 中控 thì xem tất cả data được cấp quyền, không filter theo hostName
+      if (isTrungKhong()) {
+        // TRỢ LIVE 中控 xem tất cả data (không filter theo hostName)
+        // Data đã được filter theo menu permissions và department/store permissions
+      } else {
+        // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName)
+        const currentUserName = getCurrentUserName();
+        if (currentUserName) {
+          reportData = reportData.filter(r => matchNames(r.hostName, currentUserName));
+          // Chỉ hiện thị chính mình trong danh sách personnel
+          personnelData = personnelData.filter(p => matchNames(p.fullName, currentUserName));
+        }
       }
     }
     
@@ -251,11 +259,8 @@ export const LiveSessionReport: React.FC = () => {
       const allPersonnel = personnelList.length > 0 ? personnelList : allReports.map(r => ({ fullName: r.hostName } as Personnel)).filter((p, i, arr) => arr.findIndex(item => item.fullName === p.fullName) === i);
       
       const matchingPerson = allPersonnel.find(person => {
-        const hostName = report.hostName!.toLowerCase();
-        const personName = person.fullName.toLowerCase();
-        return hostName === personName || 
-               hostName.includes(personName) || 
-               personName.includes(hostName);
+        // Sử dụng matchNames để xử lý khoảng trắng và ký tự đặc biệt
+        return matchNames(report.hostName, person.fullName);
       });
 
       if (matchingPerson) {
@@ -707,7 +712,11 @@ export const LiveSessionReport: React.FC = () => {
             key: 'hosts',
             label: 'Host',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
+            // Lấy từ allReports để có đầy đủ danh sách host, không phụ thuộc vào reports đã filter
+            options: Array.from(new Set([
+              ...allReports.map(r => r.hostName).filter(Boolean),
+              ...personnelList.map(p => p.fullName).filter(Boolean)
+            ])).sort().map(host => ({ value: host, label: host }))
           },
           {
             key: 'shifts',

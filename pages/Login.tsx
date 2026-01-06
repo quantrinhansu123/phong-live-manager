@@ -36,6 +36,7 @@ export const Login: React.FC = () => {
                     }
                     localStorage.setItem('currentUserRole', roleToStore);
                     localStorage.setItem('currentUserDepartment', user.department || '');
+                    localStorage.setItem('currentUserPosition', user.position || '');
                     navigate('/');
                     window.location.reload();
                     return;

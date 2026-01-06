@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { fetchPersonnel, createPersonnel, updatePersonnel, deletePersonnel, fetchLiveReports, MOCK_VIDEO_METRICS, fetchStores } from '../services/dataService';
 import { FilterBar } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, matchNames } from '../utils/formatUtils';
 import { Personnel as PersonnelType, LiveReport, ReportType } from '../types';
 import { isPartner, getPartnerId, isAdmin, getCurrentUserId, isRegularEmployee, getCurrentUserName } from '../utils/permissionUtils';
 
@@ -182,15 +182,9 @@ export const Personnel: React.FC = () => {
       // Lấy doanh số thực từ LiveReport dựa trên hostName (tên host) thay vì reporter (người nhập)
       const personReports = liveReports.filter(report => {
         if (!report.hostName) return false;
-        // So khớp theo tên host hoặc email
-        const hostName = report.hostName.toLowerCase();
-        const personName = person.fullName.toLowerCase();
-        const personEmail = person.email?.toLowerCase() || '';
-        
-        return hostName === personName || 
-               hostName.includes(personName) || 
-               personName.includes(hostName) ||
-               hostName === personEmail;
+        // So khớp theo tên host hoặc email (sử dụng matchNames để xử lý khoảng trắng và ký tự đặc biệt)
+        return matchNames(report.hostName, person.fullName) || 
+               matchNames(report.hostName, person.email);
       });
 
       // Lọc theo tháng được chọn

@@ -1,15 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { fetchLiveReports, fetchStores, MOCK_STORES } from '../services/dataService';
+import { fetchLiveReports, fetchStores, fetchPersonnel, MOCK_STORES } from '../services/dataService';
 import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency } from '../utils/formatUtils';
-import { LiveReport, Store } from '../types';
+import { LiveReport, Store, Personnel } from '../types';
 import { LiveReportModal } from '../components/LiveReportModal';
 import { createLiveReport, updateLiveReport, deleteLiveReport } from '../services/dataService';
 import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee } from '../utils/permissionUtils';
 
 export const LiveReportDetail: React.FC = () => {
   const [reports, setReports] = useState<LiveReport[]>([]);
+  const [allReports, setAllReports] = useState<LiveReport[]>([]); // Lưu toàn bộ reports không filter
+  const [personnelList, setPersonnelList] = useState<Personnel[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState<LiveReport | null>(null);
@@ -44,10 +46,15 @@ export const LiveReportDetail: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [reportData, storeData] = await Promise.all([
+      const [reportData, storeData, personnelData] = await Promise.all([
         fetchLiveReports(),
-        fetchStores()
+        fetchStores(),
+        fetchPersonnel()
       ]);
+      
+      // Lưu toàn bộ reports không filter
+      setAllReports(reportData);
+      setPersonnelList(personnelData);
       
       // Nếu là nhân viên có department "Đối tác", chỉ hiển thị stores được gán cho họ
       let filteredStores = storeData;
@@ -487,7 +494,11 @@ export const LiveReportDetail: React.FC = () => {
                       onClick={(e) => e.stopPropagation()}
                     />
                     <div className="max-h-40 overflow-y-auto">
-                      {Array.from(new Set(reports.map(r => r.hostName).filter(Boolean)))
+                      {Array.from(new Set([
+                        ...allReports.map(r => r.hostName).filter(Boolean),
+                        ...personnelList.map(p => p.fullName).filter(Boolean)
+                      ]))
+                        .sort()
                         .filter(host => host.toLowerCase().includes(hostSearch.toLowerCase()))
                         .map(host => (
                           <label key={host} className="flex items-center gap-2 py-1 px-2 cursor-pointer hover:bg-gray-50 rounded">
@@ -699,7 +710,11 @@ export const LiveReportDetail: React.FC = () => {
             key: 'hosts',
             label: 'Host (主播)',
             type: 'checkbox',
-            options: Array.from(new Set(reports.map(r => r.hostName).filter(Boolean))).map(host => ({ value: host, label: host }))
+            // Lấy từ allReports và personnelList để có đầy đủ danh sách host, không phụ thuộc vào reports đã filter
+            options: Array.from(new Set([
+              ...allReports.map(r => r.hostName).filter(Boolean),
+              ...personnelList.map(p => p.fullName).filter(Boolean)
+            ])).sort().map(host => ({ value: host, label: host }))
           },
           {
             key: 'shifts',

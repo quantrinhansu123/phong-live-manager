@@ -54,5 +54,39 @@ export const formatCurrencyForExcel = (val: number): string => {
   return `${formatted}₫`;
 };
 
+/**
+ * Normalize tên để so sánh (trim, normalize khoảng trắng, lowercase)
+ * @param name - Tên cần normalize
+ * @returns Tên đã được normalize
+ */
+export const normalizeName = (name: string | null | undefined): string => {
+  if (!name) return '';
+  return name
+    .trim()
+    .replace(/\s+/g, ' ') // Normalize nhiều khoảng trắng thành 1 khoảng trắng
+    .toLowerCase();
+};
+
+/**
+ * So sánh 2 tên có khớp nhau không (sau khi normalize)
+ * @param name1 - Tên thứ nhất
+ * @param name2 - Tên thứ hai
+ * @returns true nếu khớp nhau
+ */
+export const matchNames = (name1: string | null | undefined, name2: string | null | undefined): boolean => {
+  const normalized1 = normalizeName(name1);
+  const normalized2 = normalizeName(name2);
+  
+  if (!normalized1 || !normalized2) return false;
+  
+  // Exact match
+  if (normalized1 === normalized2) return true;
+  
+  // One contains the other
+  if (normalized1.includes(normalized2) || normalized2.includes(normalized1)) return true;
+  
+  return false;
+};
+
 
 
