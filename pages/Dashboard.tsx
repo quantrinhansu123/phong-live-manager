@@ -55,7 +55,14 @@ export const Dashboard: React.FC = () => {
         // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName)
         const currentUserName = getCurrentUserName();
         if (currentUserName) {
-          filteredReports = reportData.filter(r => r.hostName === currentUserName);
+          filteredReports = reportData.filter(r => {
+            if (!r.hostName) return false;
+            const hostName = r.hostName.toLowerCase();
+            const personName = currentUserName.toLowerCase();
+            return hostName === personName || 
+                   hostName.includes(personName) || 
+                   personName.includes(hostName);
+          });
         }
       }
       

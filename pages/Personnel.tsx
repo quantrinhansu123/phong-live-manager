@@ -67,7 +67,7 @@ export const Personnel: React.FC = () => {
     phoneNumber: '',
     email: '',
     password: '',
-    role: 'user' as 'user' | 'admin',
+    role: 'user' as 'user' | 'admin' | 'partner',
     baseSalary: 0,
     monthlyKPITarget: 0,
     allowedMenuIds: [] as string[]
@@ -406,46 +406,13 @@ export const Personnel: React.FC = () => {
                       <label className="block text-sm font-medium text-gray-700">Phân quyền (权限)</label>
                       <select name="role" value={formData.role || 'user'} onChange={handleInputChange} className="w-full border rounded px-3 py-2 mt-1 bg-white">
                         <option value="user">Nhân viên (员工) (User)</option>
+                        <option value="partner">Đối tác (合作伙伴) (Partner)</option>
                         <option value="admin">Quản trị viên (管理员) (Admin)</option>
                       </select>
                     </div>
                   </div>
                 </div>
 
-                {/* Menu Permissions - Only show for non-admin users */}
-                {formData.role !== 'admin' && (
-                  <div className="col-span-2 mt-2">
-                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
-                      Phân quyền Menu (菜单权限) - Chọn các hạng mục có thể xem (选择可查看的菜单项)
-                    </label>
-                    <div className="bg-green-50 p-4 rounded border border-green-100">
-                      <p className="text-xs text-gray-600 mb-3">
-                        Tích chọn các menu mà nhân sự này có thể xem. Nếu không chọn, sẽ áp dụng quyền mặc định theo role và phòng ban. (选择此人员可查看的菜单。如果不选择，将应用基于角色和部门的默认权限。)
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
-                        {MENU_ITEMS.map((menu) => (
-                          <div key={menu.id} className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={(formData.allowedMenuIds || []).includes(menu.id)}
-                              onChange={() => handleMenuToggle(menu.id)}
-                              className="w-4 h-4 text-brand-navy rounded"
-                              id={`menu-${menu.id}`}
-                            />
-                            <label htmlFor={`menu-${menu.id}`} className="text-sm text-gray-700 cursor-pointer">
-                              {menu.label}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                      {(formData.allowedMenuIds || []).length === 0 && (
-                        <p className="text-xs text-gray-500 mt-2 italic">
-                          Chưa chọn menu nào - sẽ áp dụng quyền mặc định (未选择任何菜单 - 将应用默认权限)
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
@@ -575,6 +542,7 @@ export const Personnel: React.FC = () => {
                         <td className="px-6 py-4 font-bold text-gray-800 border-r flex items-center gap-2">
                           {person.fullName}
                           {person.role === 'admin' && <span className="bg-purple-100 text-purple-800 text-xs px-1.5 rounded border border-purple-200">Admin</span>}
+                          {person.role === 'partner' && <span className="bg-blue-100 text-blue-800 text-xs px-1.5 rounded border border-blue-200">Đối tác</span>}
                         </td>
                         <td className="px-6 py-4 border-r text-gray-600">{person.email || '-'}</td>
                         <td className="px-6 py-4 border-r">
@@ -680,6 +648,9 @@ export const Personnel: React.FC = () => {
                             {person.fullName}
                             {person.role === 'admin' && (
                               <span className="ml-2 bg-purple-100 text-purple-800 text-xs px-1.5 rounded border border-purple-200">Admin</span>
+                            )}
+                            {person.role === 'partner' && (
+                              <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-1.5 rounded border border-blue-200">Đối tác</span>
                             )}
                           </td>
                           <td className="px-6 py-4 border-r">

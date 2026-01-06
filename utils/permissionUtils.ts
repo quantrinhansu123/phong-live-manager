@@ -133,7 +133,7 @@ export const getCurrentUserDepartment = (): string | undefined => {
 export const getCurrentUserRole = (): UserRole => {
   const role = localStorage.getItem('currentUserRole');
   if (role === 'admin') return 'admin';
-  // Không còn role 'partner', tất cả đều là 'employee'
+  if (role === 'partner') return 'partner';
   return 'employee'; // Default
 };
 

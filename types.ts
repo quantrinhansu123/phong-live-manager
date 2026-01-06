@@ -47,7 +47,7 @@ export interface Personnel {
   phoneNumber: string; // sdt
   email?: string; // email login
   password?: string; // password login
-  role?: 'admin' | 'user'; // role
+  role?: 'admin' | 'user' | 'partner'; // role
   baseSalary?: number; // Lương cứng (mặc định)
   monthlyKPITarget?: number; // Mục tiêu KPI theo tháng mặc định (doanh số)
   monthlySalary?: Record<string, number>; // Lương cứng theo từng tháng (key: YYYY-MM, value: lương)

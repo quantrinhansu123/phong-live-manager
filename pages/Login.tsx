@@ -25,9 +25,15 @@ export const Login: React.FC = () => {
                 if (user.password === password) {
                     localStorage.setItem('currentUser', user.fullName);
                     localStorage.setItem('currentUserId', user.id || '');
-                    // Map role: 'admin' -> 'admin', còn lại -> 'employee'
-                    // Nếu department = 'Đối tác' thì vẫn là employee nhưng có department 'Đối tác'
-                    const roleToStore = user.role === 'admin' ? 'admin' : 'employee';
+                    // Map role: 'admin' -> 'admin', 'partner' -> 'partner', còn lại -> 'employee'
+                    let roleToStore: string;
+                    if (user.role === 'admin') {
+                        roleToStore = 'admin';
+                    } else if (user.role === 'partner') {
+                        roleToStore = 'partner';
+                    } else {
+                        roleToStore = 'employee';
+                    }
                     localStorage.setItem('currentUserRole', roleToStore);
                     localStorage.setItem('currentUserDepartment', user.department || '');
                     navigate('/');
