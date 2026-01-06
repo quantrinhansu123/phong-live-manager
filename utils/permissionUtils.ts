@@ -174,7 +174,12 @@ export const getCurrentUserPosition = (): string | undefined => {
 // Kiểm tra user có phải TRỢ LIVE 中控 không (phải chứa cả "TRỢ LIVE" và "中控")
 export const isTrungKhong = (): boolean => {
   const position = getCurrentUserPosition();
-  if (!position) return false;
+  if (!position || position.trim() === '') {
+    console.log('[isTrungKhong] No position found');
+    return false;
+  }
+  
+  console.log('[isTrungKhong] Checking position:', position);
   
   // Normalize khoảng trắng và chuyển về lowercase để xử lý các trường hợp khác nhau về khoảng trắng
   const normalizedPosition = position
@@ -186,6 +191,8 @@ export const isTrungKhong = (): boolean => {
   // Sử dụng regex để tìm không phân biệt khoảng trắng
   const hasTroLive = /\btr[oợ]\s*live\b/i.test(position) || normalizedPosition.includes('trợ live') || normalizedPosition.includes('tro live');
   const hasZhongKong = position.includes('中控');
+  
+  console.log('[isTrungKhong] hasTroLive:', hasTroLive, 'hasZhongKong:', hasZhongKong);
   
   return hasTroLive && hasZhongKong;
 };

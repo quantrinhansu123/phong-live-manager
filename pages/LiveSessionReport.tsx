@@ -73,14 +73,20 @@ export const LiveSessionReport: React.FC = () => {
       }
     } else if (isRegularEmployee()) {
       // Nếu là TRỢ LIVE 中控 thì xem tất cả data được cấp quyền, không filter theo hostName
-      if (isTrungKhong()) {
+      const isTrungKhongUser = isTrungKhong();
+      console.log('[LiveSessionReport] isRegularEmployee, isTrungKhong:', isTrungKhongUser);
+      
+      if (isTrungKhongUser) {
         // TRỢ LIVE 中控 xem tất cả data (không filter theo hostName)
         // Data đã được filter theo menu permissions và department/store permissions
+        console.log('[LiveSessionReport] TRỢ LIVE 中控 - showing all data, count:', reportData.length);
       } else {
         // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName)
         const currentUserName = getCurrentUserName();
         if (currentUserName) {
+          const beforeCount = reportData.length;
           reportData = reportData.filter(r => matchNames(r.hostName, currentUserName));
+          console.log('[LiveSessionReport] Regular employee - filtered from', beforeCount, 'to', reportData.length);
           // Chỉ hiện thị chính mình trong danh sách personnel
           personnelData = personnelData.filter(p => matchNames(p.fullName, currentUserName));
         }

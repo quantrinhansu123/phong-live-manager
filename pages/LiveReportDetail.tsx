@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { fetchLiveReports, fetchStores, fetchPersonnel, MOCK_STORES } from '../services/dataService';
 import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
-import { formatCurrency } from '../utils/formatUtils';
+import { formatCurrency, matchNames } from '../utils/formatUtils';
 import { LiveReport, Store, Personnel } from '../types';
 import { LiveReportModal } from '../components/LiveReportModal';
 import { createLiveReport, updateLiveReport, deleteLiveReport } from '../services/dataService';
@@ -69,14 +69,28 @@ export const LiveReportDetail: React.FC = () => {
         }
       } else if (isRegularEmployee()) {
         // Nếu là TRỢ LIVE 中控 thì xem tất cả data được cấp quyền, không filter theo hostName
-        if (isTrungKhong()) {
+        const currentPosition = localStorage.getItem('currentUserPosition');
+        const isTrungKhongUser = isTrungKhong();
+        console.log('[LiveReportDetail] isRegularEmployee');
+        console.log('[LiveReportDetail] currentPosition:', currentPosition);
+        console.log('[LiveReportDetail] isTrungKhong:', isTrungKhongUser);
+        console.log('[LiveReportDetail] reportData count before filter:', reportData.length);
+        
+        if (isTrungKhongUser) {
           // TRỢ LIVE 中控 xem tất cả data (không filter theo hostName)
           // Data đã được filter theo menu permissions và department/store permissions
+          console.log('[LiveReportDetail] TRỢ LIVE 中控 - showing all data, count:', filteredReports.length);
         } else {
           // Nhân viên thường chỉ thấy data của chính mình (dựa trên hostName)
           const currentUserName = getCurrentUserName();
+          console.log('[LiveReportDetail] Regular employee - currentUserName:', currentUserName);
           if (currentUserName) {
+            const beforeCount = filteredReports.length;
             filteredReports = reportData.filter(r => matchNames(r.hostName, currentUserName));
+            console.log('[LiveReportDetail] Regular employee - filtered from', beforeCount, 'to', filteredReports.length);
+          } else {
+            console.log('[LiveReportDetail] No currentUserName found, showing no data');
+            filteredReports = [];
           }
         }
       }
