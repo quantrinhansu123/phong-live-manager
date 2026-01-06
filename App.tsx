@@ -11,6 +11,7 @@ import { CPQC } from './pages/CPQC';
 import { SalaryReport } from './pages/SalaryReport';
 import { StoreOverviewPage } from './pages/StoreOverview';
 import { LiveReportDetail } from './pages/LiveReportDetail';
+import { MenuPermissions } from './pages/MenuPermissions';
 
 const ProtectedLayout: React.FC = () => {
   const user = localStorage.getItem('currentUser');
@@ -43,6 +44,7 @@ const App: React.FC = () => {
           <Route path="/store-overview" element={<StoreOverviewPage />} />
           <Route path="/personnel" element={<Personnel />} />
           <Route path="/cpqc" element={<CPQC />} />
+          <Route path="/menu-permissions" element={<MenuPermissions />} />
         </Route>
         <Route path="/salary-report" element={<SalaryReport />} />
       </Routes>

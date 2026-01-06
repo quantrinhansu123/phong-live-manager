@@ -13,6 +13,7 @@ const MENU_ITEMS = [
   { id: ReportType.PERSONNEL, label: 'Nhân sự (人事)', path: '/personnel' },
   { id: ReportType.CPQC, label: 'CPQC (成本管理)', path: '/cpqc' },
   { id: ReportType.SALARY_REPORT, label: 'Báo Cáo Lương (工资报告)', path: '/salary-report' },
+  { id: 'menu_permissions', label: 'Phân Quyền Menu (菜单权限)', path: '/menu-permissions' },
 ];
 
 export const Sidebar: React.FC = () => {
@@ -54,7 +55,13 @@ export const Sidebar: React.FC = () => {
     if (!permissionsLoaded) {
       return []; // Không hiển thị menu nào cho đến khi permissions được load
     }
-    return MENU_ITEMS.filter(item => canAccessMenu(item.id, userRole, userDepartment));
+    return MENU_ITEMS.filter(item => {
+      // Menu "Phân Quyền Menu" chỉ hiển thị cho Admin
+      if (item.id === 'menu_permissions') {
+        return isAdmin();
+      }
+      return canAccessMenu(item.id, userRole, userDepartment);
+    });
   }, [userRole, userDepartment, permissionsLoaded, menuPermissionsCache]);
 
   return (
