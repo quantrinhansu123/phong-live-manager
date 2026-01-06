@@ -284,7 +284,11 @@ export const LiveSessionReport: React.FC = () => {
       ...item,
       avgROI: item.totalAdCost > 0 ? (item.totalGMV - item.totalAdCost) / item.totalAdCost : 0
     })).sort((a, b) => b.totalGMV - a.totalGMV);
+<<<<<<< HEAD
   }, [allReports, personnelList, personnelDateFrom, personnelDateTo]);
+=======
+  }, [allReports, personnelList, liveReports, personnelDateFrom, personnelDateTo]);
+>>>>>>> 36f6d4de06b9301adc5581b1a4d288b5211d0a21
 
   // Weekly Report by Host
   const weeklyReportData = useMemo(() => {
