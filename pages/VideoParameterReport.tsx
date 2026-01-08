@@ -152,27 +152,23 @@ export const VideoParameterReport: React.FC = () => {
   const handleExportExcel = () => {
     const exportData = filteredVideos.map(video => {
       const storeName = stores.find(s => s.id === video.storeId)?.name || '';
-      const directGmv = Math.floor(video.sales * 0.6);
-      const orders = Math.floor(video.sales / 10000);
-      const clickRate = 2.5; // Mock data, có thể lưu trong database sau
-      const watchRate = 85; // Mock data
-      const newFollowers = Math.floor(video.views / 50);
 
+      // Xuất CHÍNH XÁC dữ liệu đã lưu, không tính toán lại
       return {
         '视频名称': video.title,
-        '发布时间': video.uploadDate,
-        '时长': '30s', // Mock data, có thể lưu trong database sau
+        '发布时间': video.uploadDate + (video.uploadTime ? ` ${video.uploadTime}` : ''),
+        '时长': video.duration || '',
         'GMV': formatCurrencyForExcel(video.sales),
-        '直接 GMV': formatCurrencyForExcel(directGmv),
+        '直接 GMV': formatCurrencyForExcel(video.directGMV || Math.floor(video.sales * 0.6)),
         '观看人次': video.views,
-        '成交件数': orders,
-        '点击率': formatPercentage(clickRate),
-        '完播率': formatPercentage(watchRate),
-        '新增粉丝数': newFollowers,
-        '商品 ID': video.id,
+        '成交件数': video.orders !== undefined ? video.orders : Math.floor(video.sales / 10000),
+        '点击率': video.clickRate !== undefined ? formatPercentage(video.clickRate) : '',
+        '完播率': video.watchRate !== undefined ? formatPercentage(video.watchRate) : '',
+        '新增粉丝数': video.newFollowers !== undefined ? video.newFollowers : Math.floor(video.views / 50),
+        '商品 ID': video.productId || video.id,
         'CỬA HÀNG \n商店': storeName,
         'NGƯỜI PHỤ TRÁCH\n负责人 ': video.personInCharge,
-        'HOST \n主播配合': '' // Có thể thêm field này vào database sau
+        'HOST \n主播配合': video.host || ''
       };
     });
     exportToExcel(exportData, `video-report-${new Date().toISOString().split('T')[0]}.xlsx`);
