@@ -104,14 +104,7 @@ export const VideoParameterReport: React.FC = () => {
   const filteredVideos = useMemo(() => {
     let filtered = videos;
 
-    // Filter by date range
-    filtered = filtered.filter(v => {
-      const videoDate = new Date(v.uploadDate);
-      const fromDate = new Date(dateFrom);
-      const toDate = new Date(dateTo);
-      toDate.setHours(23, 59, 59, 999);
-      return videoDate >= fromDate && videoDate <= toDate;
-    });
+    // Không lọc theo ngày - hiển thị tất cả video (No date filtering - show all videos)
 
     // Filter by store
     if (selectedFilters.stores && selectedFilters.stores.length > 0) {
@@ -146,7 +139,7 @@ export const VideoParameterReport: React.FC = () => {
     }
 
     return filtered;
-  }, [videos, selectedFilters, searchText, dateFrom, dateTo, stores]);
+  }, [videos, selectedFilters, searchText, stores]);
 
   const handleExportExcel = () => {
     const exportData = filteredVideos.map(video => {
