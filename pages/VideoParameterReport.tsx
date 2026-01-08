@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { MOCK_VIDEO_METRICS, MOCK_STORES, fetchVideoMetrics, fetchStores, fetchPersonnel, createVideoMetric, updateVideoMetric, deleteVideoMetric } from '../services/dataService';
 import { VideoMetric, Store } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency, parseCurrency, parsePercentage, formatPercentage, formatCurrencyForExcel } from '../utils/formatUtils';
 import { VideoEditModal } from '../components/VideoEditModal';
@@ -559,56 +558,6 @@ export const VideoParameterReport: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý & Báo cáo Video (视频管理和报告)</h2>
       </div>
 
-      {/* FilterBar */}
-      <FilterBar
-        onSearch={setSearchText}
-        onExportExcel={handleExportExcel}
-        onImportExcel={handleImportExcel}
-        onReset={() => {
-          setSearchText('');
-          setSelectedFilters({});
-          const today = new Date();
-          const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-          setDateFrom(firstDayOfMonth.toISOString().split('T')[0]);
-          setDateTo(today.toISOString().split('T')[0]);
-        }}
-        selectedFilters={selectedFilters}
-        onFilterChange={(field, values) => {
-          setSelectedFilters(prev => ({ ...prev, [field]: values }));
-        }}
-        dateFrom={dateFrom}
-        dateTo={dateTo}
-        onDateFromChange={setDateFrom}
-        onDateToChange={setDateTo}
-        onQuickDateSelect={(from, to) => {
-          setDateFrom(from);
-          setDateTo(to);
-        }}
-        filterFields={[
-          {
-            key: 'stores',
-            label: 'Cửa hàng (店铺)',
-            type: 'select',
-            options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
-          },
-          {
-            key: 'platforms',
-            label: 'Nền tảng (平台)',
-            type: 'select',
-            options: [
-              { value: 'TikTok', label: 'TikTok' },
-              { value: 'Facebook', label: 'Facebook' },
-              { value: 'Shopee', label: 'Shopee' }
-            ]
-          },
-          {
-            key: 'persons',
-            label: 'Người phụ trách (负责人)',
-            type: 'select',
-            options: Array.from(new Set(videos.map(v => v.personInCharge).filter(Boolean))).map(person => ({ value: person, label: person }))
-          }
-        ]}
-      />
 
       {/* KPI Section */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
