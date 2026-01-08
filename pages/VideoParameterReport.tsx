@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { MOCK_VIDEO_METRICS, MOCK_STORES, fetchVideoMetrics, fetchStores, createVideoMetric, updateVideoMetric, deleteVideoMetric } from '../services/dataService';
+import { MOCK_VIDEO_METRICS, MOCK_STORES, fetchVideoMetrics, fetchStores, fetchPersonnel, createVideoMetric, updateVideoMetric, deleteVideoMetric } from '../services/dataService';
 import { VideoMetric, Store } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { FilterBar, FilterField } from '../components/FilterBar';
@@ -31,27 +31,56 @@ export const VideoParameterReport: React.FC = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      let [videoData, storeData] = await Promise.all([
+      let [videoData, storeData, personnelData] = await Promise.all([
         fetchVideoMetrics(),
-        fetchStores()
+        fetchStores(),
+        fetchPersonnel()
       ]);
-      
-      // Nếu là nhân viên có department "Đối tác", chỉ hiển thị stores được gán cho họ
-      if (isPartner() && !isAdmin()) {
+
+      // Admin: xem tất cả (Admin: see all)
+      if (isAdmin()) {
+        // No filtering needed
+      }
+      // Đối tác: chỉ xem video của cửa hàng được gán (Partner: only see assigned stores' videos)
+      else if (isPartner()) {
         const partnerId = getPartnerId();
         if (partnerId) {
           storeData = storeData.filter(s => s.partnerId === partnerId);
           const allowedStoreIds = storeData.map(s => s.id);
           videoData = videoData.filter(v => allowedStoreIds.includes(v.storeId));
         }
-      } else if (isRegularEmployee()) {
-        // Nhân viên thường chỉ thấy video của chính mình (dựa trên personInCharge)
+      }
+      // Nhân sự thường: xem video mình upload HOẶC video của cửa hàng mình phụ trách
+      // (Regular employee: see videos they uploaded OR videos from stores they manage)
+      else if (isRegularEmployee()) {
         const currentUserName = getCurrentUserName();
         if (currentUserName) {
-          videoData = videoData.filter(v => v.personInCharge === currentUserName);
+          // Tìm personnel record của user hiện tại
+          const currentPersonnel = personnelData.find(p =>
+            p.fullName === currentUserName || p.email === currentUserName
+          );
+
+          if (currentPersonnel) {
+            // Tìm các cửa hàng mà nhân sự này phụ trách
+            const managedStoreIds = storeData
+              .filter(store =>
+                store.personnelIds &&
+                store.personnelIds.includes(currentPersonnel.id || currentPersonnel.fullName)
+              )
+              .map(store => store.id);
+
+            // Filter: video mình upload HOẶC video từ cửa hàng mình phụ trách
+            videoData = videoData.filter(v =>
+              v.personInCharge === currentUserName || // Video mình upload
+              managedStoreIds.includes(v.storeId)     // Video từ cửa hàng mình quản lý
+            );
+          } else {
+            // Nếu không tìm thấy personnel record, chỉ hiển thị video mình upload
+            videoData = videoData.filter(v => v.personInCharge === currentUserName);
+          }
         }
       }
-      
+
       // Fallback to mock data if DB is empty
       if (videoData.length === 0) {
         console.warn("Using Mock Data because DB returned empty");
@@ -124,7 +153,7 @@ export const VideoParameterReport: React.FC = () => {
       const clickRate = 2.5; // Mock data, có thể lưu trong database sau
       const watchRate = 85; // Mock data
       const newFollowers = Math.floor(video.views / 50);
-      
+
       return {
         '视频名称': video.title,
         '发布时间': video.uploadDate,
@@ -238,18 +267,18 @@ export const VideoParameterReport: React.FC = () => {
       console.log('Starting import, file:', file.name, file.type, file.size);
       const data = await importFromExcel(file);
       console.log('Imported data:', data);
-      
+
       if (!data || data.length === 0) {
         alert('File Excel trống hoặc không có dữ liệu hợp lệ. (Excel文件为空或没有有效数据)');
         return;
       }
-      
+
       // Map Excel columns to VideoMetric - hỗ trợ nhiều format tên cột
       const newVideosData = data.map((row: any) => {
         // Tìm store name từ nhiều format khác nhau
         const storeName = row['CỬA HÀNG \n商店'] || row['CỬA HÀNG'] || row['商店'] || row['店铺 (Cửa hàng)'] || row['店铺'] || row['Cửa hàng'] || '';
         const store = storeName ? stores.find(s => s.name === storeName) : null;
-        
+
         // Parse uploadDate - có thể có format khác nhau
         let uploadDate = row['发布时间'] || row['发布时间 (Ngày đăng)'] || row['Ngày đăng'] || '';
         // Nếu có format "2026-01-02 12:49", chỉ lấy phần ngày
@@ -260,23 +289,23 @@ export const VideoParameterReport: React.FC = () => {
         if (!uploadDate) {
           uploadDate = new Date().toISOString().split('T')[0];
         }
-        
+
         // Parse person in charge
         const personInCharge = row['NGƯỜI PHỤ TRÁCH\n负责人 '] || row['NGƯỜI PHỤ TRÁCH'] || row['负责人'] || row['负责人 (Người phụ trách)'] || row['Người phụ trách'] || 'Nhân viên';
-        
+
         // Parse GMV từ format "0₫" hoặc "300.010₫"
         const gmvStr = row['GMV'] || row['GMV (交易额)'] || row['交易额'] || '0';
         const sales = parseCurrency(gmvStr);
-        
+
         // Parse views
         const views = parseInt(row['观看人次'] || row['观看人次 (Lượt xem)'] || row['Lượt xem'] || '0') || 0;
-        
+
         // Parse title
         const title = row['视频名称'] || row['视频名称 (Tên video)'] || row['Tên video'] || '';
-        
+
         // Default platform là TikTok
         const platform = 'TikTok' as 'TikTok' | 'Facebook' | 'Shopee';
-        
+
         return {
           storeId: store?.id || stores[0]?.id || 'all',
           title: title,
@@ -289,7 +318,7 @@ export const VideoParameterReport: React.FC = () => {
       }).filter(v => v.title && v.title.trim() !== ''); // Loại bỏ các dòng không có title
 
       console.log('Processed videos data:', newVideosData);
-      
+
       if (newVideosData.length === 0) {
         alert('Không tìm thấy dữ liệu video hợp lệ trong file Excel. Vui lòng kiểm tra lại định dạng file. (未在Excel文件中找到有效的视频数据。请检查文件格式。)');
         return;
@@ -298,7 +327,7 @@ export const VideoParameterReport: React.FC = () => {
       // Save each video to database
       let successCount = 0;
       let errorCount = 0;
-      
+
       for (const videoData of newVideosData) {
         try {
           await createVideoMetric(videoData);
@@ -331,7 +360,7 @@ export const VideoParameterReport: React.FC = () => {
   // Week Total Views Calculation
   const totalViews = filteredVideos.reduce((sum, v) => sum + v.views, 0);
   const totalSales = filteredVideos.reduce((sum, v) => sum + v.sales, 0);
-  
+
   // Chart data - Group by date
   const chartData = filteredVideos.reduce((acc: any[], video) => {
     const existing = acc.find(item => item.date === video.uploadDate);
@@ -574,9 +603,9 @@ export const VideoParameterReport: React.FC = () => {
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" tick={{fontSize: 12}} />
-              <YAxis yAxisId="left" tick={{fontSize: 12}} />
-              <YAxis yAxisId="right" orientation="right" tick={{fontSize: 12}} />
+              <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+              <YAxis yAxisId="left" tick={{ fontSize: 12 }} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
               <Tooltip />
               <Line yAxisId="left" type="monotone" dataKey="views" stroke="#3B82F6" strokeWidth={2} name="场观" />
               <Line yAxisId="right" type="monotone" dataKey="sales" stroke="#F59E0B" strokeWidth={2} name="GMV" />
@@ -600,8 +629,8 @@ export const VideoParameterReport: React.FC = () => {
                     <span className="text-blue-600 font-semibold">{new Intl.NumberFormat('vi-VN').format(person.views)}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500" 
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
                       style={{ width: `${percentage}%` }}
                     ></div>
                   </div>

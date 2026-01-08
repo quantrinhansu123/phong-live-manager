@@ -14,6 +14,14 @@ export const SalaryReport: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
 
+  // Threshold values for color coding (可调整的阈值)
+  const [kpiGreenThreshold, setKpiGreenThreshold] = useState(100); // KPI Green: >= 100%
+  const [kpiYellowThreshold, setKpiYellowThreshold] = useState(80); // KPI Yellow: >= 80%
+
+  // Salary status thresholds: GMV required per 1 million VND salary (每百万工资需要的GMV)
+  const [gmvPerSalaryGreen, setGmvPerSalaryGreen] = useState(22); // Green: GMV > 22M per 1M salary (超过要求)
+  const [gmvPerSalaryYellow, setGmvPerSalaryYellow] = useState(21); // Yellow: GMV = 21M per 1M salary (刚好达标/盈亏平衡)
+
   useEffect(() => {
     loadData();
   }, []);
@@ -26,7 +34,7 @@ export const SalaryReport: React.FC = () => {
         fetchPersonnel(),
         fetchStores()
       ]);
-      
+
       // Nếu là nhân viên có department "Đối tác", chỉ hiển thị stores được gán cho họ
       if (isPartner() && !isAdmin()) {
         const partnerId = getPartnerId();
@@ -36,7 +44,7 @@ export const SalaryReport: React.FC = () => {
           reportData = reportData.filter(r => allowedStoreIds.includes(r.channelId));
         }
       }
-      
+
       setReports(reportData);
       setPersonnel(personnelData);
       setStores(storeData);
@@ -70,6 +78,8 @@ export const SalaryReport: React.FC = () => {
       kpiAchievement: number;
       kpiStatus: 'green' | 'yellow' | 'red';
       salaryStatus: 'green' | 'yellow' | 'red';
+      requiredGMV: number; // GMV required to cover salary (支付工资所需的GMV)
+      gmvToSalaryRatio: number; // Actual GMV per 1M salary (实际每百万工资的GMV)
     }> = {};
 
     // Initialize with all personnel
@@ -85,7 +95,9 @@ export const SalaryReport: React.FC = () => {
         kpiTarget: person.monthlyKPITarget || 0,
         kpiAchievement: 0,
         kpiStatus: 'red',
-        salaryStatus: 'red'
+        salaryStatus: 'red',
+        requiredGMV: 0,
+        gmvToSalaryRatio: 0
       };
     });
 
@@ -95,8 +107,8 @@ export const SalaryReport: React.FC = () => {
 
       // Find matching personnel - tìm theo hostName (sử dụng matchNames để xử lý khoảng trắng và ký tự đặc biệt)
       const matchingPerson = personnel.find(person => {
-        return matchNames(report.hostName, person.fullName) || 
-               matchNames(report.hostName, person.email);
+        return matchNames(report.hostName, person.fullName) ||
+          matchNames(report.hostName, person.email);
       });
 
       if (matchingPerson) {
@@ -113,7 +125,9 @@ export const SalaryReport: React.FC = () => {
             kpiTarget: matchingPerson.monthlyKPITarget || 0,
             kpiAchievement: 0,
             kpiStatus: 'red',
-            salaryStatus: 'red'
+            salaryStatus: 'red',
+            requiredGMV: 0,
+            gmvToSalaryRatio: 0
           };
         }
 
@@ -132,27 +146,33 @@ export const SalaryReport: React.FC = () => {
       item.roi = item.totalAdCost > 0 ? (item.totalGMV - item.totalAdCost) / item.totalAdCost : 0;
       item.kpiAchievement = item.kpiTarget > 0 ? (item.totalGMV / item.kpiTarget) * 100 : 0;
 
-      // KPI Status: Green >= 100%, Yellow >= 80%, Red < 80%
-      if (item.kpiAchievement >= 100) {
+      // KPI Status: Use dynamic thresholds
+      if (item.kpiAchievement >= kpiGreenThreshold) {
         item.kpiStatus = 'green';
-      } else if (item.kpiAchievement >= 80) {
+      } else if (item.kpiAchievement >= kpiYellowThreshold) {
         item.kpiStatus = 'yellow';
       } else {
         item.kpiStatus = 'red';
       }
 
-      // Salary Status: Green (ROI >= 4), Yellow (ROI >= 2), Red (< 2)
-      if (item.roi >= 4) {
-        item.salaryStatus = 'green';
-      } else if (item.roi >= 2) {
-        item.salaryStatus = 'yellow';
+      // Salary Status: Based on GMV-to-Salary ratio (基于GMV与工资的比率)
+      // Calculate required GMV and actual ratio
+      const salaryInMillions = item.baseSalary / 1_000_000; // Convert to millions
+      item.requiredGMV = salaryInMillions * gmvPerSalaryYellow * 1_000_000; // Required GMV for break-even
+      item.gmvToSalaryRatio = salaryInMillions > 0 ? item.totalGMV / (salaryInMillions * 1_000_000) : 0;
+
+      // Determine status based on actual GMV vs required GMV
+      if (item.totalGMV > salaryInMillions * gmvPerSalaryGreen * 1_000_000) {
+        item.salaryStatus = 'green'; // Exceeds requirement (超过要求)
+      } else if (item.totalGMV >= item.requiredGMV) {
+        item.salaryStatus = 'yellow'; // Meets requirement / Break-even (达标/盈亏平衡)
       } else {
-        item.salaryStatus = 'red';
+        item.salaryStatus = 'red'; // Below requirement / Warning (低于要求/警告)
       }
     });
 
     return Object.values(dataMap).sort((a, b) => b.totalGMV - a.totalGMV);
-  }, [monthlyReports, personnel]);
+  }, [monthlyReports, personnel, kpiGreenThreshold, kpiYellowThreshold, gmvPerSalaryGreen, gmvPerSalaryYellow]);
 
 
   const getStatusColor = (status: 'green' | 'yellow' | 'red') => {
@@ -234,21 +254,88 @@ export const SalaryReport: React.FC = () => {
         </div>
       </div>
 
-      {/* Legend */}
+      {/* Legend with Editable Thresholds */}
       <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
         <h3 className="text-sm font-bold text-gray-800 mb-3">Chú thích màu sắc: (颜色说明:)</h3>
+
+        {/* Threshold Controls */}
+        <div className="mb-4 p-3 bg-gray-50 rounded border border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* KPI Thresholds */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-gray-600 uppercase">Ngưỡng KPI (KPI阈值):</p>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600 w-24">Xanh (绿色) ≥</label>
+                <input
+                  type="number"
+                  className="border border-gray-300 rounded px-2 py-1 text-sm w-20 focus:outline-none focus:border-brand-navy"
+                  value={kpiGreenThreshold}
+                  onChange={(e) => setKpiGreenThreshold(Number(e.target.value))}
+                  min="0"
+                  max="200"
+                />
+                <span className="text-xs text-gray-600">%</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600 w-24">Vàng (黄色) ≥</label>
+                <input
+                  type="number"
+                  className="border border-gray-300 rounded px-2 py-1 text-sm w-20 focus:outline-none focus:border-brand-navy"
+                  value={kpiYellowThreshold}
+                  onChange={(e) => setKpiYellowThreshold(Number(e.target.value))}
+                  min="0"
+                  max="200"
+                />
+                <span className="text-xs text-gray-600">%</span>
+              </div>
+            </div>
+
+            {/* Salary GMV Ratio Thresholds */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-gray-600 uppercase">Tỷ lệ GMV/Lương (GMV/工资比率):</p>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600 w-32">Xanh (绿色) &gt;</label>
+                <input
+                  type="number"
+                  className="border border-gray-300 rounded px-2 py-1 text-sm w-20 focus:outline-none focus:border-brand-navy"
+                  value={gmvPerSalaryGreen}
+                  onChange={(e) => setGmvPerSalaryGreen(Number(e.target.value))}
+                  min="1"
+                  max="100"
+                  step="0.5"
+                />
+                <span className="text-xs text-gray-600">triệu GMV / 1tr lương</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-gray-600 w-32">Vàng (黄色) ≥</label>
+                <input
+                  type="number"
+                  className="border border-gray-300 rounded px-2 py-1 text-sm w-20 focus:outline-none focus:border-brand-navy"
+                  value={gmvPerSalaryYellow}
+                  onChange={(e) => setGmvPerSalaryYellow(Number(e.target.value))}
+                  min="1"
+                  max="100"
+                  step="0.5"
+                />
+                <span className="text-xs text-gray-600">triệu GMV / 1tr lương</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Color Legend */}
         <div className="flex flex-wrap gap-4">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-green-100 border-2 border-green-300"></div>
-            <span className="text-sm text-gray-700">Xanh: Tốt (绿色: 良好) (KPI ≥ 100% hoặc ROI ≥ 4)</span>
+            <span className="text-sm text-gray-700">Xanh: Tốt (绿色: 良好) - KPI ≥ {kpiGreenThreshold}% | Lương: GMV &gt; {gmvPerSalaryGreen}tr/1tr lương</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-yellow-100 border-2 border-yellow-300"></div>
-            <span className="text-sm text-gray-700">Vàng: Khá (黄色: 一般) (KPI ≥ 80% hoặc ROI ≥ 2)</span>
+            <span className="text-sm text-gray-700">Vàng: Hòa vốn (黄色: 盈亏平衡) - KPI ≥ {kpiYellowThreshold}% | Lương: GMV ≥ {gmvPerSalaryYellow}tr/1tr lương</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded bg-red-100 border-2 border-red-300"></div>
-            <span className="text-sm text-gray-700">Đỏ: Cần cải thiện (红色: 需改进) (KPI &lt; 80% hoặc ROI &lt; 2)</span>
+            <span className="text-sm text-gray-700">Đỏ: Báo động (红色: 警告) - KPI &lt; {kpiYellowThreshold}% | Lương: GMV &lt; {gmvPerSalaryYellow}tr/1tr lương</span>
           </div>
         </div>
       </div>
@@ -293,11 +380,10 @@ export const SalaryReport: React.FC = () => {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded text-xs font-medium border ${
-                        item.person.department === 'Live' ? 'bg-red-50 text-red-700 border-red-200' :
+                      <span className={`px-2 py-1 rounded text-xs font-medium border ${item.person.department === 'Live' ? 'bg-red-50 text-red-700 border-red-200' :
                         item.person.department === 'Media' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                        'bg-gray-50 text-gray-600 border-gray-200'
-                      }`}>
+                          'bg-gray-50 text-gray-600 border-gray-200'
+                        }`}>
                         {item.person.department || '-'}
                       </span>
                     </td>
