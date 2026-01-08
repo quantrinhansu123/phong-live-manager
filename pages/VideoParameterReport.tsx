@@ -760,13 +760,13 @@ export const VideoParameterReport: React.FC = () => {
                         <td className="px-4 py-4 text-gray-600">{video.platform}</td>
                         <td className="px-4 py-4 text-gray-600">{storeName}</td>
                         <td className="px-4 py-4 text-gray-600">{video.personInCharge}</td>
-                        <td className="px-4 py-4 text-right font-bold text-green-600">{formatCurrency(video.sales)}</td>
-                        <td className="px-4 py-4 text-right text-gray-600">{formatCurrency(video.directGMV || Math.floor(video.sales * 0.6))}</td>
-                        <td className="px-4 py-4 text-right font-semibold">{new Intl.NumberFormat('vi-VN').format(video.views)}</td>
-                        <td className="px-4 py-4 text-right">{video.orders !== undefined ? video.orders : Math.floor(video.sales / 10000)}</td>
-                        <td className="px-4 py-4 text-right">{video.clickRate !== undefined ? `${video.clickRate.toFixed(2)}%` : '-'}</td>
-                        <td className="px-4 py-4 text-right">{video.watchRate !== undefined ? `${video.watchRate.toFixed(2)}%` : '-'}</td>
-                        <td className="px-4 py-4 text-right">{video.newFollowers !== undefined ? new Intl.NumberFormat('vi-VN').format(video.newFollowers) : '-'}</td>
+                        <td className="px-4 py-4 text-right font-bold text-green-600">{video.sales}</td>
+                        <td className="px-4 py-4 text-right text-gray-600">{video.directGMV !== undefined ? video.directGMV : ''}</td>
+                        <td className="px-4 py-4 text-right font-semibold">{video.views}</td>
+                        <td className="px-4 py-4 text-right">{video.orders !== undefined ? video.orders : ''}</td>
+                        <td className="px-4 py-4 text-right">{video.clickRate !== undefined ? `${video.clickRate}%` : '-'}</td>
+                        <td className="px-4 py-4 text-right">{video.watchRate !== undefined ? `${video.watchRate}%` : '-'}</td>
+                        <td className="px-4 py-4 text-right">{video.newFollowers !== undefined ? video.newFollowers : '-'}</td>
                         <td className="px-4 py-4 text-gray-600">{video.productId || '-'}</td>
                         <td className="px-4 py-4 text-gray-600">{video.host || '-'}</td>
                         <td className="px-4 py-4">
