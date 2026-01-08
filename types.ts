@@ -88,13 +88,22 @@ export interface HostRevenue {
 
 export interface VideoMetric {
   id: string;
-  title: string;
+  title: string; // 视频名称
   storeId: string;
   platform: 'TikTok' | 'Facebook' | 'Shopee';
-  uploadDate: string;
-  views: number;
-  personInCharge: string;
-  sales: number;
+  uploadDate: string; // 发布时间 (YYYY-MM-DD hoặc YYYY-MM-DD HH:mm)
+  uploadTime?: string; // Giờ phút upload (HH:mm) - tách riêng để dễ xử lý
+  duration?: string; // 时长 (ví dụ: "37s", "2m30s")
+  views: number; // 观看人次
+  personInCharge: string; // NGƯỜI PHỤ TRÁCH / 负责人
+  sales: number; // GMV
+  directGMV?: number; // 直接 GMV
+  orders?: number; // 成交件数
+  clickRate?: number; // 点击率 (%)
+  watchRate?: number; // 完播率 (%)
+  newFollowers?: number; // 新增粉丝数
+  productId?: string; // 商品 ID
+  host?: string; // HOST / 主播配合
 }
 
 export interface VideoConfigItem {

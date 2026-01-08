@@ -6,7 +6,7 @@ import { FilterBar, FilterField } from '../components/FilterBar';
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency, parseCurrency, parsePercentage, formatPercentage, formatCurrencyForExcel } from '../utils/formatUtils';
 import { VideoEditModal } from '../components/VideoEditModal';
-import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee } from '../utils/permissionUtils';
+import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee, isVideoUploader } from '../utils/permissionUtils';
 
 export const VideoParameterReport: React.FC = () => {
   const [videos, setVideos] = useState<VideoMetric[]>([]);
@@ -40,6 +40,10 @@ export const VideoParameterReport: React.FC = () => {
       // Admin: xem tất cả (Admin: see all)
       if (isAdmin()) {
         // No filtering needed
+      }
+      // Người tải lên (Media/TRỢ LIVE 中控): xem tất cả video (Video uploader: see all videos)
+      else if (isVideoUploader()) {
+        // No filtering needed - người import Excel thấy tất cả
       }
       // Đối tác: chỉ xem video của cửa hàng được gán (Partner: only see assigned stores' videos)
       else if (isPartner()) {
@@ -273,35 +277,67 @@ export const VideoParameterReport: React.FC = () => {
         return;
       }
 
-      // Map Excel columns to VideoMetric - hỗ trợ nhiều format tên cột
+      // Map Excel columns to VideoMetric - lưu đầy đủ tất cả thông tin từ Excel
       const newVideosData = data.map((row: any) => {
-        // Tìm store name từ nhiều format khác nhau
-        const storeName = row['CỬA HÀNG \n商店'] || row['CỬA HÀNG'] || row['商店'] || row['店铺 (Cửa hàng)'] || row['店铺'] || row['Cửa hàng'] || '';
+        // Tìm store name
+        const storeName = row['CỬA HÀNG \n商店'] || row['CỬA HÀNG'] || row['商店'] || '';
         const store = storeName ? stores.find(s => s.name === storeName) : null;
 
-        // Parse uploadDate - có thể có format khác nhau
-        let uploadDate = row['发布时间'] || row['发布时间 (Ngày đăng)'] || row['Ngày đăng'] || '';
-        // Nếu có format "2026-01-02 12:49", chỉ lấy phần ngày
-        if (uploadDate && uploadDate.includes(' ')) {
-          uploadDate = uploadDate.split(' ')[0];
-        }
-        // Nếu không có date, dùng ngày hiện tại
-        if (!uploadDate) {
+        // Parse uploadDate và uploadTime - GIỮ NGUYÊN format từ Excel
+        let uploadDateFull = row['发布时间'] || '';
+        let uploadDate = '';
+        let uploadTime = '';
+
+        if (uploadDateFull && uploadDateFull.includes(' ')) {
+          // Format: "2026-01-02 12:49"
+          const parts = uploadDateFull.split(' ');
+          uploadDate = parts[0]; // "2026-01-02"
+          uploadTime = parts[1]; // "12:49"
+        } else if (uploadDateFull) {
+          uploadDate = uploadDateFull;
+        } else {
           uploadDate = new Date().toISOString().split('T')[0];
         }
 
         // Parse person in charge
-        const personInCharge = row['NGƯỜI PHỤ TRÁCH\n负责人 '] || row['NGƯỜI PHỤ TRÁCH'] || row['负责人'] || row['负责人 (Người phụ trách)'] || row['Người phụ trách'] || 'Nhân viên';
-
-        // Parse GMV từ format "0₫" hoặc "300.010₫"
-        const gmvStr = row['GMV'] || row['GMV (交易额)'] || row['交易额'] || '0';
-        const sales = parseCurrency(gmvStr);
-
-        // Parse views
-        const views = parseInt(row['观看人次'] || row['观看人次 (Lượt xem)'] || row['Lượt xem'] || '0') || 0;
+        const personInCharge = row['NGƯỜI PHỤ TRÁCH\n负责人 '] || row['NGƯỜI PHỤ TRÁCH'] || row['负责人'] || 'Nhân viên';
 
         // Parse title
-        const title = row['视频名称'] || row['视频名称 (Tên video)'] || row['Tên video'] || '';
+        const title = row['视频名称'] || '';
+
+        // Parse duration - GIỮ NGUYÊN format từ Excel (ví dụ: "37s", "2m30s")
+        const duration = row['时长'] || '';
+
+        // Parse GMV
+        const gmvStr = row['GMV'] || '0';
+        const sales = parseCurrency(gmvStr);
+
+        // Parse 直接 GMV
+        const directGMVStr = row['直接 GMV'] || '0';
+        const directGMV = parseCurrency(directGMVStr);
+
+        // Parse views
+        const views = parseInt(row['观看人次'] || '0') || 0;
+
+        // Parse orders (成交件数)
+        const orders = parseInt(row['成交件数'] || '0') || 0;
+
+        // Parse click rate (点击率) - từ "10.53%" -> 10.53
+        const clickRateStr = row['点击率'] || '0%';
+        const clickRate = parsePercentage(clickRateStr);
+
+        // Parse watch rate (完播率) - từ "5.26%" -> 5.26
+        const watchRateStr = row['完播率'] || '0%';
+        const watchRate = parsePercentage(watchRateStr);
+
+        // Parse new followers
+        const newFollowers = parseInt(row['新增粉丝数'] || '0') || 0;
+
+        // Parse product ID
+        const productId = row['商品 ID'] ? String(row['商品 ID']) : '';
+
+        // Parse host
+        const host = row['HOST \n主播配合'] || row['HOST'] || '';
 
         // Default platform là TikTok
         const platform = 'TikTok' as 'TikTok' | 'Facebook' | 'Shopee';
@@ -311,9 +347,18 @@ export const VideoParameterReport: React.FC = () => {
           title: title,
           platform: platform,
           uploadDate: uploadDate,
+          uploadTime: uploadTime,
+          duration: duration,
           personInCharge: personInCharge,
           views: views,
           sales: sales,
+          directGMV: directGMV,
+          orders: orders,
+          clickRate: clickRate,
+          watchRate: watchRate,
+          newFollowers: newFollowers,
+          productId: productId,
+          host: host
         };
       }).filter(v => v.title && v.title.trim() !== ''); // Loại bỏ các dòng không có title
 
@@ -737,6 +782,7 @@ export const VideoParameterReport: React.FC = () => {
                     </th>
                     <th className="px-4 py-3">视频名称 (Tên video)</th>
                     <th className="px-4 py-3">发布时间 (Ngày đăng)</th>
+                    <th className="px-4 py-3">时长 (Thời lượng)</th>
                     <th className="px-4 py-3">平台 (Nền tảng)</th>
                     <th className="px-4 py-3">店铺 (Cửa hàng)</th>
                     <th className="px-4 py-3">负责人 (Người phụ trách)</th>
@@ -748,6 +794,7 @@ export const VideoParameterReport: React.FC = () => {
                     <th className="px-4 py-3 text-right">完播率 (Tỉ lệ xem hết)</th>
                     <th className="px-4 py-3 text-right">新增粉丝数 (Số fan mới)</th>
                     <th className="px-4 py-3">商品 ID (Mã sản phẩm)</th>
+                    <th className="px-4 py-3">HOST (主播配合)</th>
                     <th className="px-4 py-3 text-center">Hành động (操作)</th>
                   </tr>
                 </thead>
@@ -768,18 +815,22 @@ export const VideoParameterReport: React.FC = () => {
                           />
                         </td>
                         <td className="px-4 py-4 font-medium text-gray-900">{video.title}</td>
-                        <td className="px-4 py-4 text-gray-600">{video.uploadDate}</td>
+                        <td className="px-4 py-4 text-gray-600">
+                          {video.uploadDate}{video.uploadTime ? ` ${video.uploadTime}` : ''}
+                        </td>
+                        <td className="px-4 py-4 text-gray-600">{video.duration || '-'}</td>
                         <td className="px-4 py-4 text-gray-600">{video.platform}</td>
                         <td className="px-4 py-4 text-gray-600">{storeName}</td>
                         <td className="px-4 py-4 text-gray-600">{video.personInCharge}</td>
                         <td className="px-4 py-4 text-right font-bold text-green-600">{formatCurrency(video.sales)}</td>
-                        <td className="px-4 py-4 text-right text-gray-600">{formatCurrency(Math.floor(video.sales * 0.6))}</td>
+                        <td className="px-4 py-4 text-right text-gray-600">{formatCurrency(video.directGMV || Math.floor(video.sales * 0.6))}</td>
                         <td className="px-4 py-4 text-right font-semibold">{new Intl.NumberFormat('vi-VN').format(video.views)}</td>
-                        <td className="px-4 py-4 text-right">{Math.floor(video.sales / 10000)}</td>
-                        <td className="px-4 py-4 text-right">2.5%</td>
-                        <td className="px-4 py-4 text-right">85%</td>
-                        <td className="px-4 py-4 text-right">{Math.floor(video.views / 50)}</td>
-                        <td className="px-4 py-4 text-gray-600">PROD{video.id}</td>
+                        <td className="px-4 py-4 text-right">{video.orders !== undefined ? video.orders : Math.floor(video.sales / 10000)}</td>
+                        <td className="px-4 py-4 text-right">{video.clickRate !== undefined ? `${video.clickRate.toFixed(2)}%` : '-'}</td>
+                        <td className="px-4 py-4 text-right">{video.watchRate !== undefined ? `${video.watchRate.toFixed(2)}%` : '-'}</td>
+                        <td className="px-4 py-4 text-right">{video.newFollowers !== undefined ? new Intl.NumberFormat('vi-VN').format(video.newFollowers) : '-'}</td>
+                        <td className="px-4 py-4 text-gray-600">{video.productId || '-'}</td>
+                        <td className="px-4 py-4 text-gray-600">{video.host || '-'}</td>
                         <td className="px-4 py-4">
                           <div className="flex justify-center gap-2">
                             <button

@@ -82,7 +82,7 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
 
   const permissions = getMenuPermissions();
   const menuPermission = permissions.find(p => p.menuId === menuId);
-  
+
   if (!menuPermission) {
     // Nếu không có permission được set, mặc định là không có quyền (cho employee)
     return false;
@@ -92,7 +92,7 @@ export const canAccessMenu = (menuId: string, userRole: UserRole, userDepartment
   if (!menuPermission.allowedRoles || !Array.isArray(menuPermission.allowedRoles) || menuPermission.allowedRoles.length === 0) {
     return false;
   }
-  
+
   if (!menuPermission.allowedRoles.includes(userRole)) {
     return false;
   }
@@ -182,21 +182,31 @@ export const isTrungKhong = (): boolean => {
     console.log('[isTrungKhong] No position found');
     return false;
   }
-  
+
   console.log('[isTrungKhong] Checking position:', position);
-  
+
   // Normalize khoảng trắng và chuyển về lowercase để xử lý các trường hợp khác nhau về khoảng trắng
   const normalizedPosition = position
     .trim()
     .replace(/\s+/g, ' ') // Normalize nhiều khoảng trắng thành 1 khoảng trắng
     .toLowerCase();
-  
+
   // Phải chứa cả "trợ live" (hoặc "tro live") VÀ "中控"
   // Sử dụng regex để tìm không phân biệt khoảng trắng
   const hasTroLive = /\btr[oợ]\s*live\b/i.test(position) || normalizedPosition.includes('trợ live') || normalizedPosition.includes('tro live');
   const hasZhongKong = position.includes('中控');
-  
+
   console.log('[isTrungKhong] hasTroLive:', hasTroLive, 'hasZhongKong:', hasZhongKong);
-  
+
   return hasTroLive && hasZhongKong;
+};
+
+// Kiểm tra user có phải người tải lên video không (có quyền xem tất cả video)
+// Logic: Department = 'Media' HOẶC position chứa 'TRỢ LIVE 中控'
+export const isVideoUploader = (): boolean => {
+  const department = getCurrentUserDepartment();
+  const position = getCurrentUserPosition();
+
+  // Người tải lên nếu thuộc phòng Media HOẶC có vị trí TRỢ LIVE 中控
+  return department === 'Media' || isTrungKhong();
 };
