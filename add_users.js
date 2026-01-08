@@ -1,31 +1,29 @@
 /**
- * Script để thêm users vào Firebase Realtime Database với mật khẩu đã hash
+ * Script để thêm users vào Supabase với mật khẩu đã hash
  * Chạy: node add_users.js
  */
 
-import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, set, get } from 'firebase/database';
+import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
 
-// Firebase configuration (giống trong src/firebase/config.js)
-const firebaseConfig = {
-  apiKey: "AIzaSyDjLU2cGWALLCJIVGp_JTKHmRFBJvAtEfw",
-  authDomain: "report-867c2.firebaseapp.com",
-  databaseURL: "https://report-867c2-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "report-867c2",
-  storageBucket: "report-867c2.firebasestorage.app",
-  messagingSenderId: "527168181858",
-  appId: "1:527168181858:web:7c8e0bb04c6b65c5c58b04"
-};
+dotenv.config();
 
-// Khởi tạo Firebase
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+// Supabase configuration
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Lỗi: Thiếu VITE_SUPABASE_URL hoặc VITE_SUPABASE_ANON_KEY trong .env');
+  process.exit(1);
+}
+
+// Khởi tạo Supabase
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Sample users (mật khẩu sẽ được hash trước khi lưu)
 const sampleUsers = [
   {
-    id: 'user1',
     username: 'admin',
     password: 'admin123',
     email: 'admin@example.com',
@@ -33,7 +31,6 @@ const sampleUsers = [
     name: 'Quản trị viên'
   },
   {
-    id: 'user2',
     username: 'marketing',
     password: 'mkt123',
     email: 'marketing@example.com',
@@ -41,7 +38,6 @@ const sampleUsers = [
     name: 'Marketing User'
   },
   {
-    id: 'user3',
     username: 'demo',
     password: 'demo123',
     email: 'demo@example.com',
@@ -49,7 +45,6 @@ const sampleUsers = [
     name: 'Demo User'
   },
   {
-    id: 'user4',
     username: 'test',
     password: 'test123',
     email: 'test@example.com',
@@ -60,33 +55,52 @@ const sampleUsers = [
 
 async function addUsers() {
   console.log('='.repeat(60));
-  console.log('🔐 Firebase Users Management Tool');
+  console.log('🔐 Supabase Users Management Tool');
   console.log('='.repeat(60));
   console.log();
 
   try {
-    console.log('📝 Đang thêm users vào Firebase với mật khẩu đã hash...');
+    console.log('📝 Đang thêm users vào Supabase với mật khẩu đã hash...');
     
     const salt = bcrypt.genSaltSync(10);
     
     for (const user of sampleUsers) {
-      const { id, password, ...userData } = user;
+      const { password, ...userData } = user;
       
       // Hash mật khẩu
       const hashedPassword = bcrypt.hashSync(password, salt);
       
-      // Lưu user với password đã hash
-      const userRef = ref(database, `users/${id}`);
-      await set(userRef, {
-        ...userData,
-        password: hashedPassword,
-        createdAt: new Date().toISOString()
-      });
+      // Kiểm tra nếu user đã tồn tại
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', user.email)
+        .single();
       
-      console.log(`   ✅ Đã thêm: ${userData.username} (password: ${password} -> hashed)`);
+      if (existingUser) {
+        console.log(`   ⏭️  Bỏ qua: ${userData.username} (đã tồn tại)`);
+        continue;
+      }
+      
+      // Lưu user với password đã hash
+      const { error } = await supabase
+        .from('users')
+        .insert([
+          {
+            ...userData,
+            password: hashedPassword,
+            created_at: new Date().toISOString()
+          }
+        ]);
+      
+      if (error) {
+        console.log(`   ❌ Lỗi thêm: ${userData.username} - ${error.message}`);
+      } else {
+        console.log(`   ✅ Đã thêm: ${userData.username} (password: ${password} -> hashed)`);
+      }
     }
 
-    console.log(`\n✅ Đã thêm ${sampleUsers.length} users vào Firebase!\n`);
+    console.log(`\n✅ Hoàn tất thêm users vào Supabase!\n`);
     console.log('📋 Thông tin đăng nhập (mật khẩu gốc):');
     console.log('-'.repeat(60));
     console.log('Username         | Password   | Role');
@@ -109,24 +123,27 @@ async function addUsers() {
 
 async function listUsers() {
   try {
-    console.log('\n📋 Danh sách users trong Firebase:');
+    console.log('\n📋 Danh sách users trong Supabase:');
     console.log('-'.repeat(80));
     
-    const usersRef = ref(database, 'users');
-    const snapshot = await get(usersRef);
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, username, email, role')
+      .order('created_at', { ascending: true });
 
-    if (snapshot.exists()) {
-      const users = snapshot.val();
+    if (error) throw error;
+
+    if (users && users.length > 0) {
       console.log('ID         | Username         | Email                          | Role');
       console.log('-'.repeat(80));
       
-      for (const [userId, userData] of Object.entries(users)) {
+      for (const user of users) {
         console.log(
-          `${userId.padEnd(10)} | ${userData.username.padEnd(16)} | ${(userData.email || 'N/A').padEnd(30)} | ${userData.role || 'N/A'}`
+          `${(user.id || '').substring(0, 10).padEnd(10)} | ${(user.username || '').padEnd(16)} | ${(user.email || 'N/A').padEnd(30)} | ${user.role || 'N/A'}`
         );
       }
       console.log('-'.repeat(80));
-      console.log(`Tổng số: ${Object.keys(users).length} users`);
+      console.log(`Tổng số: ${users.length} users`);
     } else {
       console.log('❌ Không có users nào trong database');
     }

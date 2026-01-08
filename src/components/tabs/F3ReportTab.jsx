@@ -2,8 +2,7 @@ import { useState, useMemo } from 'react';
 import { toast } from 'react-toastify';
 import { useF3Data } from '../../hooks/useF3Data';
 import { Pagination } from '../shared/Pagination';
-import { ref, update } from 'firebase/database';
-import { database } from '../../firebase/config';
+import { supabase } from '../../supabase/config';
 
 export function F3ReportTab({ filters, setFilters, userRole, userEmail }) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,8 +109,12 @@ export function F3ReportTab({ filters, setFilters, userRole, userEmail }) {
     if (!editingOrder || !newOrderStatus) return;
 
     try {
-      const orderRef = ref(database, `f3_data/${editingOrder.id}`);
-      await update(orderRef, { 'Trạng thái đơn': newOrderStatus });
+      const { error } = await supabase
+        .from('f3_data')
+        .update({ 'Trạng thái đơn': newOrderStatus })
+        .eq('id', editingOrder.id);
+      
+      if (error) throw error;
       
       toast.success('Cập nhật trạng thái đơn thành công');
       

@@ -1,5 +1,4 @@
-import React from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -45,6 +44,7 @@ export default function Header() {
             >
               Trang chủ
             </Link>
+
             {/* <Link
               to="/bang-bao-cao"
               className="text-white hover:bg-green-700 px-3 py-2 rounded-md text-sm font-medium transition"

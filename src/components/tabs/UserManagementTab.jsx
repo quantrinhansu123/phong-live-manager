@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ref, get, update, remove, push, set } from 'firebase/database';
-import { database } from '../../firebase/config';
+import { supabase } from '../../supabase/config';
 import bcrypt from 'bcryptjs';
 import { toast } from 'react-toastify';
 
@@ -28,28 +27,28 @@ export function UserManagementTab({ userRole, userTeam, searchText, teamFilter }
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 30;
 
-  // Fetch users from Firebase
+  // Fetch users from Supabase
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const usersRef = ref(database, 'human_resources');
-        const snapshot = await get(usersRef);
         
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const usersArray = Object.entries(data).map(([firebaseKey, values]) => ({
-            firebaseKey,
-            ...values
-          }));
-          setUsers(usersArray);
+        const { data, error: fetchError } = await supabase
+          .from('human_resources')
+          .select('*')
+          .order('Họ Và Tên', { ascending: true });
+        
+        if (fetchError) throw fetchError;
+        
+        if (data) {
+          setUsers(data);
           
           // Apply role-based filtering
           if (userRole === 'leader' && userTeam) {
-            const filtered = usersArray.filter(user => user.Team === userTeam);
+            const filtered = data.filter(user => user.Team === userTeam);
             setFilteredUsers(filtered);
           } else {
-            setFilteredUsers(usersArray);
+            setFilteredUsers(data);
           }
         } else {
           setUsers([]);
@@ -100,18 +99,22 @@ export function UserManagementTab({ userRole, userTeam, searchText, teamFilter }
     setCurrentPage(1); // Reset to page 1 when search changes
   }, [users, userRole, userTeam, searchText, teamFilter]);
 
-  // Update user in Firebase
-  const handleUpdateUser = async (firebaseKey, updatedData) => {
+  // Update user in Supabase
+  const handleUpdateUser = async (userId, updatedData) => {
     try {
-      const userRef = ref(database, `human_resources/${firebaseKey}`);
-      await update(userRef, updatedData);
+      const { error } = await supabase
+        .from('human_resources')
+        .update(updatedData)
+        .eq('id', userId);
+      
+      if (error) throw error;
       
       // Update local state
       setUsers(prev => prev.map(user => 
-        user.firebaseKey === firebaseKey ? { ...user, ...updatedData } : user
+        user.id === userId ? { ...user, ...updatedData } : user
       ));
       setFilteredUsers(prev => prev.map(user => 
-        user.firebaseKey === firebaseKey ? { ...user, ...updatedData } : user
+        user.id === userId ? { ...user, ...updatedData } : user
       ));
       
       setIsModalOpen(false);
@@ -182,77 +185,87 @@ export function UserManagementTab({ userRole, userTeam, searchText, teamFilter }
 
     try {
       // Check if email already exists
-      const usersSnapshot = await get(ref(database, 'users'));
-      if (usersSnapshot.exists()) {
-        const existingUsers = Object.values(usersSnapshot.val());
-        const emailExists = existingUsers.some(user => user.email === newUser.email);
-        if (emailExists) {
-          toast.error('Email này đã được sử dụng!');
-          return;
-        }
+      const { data: existingUsers, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', newUser.email);
+      
+      if (checkError) throw checkError;
+      
+      if (existingUsers && existingUsers.length > 0) {
+        toast.error('Email này đã được sử dụng!');
+        return;
       }
-
-      // Generate unique user ID
-      const usersListRef = ref(database, 'users');
-      const newUserRef = push(usersListRef);
-      const userId = newUserRef.key;
 
       // Hash password
       const hashedPassword = bcrypt.hashSync(newUser.password, 10);
 
-      // Create user record in human_resources
-      const hrRef = ref(database, `human_resources/${userId}`);
-      const hrData = {
-        'Họ Và Tên': newUser['Họ Và Tên'],
-        email: newUser.email,
-        'Bộ phận': newUser['Bộ phận'],
-        Team: newUser.Team,
-        'Vị trí': newUser['Vị trí'],
-        'chi nhánh': newUser['chi nhánh'],
-        Ca: newUser.Ca,
-        role: newUser.role,
-        status: 'active',
-        'Ngày vào làm': new Date().toISOString().split('T')[0],
-        createdAt: new Date().toISOString(),
-        createdBy: localStorage.getItem('username') || 'admin'
-      };
+      // Generate unique ID
+      const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      await set(hrRef, hrData);
+      // Create user record in users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .insert([
+          {
+            id: userId,
+            username: newUser.email.split('@')[0],
+            name: newUser['Họ Và Tên'],
+            email: newUser.email,
+            password: hashedPassword,
+            team: newUser.Team,
+            role: newUser.role,
+            department: newUser['Bộ phận'],
+            position: newUser['Vị trí'],
+            branch: newUser['chi nhánh'],
+            shift: newUser.Ca,
+            created_at: new Date().toISOString(),
+            created_by: localStorage.getItem('username') || 'admin'
+          }
+        ])
+        .select();
+      
+      if (userError) throw userError;
 
-      // Create user in users collection for authentication
-      const usersRef = ref(database, `users/${userId}`);
-      const userData = {
-        username: newUser.email.split('@')[0],
-        name: newUser['Họ Và Tên'],
-        email: newUser.email,
-        password: hashedPassword,
-        team: newUser.Team,
-        role: newUser.role,
-        department: newUser['Bộ phận'],
-        position: newUser['Vị trí'],
-        branch: newUser['chi nhánh'],
-        shift: newUser.Ca,
-        createdAt: new Date().toISOString(),
-        createdBy: localStorage.getItem('username') || 'admin'
-      };
-
-      await set(usersRef, userData);
+      // Create record in human_resources table
+      const { error: hrError } = await supabase
+        .from('human_resources')
+        .insert([
+          {
+            id: userId,
+            'Họ Và Tên': newUser['Họ Và Tên'],
+            email: newUser.email,
+            'Bộ phận': newUser['Bộ phận'],
+            Team: newUser.Team,
+            'Vị trí': newUser['Vị trí'],
+            'chi nhánh': newUser['chi nhánh'],
+            Ca: newUser.Ca,
+            role: newUser.role,
+            status: 'active',
+            'Ngày vào làm': new Date().toISOString().split('T')[0],
+            created_at: new Date().toISOString(),
+            created_by: localStorage.getItem('username') || 'admin'
+          }
+        ]);
+      
+      if (hrError) throw hrError;
 
       // Refresh users list
-      const hrSnapshot = await get(ref(database, 'human_resources'));
-      if (hrSnapshot.exists()) {
-        const data = hrSnapshot.val();
-        const usersArray = Object.entries(data).map(([firebaseKey, values]) => ({
-          firebaseKey,
-          ...values
-        }));
-        setUsers(usersArray);
+      const { data: updatedUsers, error: refreshError } = await supabase
+        .from('human_resources')
+        .select('*')
+        .order('Họ Và Tên', { ascending: true });
+      
+      if (refreshError) throw refreshError;
+      
+      if (updatedUsers) {
+        setUsers(updatedUsers);
         
         if (userRole === 'leader' && userTeam) {
-          const filtered = usersArray.filter(user => user.Team === userTeam);
+          const filtered = updatedUsers.filter(user => user.Team === userTeam);
           setFilteredUsers(filtered);
         } else {
-          setFilteredUsers(usersArray);
+          setFilteredUsers(updatedUsers);
         }
       }
 
@@ -274,17 +287,21 @@ export function UserManagementTab({ userRole, userTeam, searchText, teamFilter }
     setDeletingUser(null);
   };
 
-  // Delete user from Firebase
+  // Delete user from Supabase
   const handleDeleteUser = async () => {
     if (!deletingUser) return;
 
     try {
-      const userRef = ref(database, `human_resources/${deletingUser.firebaseKey}`);
-      await remove(userRef);
+      const { error } = await supabase
+        .from('human_resources')
+        .delete()
+        .eq('id', deletingUser.id);
+      
+      if (error) throw error;
       
       // Update local state
-      setUsers(prev => prev.filter(user => user.firebaseKey !== deletingUser.firebaseKey));
-      setFilteredUsers(prev => prev.filter(user => user.firebaseKey !== deletingUser.firebaseKey));
+      setUsers(prev => prev.filter(user => user.id !== deletingUser.id));
+      setFilteredUsers(prev => prev.filter(user => user.id !== deletingUser.id));
       
       closeDeleteConfirm();
       toast.success('Xóa nhân sự thành công!');

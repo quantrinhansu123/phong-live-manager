@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { ChevronLeft, Download, RefreshCw, Search, Settings, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import * as API from '../services/api';
-import { PRIMARY_KEY_COLUMN, ORDER_MGMT_COLUMNS, COLUMN_MAPPING } from '../types';
-import { ChevronLeft, RefreshCw, Search, Filter, Download, Settings, X } from 'lucide-react';
+import { supabase } from '../supabase/config';
+import { COLUMN_MAPPING, PRIMARY_KEY_COLUMN } from '../types';
 
 function DanhSachDon() {
   const [allData, setAllData] = useState([]);
@@ -21,6 +21,7 @@ function DanhSachDon() {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
   const [showColumnSettings, setShowColumnSettings] = useState(false);
+  const [syncing, setSyncing] = useState(false); // State for sync process
 
   // Debounce search text for better performance
   useEffect(() => {
@@ -30,7 +31,7 @@ function DanhSachDon() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchText]);
-  
+
   // Get all available columns from data
   const allAvailableColumns = useMemo(() => {
     if (allData.length === 0) return [];
@@ -88,16 +89,85 @@ function DanhSachDon() {
     }
   }, [visibleColumns]);
 
-  // Load data from F3
+  // Load data from Supabase
   const loadData = async () => {
     setLoading(true);
     try {
-      console.log('Loading orders from F3...');
-      const data = await API.fetchOrders();
-      setAllData(data);
-      if (data.length === 2 && data[0]["Mã đơn hàng"] === "DEMO001") {
-        alert('⚠️ Đang sử dụng dữ liệu demo do API lỗi. Kiểm tra kết nối mạng.');
+      console.log('Loading orders from Supabase...');
+
+      let allOrders = [];
+      const pageSize = 1000;
+      let page = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .range(from, to)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          allOrders = [...allOrders, ...data];
+          if (data.length < pageSize) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
       }
+
+      // Map Supabase columns to existing UI format
+      const mappedData = allOrders.map(item => ({
+        "Mã đơn hàng": item.order_code,
+        "Ngày lên đơn": item.order_date || item.created_at,
+        "Name*": item.customer_name,
+        "Phone*": item.customer_phone,
+        "Add": item.customer_address,
+        "City": item.city,
+        "State": item.state,
+        "Khu vực": item.country, // Assuming 'country' maps to 'Khu vực' or similar
+        "Zipcode": item.zipcode,
+        "Mặt hàng": item.product,
+        "Tên mặt hàng 1": item.product, // Mapping to legacy fields
+        "Tổng tiền VNĐ": item.total_amount_vnd,
+        "Hình thức thanh toán": item.payment_method,
+        "Mã Tracking": item.tracking_code,
+        "Phí ship": item.shipping_fee,
+        "Nhân viên Marketing": item.marketing_staff,
+        "Nhân viên Sale": item.sale_staff,
+        "Team": item.team,
+        "Trạng thái giao hàng": item.delivery_status,
+        "Kết quả Check": item.payment_status,
+        "Ghi chú": item.note,
+
+        // Extended columns (kept data available even if hidden by default)
+        "CSKH": item.cskh,
+        "NV Vận đơn": item.delivery_staff,
+        "Tiền Hàng": item.goods_amount,
+        "Tiền Việt đã đối soát": item.reconciled_amount,
+        "Phí Chung": item.general_fee,
+        "Phí bay": item.flight_fee,
+        "Thuê TK": item.account_rental_fee,
+        "Phí xử lý đơn đóng hàng-Lưu kho(usd)": item.general_fee,
+        "Thời gian cutoff": item.cutoff_time,
+        "Đơn vị vận chuyển": item.shipping_unit,
+        "Kế toán xác nhận thu tiền về": item.accountant_confirm,
+        "Trạng thái thu tiền": item.payment_status_detail,
+        "Lý do": item.reason,
+
+        // Preserve original ID for updates if needed
+        "_id": item.id
+      }));
+
+      setAllData(mappedData);
     } catch (error) {
       console.error('Load data error:', error);
       alert(`❌ Lỗi tải dữ liệu: ${error.message}`);
@@ -119,6 +189,167 @@ function DanhSachDon() {
     });
     return Array.from(markets).sort();
   }, [allData]);
+
+  // Sync data from F3 Firebase
+  const handleSyncF3 = async () => {
+    if (!window.confirm("Bạn có chắc chắn muốn đồng bộ dữ liệu từ F3 (Firebase) về Supabase? Dữ liệu cũ trên Supabase có thể bị ghi đè hoặc trùng lặp.")) return;
+
+    try {
+      setSyncing(true);
+      const F3_URL = "https://lumi-6dff7-default-rtdb.asia-southeast1.firebasedatabase.app/datasheet/F3.json";
+      console.log("Fetching F3 data from:", F3_URL);
+
+      const response = await fetch(F3_URL);
+      const dataRaw = await response.json();
+
+      let firebaseData = [];
+      if (Array.isArray(dataRaw)) {
+        firebaseData = dataRaw;
+      } else if (dataRaw && typeof dataRaw === 'object') {
+        firebaseData = Object.values(dataRaw);
+      }
+
+      if (firebaseData.length === 0) {
+        alert("Không tìm thấy dữ liệu trên F3.");
+        return;
+      }
+
+      console.log(`Found ${firebaseData.length} records.`);
+
+      // DEBUG: Show first item structure to verify keys
+      const firstItem = firebaseData[0];
+      const sampleKeys = Object.keys(firstItem).join(", ");
+      console.log("First item keys:", sampleKeys);
+      // alert(`Debug keys: ${sampleKeys}`); // Uncomment if you need to see this in UI
+
+      // Prepare batch data
+      const batchSize = 50;
+      let successCount = 0;
+      let errorCount = 0;
+      let lastError = null;
+
+      for (let i = 0; i < firebaseData.length; i += batchSize) {
+        const batch = firebaseData.slice(i, i + batchSize);
+        const transformedBatch = batch.map((item, index) => {
+          // Parse date helper
+          // Parse date helper with support for multiple formats
+          let dateRaw = item["Ngày lên đơn"] || item["Ngày_lên_đơn"];
+          let orderDate = null;
+          if (dateRaw) {
+            try {
+              if (dateRaw.includes("/")) {
+                let [p1, p2, p3] = dateRaw.split("/");
+                // Check if parts are valid numbers
+                let d = parseInt(p1);
+                let m = parseInt(p2);
+                let y = parseInt(p3);
+
+                if (!isNaN(d) && !isNaN(m) && !isNaN(y)) {
+                  // Handle case where format is MM/DD/YYYY (m > 12 is impossible for month)
+                  // If 2nd part > 12, it must be Day -> so 1st part is Month.
+                  if (m > 12) {
+                    const temp = d; d = m; m = temp;
+                  }
+                  // Also simply swap if d is clearly month (>12 impossible) 
+                  // But wait, if d > 12, d is definitely day. m must be month.
+                  // Standard assumption: p1=Day, p2=Month. 
+                  // If p2 > 12 (invalid month), then swap? No, if p2 > 12 it CANNOT be month.
+                  // So p2 is Day, p1 is Month.
+
+                  // Validate final components
+                  if (m > 0 && m <= 12 && d > 0 && d <= 31) {
+                    orderDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                  }
+                }
+              } else if (dateRaw.includes("-")) {
+                const d = new Date(dateRaw);
+                if (!isNaN(d.getTime())) {
+                  orderDate = d.toISOString();
+                }
+              }
+            } catch (e) {
+              console.warn("Date parse error", dateRaw);
+            }
+          }
+
+          // Handle amount with various key formats
+          const rawAmount = item["Tổng tiền VNĐ"] || item["Tổng_tiền_VNĐ"] || "0";
+          const rawShip = item["Phí ship"] || item["Phí_ship"] || "0";
+          const rawGoodsAmount = item["Tiền Hàng"] || item["Tiền_Hàng"] || "0";
+          const rawReconciled = item["Tiền Việt đã đối soát"] || item["Tiền_Việt_đã_đối_soát"] || "0";
+
+          const amount = parseFloat(String(rawAmount).replace(/[^0-9.-]+/g, "")) || 0;
+          const ship = parseFloat(String(rawShip).replace(/[^0-9.-]+/g, "")) || 0;
+          const goodsAmount = parseFloat(String(rawGoodsAmount).replace(/[^0-9.-]+/g, "")) || 0;
+          const reconciled = parseFloat(String(rawReconciled).replace(/[^0-9.-]+/g, "")) || 0;
+
+          return {
+            order_code: item["Mã đơn hàng"] || item["Mã_đơn_hàng"] || `UNK-${Date.now()}-${i + index}`,
+            order_date: orderDate,
+            customer_name: item["Name"] || item["Name*"] || "",
+            customer_phone: item["Phone"] || item["Phone*"] || "",
+            customer_address: item["Add"] || "",
+            city: item["City"] || "",
+            state: item["State"] || "",
+            zipcode: item["Zipcode"] || "",
+            country: item["Khu vực"] || item["Khu_vực"] || "",
+            product: item["Mặt hàng"] || item["Mặt_hàng"] || item["Tên mặt hàng 1"] || "",
+            total_amount_vnd: amount,
+            payment_method: item["Hình thức thanh toán"] || item["Hình_thức_thanh_toán"] || "",
+            tracking_code: item["Mã Tracking"] || item["Mã_Tracking"] || "",
+            shipping_fee: ship,
+            marketing_staff: item["Nhân viên Marketing"] || item["Nhân_viên_Marketing"] || "",
+            sale_staff: item["Nhân viên Sale"] || item["Nhân_viên_Sale"] || "",
+            team: item["Team"] || "",
+            delivery_status: item["Trạng thái giao hàng"] || item["Trạng_thái_giao_hàng_NB"] || item["Trạng_thái_giao_hàng"] || "",
+            payment_status: item["Kết quả Check"] || item["Kết_quả_Check"] || "",
+            note: item["Ghi chú"] || item["Ghi_chú"] || "",
+
+            // New extended columns
+            cskh: item["CSKH"] || "",
+            delivery_staff: item["NV_Vận_đơn"] || item["NV Vận đơn"] || "",
+            goods_amount: goodsAmount,
+            reconciled_amount: reconciled,
+            general_fee: parseFloat(String(item["Phí_Chung"] || item["Phí Chung"] || "0").replace(/[^0-9.-]+/g, "")) || 0,
+            flight_fee: parseFloat(String(item["Phí_bay"] || item["Phí bay"] || "0").replace(/[^0-9.-]+/g, "")) || 0,
+            account_rental_fee: parseFloat(String(item["Thuê_TK"] || item["Thuê TK"] || "0").replace(/[^0-9.-]+/g, "")) || 0,
+            cutoff_time: item["Thời_gian_cutoff"] || item["Thời gian cutoff"] || "",
+            shipping_unit: item["Đơn_vị_vận_chuyển"] || item["Đơn vị vận chuyển"] || "",
+            accountant_confirm: item["Kế_toán_xác_nhận_thu_tiền_về"] || item["Kế toán xác nhận thu tiền về"] || "",
+            payment_status_detail: item["Trạng_thái_thu_tiền"] || item["Trạng thái thu tiền"] || "",
+            reason: item["Lý_do"] || item["Lý do"] || ""
+          };
+        });
+
+        // Upsert to Supabase
+        const { error } = await supabase
+          .from("orders")
+          .upsert(transformedBatch, { onConflict: 'order_code', ignoreDuplicates: false });
+
+        if (error) {
+          console.error("Batch error:", error);
+          // Capture the first error closely
+          if (!lastError) lastError = error;
+          errorCount += batch.length;
+        } else {
+          successCount += batch.length;
+        }
+      }
+
+      let msg = `Đồng bộ hoàn tất!\nThành công: ${successCount}\nLỗi: ${errorCount}`;
+      if (lastError) {
+        msg += `\n\nChi tiết lỗi cuối cùng: ${lastError.message || JSON.stringify(lastError)}`;
+      }
+      alert(msg);
+      loadData(); // Reload table
+
+    } catch (error) {
+      console.error("Sync error:", error);
+      alert("Lỗi quá trình đồng bộ: " + error.message);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const uniqueProducts = useMemo(() => {
     const products = new Set();
@@ -374,10 +605,10 @@ function DanhSachDon() {
               </Link>
               <div>
                 <h1 className="text-xl font-bold text-gray-800">DANH SÁCH ĐƠN HÀNG</h1>
-                <p className="text-xs text-gray-500">Dữ liệu từ F3</p>
+                <p className="text-xs text-gray-500">Dữ liệu từ Database</p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-lg">
                 <span className={`h-2 w-2 rounded-full ${allData.length > 0 ? 'bg-green-500' : 'bg-red-500'}`}></span>
@@ -385,6 +616,18 @@ function DanhSachDon() {
                   {filteredData.length} / {allData.length} đơn hàng
                 </span>
               </div>
+              <button
+                onClick={handleSyncF3}
+                disabled={syncing || loading}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 shadow-sm"
+              >
+                {syncing ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                ) : (
+                  <span>🔄</span>
+                )}
+                {syncing ? 'Đang đồng bộ...' : 'Đồng bộ F3'}
+              </button>
               <button
                 onClick={loadData}
                 disabled={loading}
@@ -588,12 +831,12 @@ function DanhSachDon() {
                       {displayColumns.map((col) => {
                         const key = COLUMN_MAPPING[col] || col;
                         let value = row[key] ?? row[col] ?? '';
-                        
+
                         // Format date
                         if (col.includes('Ngày')) {
                           value = formatDate(value);
                         }
-                        
+
                         // Format money
                         if (col === 'Tổng tiền VNĐ') {
                           const num = parseFloat(String(value).replace(/[^\d.-]/g, '')) || 0;

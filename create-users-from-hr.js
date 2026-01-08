@@ -1,22 +1,20 @@
-import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, set, get } from 'firebase/database';
+import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyAsWaXBamChgdkPUyjFOufet9aUfbHNSAw",
-  authDomain: "report-fc377.firebaseapp.com",
-  databaseURL: "https://report-fc377-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "report-fc377",
-  storageBucket: "report-fc377.firebasestorage.app",
-  messagingSenderId: "921544399883",
-  appId: "1:921544399883:web:6ee83814f62509ee33fb0e",
-  measurementId: "G-DDC3SKZD4T",
-};
+dotenv.config();
 
-// Khởi tạo Firebase
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+// Supabase configuration
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Lỗi: Thiếu VITE_SUPABASE_URL hoặc VITE_SUPABASE_ANON_KEY trong .env');
+  process.exit(1);
+}
+
+// Khởi tạo Supabase
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Mapping position to role
 const positionToRole = {
@@ -38,55 +36,66 @@ async function createUserFromHumanResource(hrData) {
     const role = positionToRole[hrData['Vị trí']] || 'user';
 
     // Hash the default password
-    const hashedPassword = await hashPassword('123456');
+    const salt = bcrypt.genSaltSync(10);
+    const hashedPassword = bcrypt.hashSync('123456', salt);
 
     // Create username from email (remove @domain part)
     const username = hrData.email.split('@')[0];
 
-    // Bước 1: Tạo user record trong users
+    // Bước 1: Tạo user record trong users table
     console.log(`📝 Đang tạo user trong users cho: ${hrData['Họ Và Tên']}...`);
-    const userRef = ref(database, `users/${hrData.id}`);
-    const userData = {
-      branch: hrData['chi nhánh'] || '',
-      createdAt: new Date().toISOString(),
-      createdBy: 'auto-script',
-      department: hrData['Bộ phận'] || '',
-      email: hrData.email,
-      id_ns: hrData.id,
-      name: hrData['Họ Và Tên'] || '',
-      password: hashedPassword,
-      position: hrData['Vị trí'] || '',
-      role: role,
-      shift: hrData['Ca'] || '',
-      team: hrData['Team'] || '',
-      username: username
-    };
-
-    await set(userRef, userData);
+    
+    const { data: newUser, error: userError } = await supabase
+      .from('users')
+      .insert([
+        {
+          branch: hrData['chi nhánh'] || '',
+          created_at: new Date().toISOString(),
+          created_by: 'auto-script',
+          department: hrData['Bộ phận'] || '',
+          email: hrData.email,
+          name: hrData['Họ Và Tên'] || '',
+          password: hashedPassword,
+          position: hrData['Vị trí'] || '',
+          role: role,
+          shift: hrData['Ca'] || '',
+          team: hrData['Team'] || '',
+          username: username
+        }
+      ])
+      .select();
+    
+    if (userError) throw userError;
     console.log('✅ Đã tạo record trong users');
 
-    // Bước 2: Tạo user record trong human_resources
-    console.log(`📝 Đang tạo user trong human_resources cho: ${hrData['Họ Và Tên']}...`);
-    const hrRef = ref(database, `human_resources/${hrData.id}`);
-    const hrDataRecord = {
-      "Bộ phận": hrData['Bộ phận'] || '',
-      "Ca": hrData['Ca'] || '',
-      "Họ Và Tên": hrData['Họ Và Tên'] || '',
-      "Team": hrData['Team'] || '',
-      "Vị trí": hrData['Vị trí'] || '',
-      "chi nhánh": hrData['chi nhánh'] || '',
-      "email": hrData.email,
-      "id": hrData.id,
-      "status": "active",
-      "createdAt": new Date().toISOString(),
-      "createdBy": "auto-script"
-    };
+    const userId = newUser[0].id;
 
-    await set(hrRef, hrDataRecord);
+    // Bước 2: Tạo user record trong human_resources table
+    console.log(`📝 Đang tạo user trong human_resources cho: ${hrData['Họ Và Tên']}...`);
+    
+    const { error: hrError } = await supabase
+      .from('human_resources')
+      .insert([
+        {
+          id: userId,
+          "Bộ phận": hrData['Bộ phận'] || '',
+          "Ca": hrData['Ca'] || '',
+          "Họ Và Tên": hrData['Họ Và Tên'] || '',
+          "Team": hrData['Team'] || '',
+          "Vị trí": hrData['Vị trí'] || '',
+          "chi nhánh": hrData['chi nhánh'] || '',
+          "email": hrData.email,
+          "status": "active",
+          "created_at": new Date().toISOString(),
+          "created_by": "auto-script"
+        }
+      ]);
+    
+    if (hrError) throw hrError;
     console.log('✅ Đã tạo record trong human_resources');
 
     console.log(`✅ Created user account for: ${hrData['Họ Và Tên']} (${hrData.email}) - Role: ${role}`);
-    return userData;
+    return newUser[0];
 
   } catch (error) {
     console.error(`❌ Error creating user for ${hrData.email}:`, error);
@@ -155,21 +164,24 @@ async function listAllUsers() {
     console.log('\n📋 Danh sách users trong bảng "users":');
     console.log('-'.repeat(100));
 
-    const usersRef = ref(database, 'users');
-    const snapshot = await get(usersRef);
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, username, name, email, role, team')
+      .order('created_at', { ascending: true });
 
-    if (snapshot.exists()) {
-      const users = snapshot.val();
+    if (error) throw error;
+
+    if (users && users.length > 0) {
       console.log('ID         | Username       | Name                | Email                          | Role  | Team');
       console.log('-'.repeat(100));
 
-      for (const [userId, userData] of Object.entries(users)) {
+      for (const user of users) {
         console.log(
-          `${userId.substring(0, 10).padEnd(10)} | ${(userData.username || 'N/A').padEnd(14)} | ${(userData.name || 'N/A').padEnd(19)} | ${(userData.email || 'N/A').padEnd(30)} | ${(userData.role || 'user').padEnd(5)} | ${userData.team || 'N/A'}`
+          `${(user.id || '').substring(0, 10).padEnd(10)} | ${(user.username || 'N/A').padEnd(14)} | ${(user.name || 'N/A').padEnd(19)} | ${(user.email || 'N/A').padEnd(30)} | ${(user.role || 'user').padEnd(5)} | ${user.team || 'N/A'}`
         );
       }
       console.log('-'.repeat(100));
-      console.log(`Tổng số: ${Object.keys(users).length} users`);
+      console.log(`Tổng số: ${users.length} users`);
     } else {
       console.log('❌ Không có users nào trong bảng "users"');
     }
@@ -184,21 +196,24 @@ async function listHumanResources() {
     console.log('\n📋 Danh sách users trong bảng "human_resources":');
     console.log('-'.repeat(80));
 
-    const hrRef = ref(database, 'human_resources');
-    const snapshot = await get(hrRef);
+    const { data: users, error } = await supabase
+      .from('human_resources')
+      .select('id, Họ Và Tên, email, Vị trí, Team')
+      .order('Họ Và Tên', { ascending: true });
 
-    if (snapshot.exists()) {
-      const users = snapshot.val();
+    if (error) throw error;
+
+    if (users && users.length > 0) {
       console.log('ID         | Name                | Email                          | Role  | Team');
       console.log('-'.repeat(80));
 
-      for (const [userId, userData] of Object.entries(users)) {
+      for (const user of users) {
         console.log(
-          `${userId.substring(0, 10).padEnd(10)} | ${(userData['Họ Và Tên'] || 'N/A').padEnd(19)} | ${(userData.email || 'N/A').padEnd(30)} | ${(userData['Vị trí'] || 'N/A').padEnd(5)} | ${userData.Team || 'N/A'}`
+          `${(user.id || '').substring(0, 10).padEnd(10)} | ${(user['Họ Và Tên'] || 'N/A').padEnd(19)} | ${(user.email || 'N/A').padEnd(30)} | ${(user['Vị trí'] || 'N/A').padEnd(5)} | ${user.Team || 'N/A'}`
         );
       }
       console.log('-'.repeat(80));
-      console.log(`Tổng số: ${Object.keys(users).length} users`);
+      console.log(`Tổng số: ${users.length} users`);
     } else {
       console.log('❌ Không có users nào trong bảng "human_resources"');
     }

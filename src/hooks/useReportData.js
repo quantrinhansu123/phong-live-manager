@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { ref, get } from 'firebase/database';
-import { database } from '../firebase/config';
+import { supabase } from '../supabase/config';
 
 export function useReportData(userRole, userTeam, userEmail) {
   const [masterData, setMasterData] = useState([]);
@@ -8,20 +7,24 @@ export function useReportData(userRole, userTeam, userEmail) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch master data from Firebase instead of API
+  // Fetch master data from Supabase
   useEffect(() => {
     const fetchMasterData = async () => {
       try {
         setLoading(true);
-        const masterDataRef = ref(database, 'detail_reports');
-        const snapshot = await get(masterDataRef);
         
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          
-          // Process data from Firebase (matching the structure from API)
-          const processedData = Object.values(data)
-            .filter((r) => r["Tên"] && String(r["Tên"]).trim() !== "")
+        // Query from detail_reports table
+        const { data, error: fetchError } = await supabase
+          .from('detail_reports')
+          .select('*')
+          .not('Tên', 'is', null)
+          .neq('Tên', '');
+        
+        if (fetchError) throw fetchError;
+        
+        if (data) {
+          // Process data from Supabase (matching the structure from API)
+          const processedData = data
             .map((r) => {
               const dsChot = Number(r["Doanh số"]) || 0;
               const dsSauHoanHuy = Number(r["DS sau hoàn hủy"]) || 0;
@@ -61,7 +64,7 @@ export function useReportData(userRole, userTeam, userEmail) {
           setMasterData([]);
         }
       } catch (err) {
-        console.error('Error fetching master data from Firebase:', err);
+        console.error('Error fetching master data from Supabase:', err);
         setError(err.message);
       } finally {
         setLoading(false);
@@ -71,35 +74,35 @@ export function useReportData(userRole, userTeam, userEmail) {
     fetchMasterData();
   }, []);
 
-  // Fetch Firebase reports
+  // Fetch Supabase reports
   useEffect(() => {
-    const fetchFirebaseReports = async () => {
+    const fetchSupabaseReports = async () => {
       try {
-        const reportsRef = ref(database, 'reports');
-        const snapshot = await get(reportsRef);
+        const { data, error: fetchError } = await supabase
+          .from('reports')
+          .select('*')
+          .order('created_at', { ascending: false });
         
-        if (snapshot.exists()) {
-          const reportsData = snapshot.val();
-          const reportsArray = Object.entries(reportsData).map(([id, data]) => ({
-            id,
-            ...data,
-            date: new Date(data.date),
-            timestamp: data.timestamp || data.createdAt,
+        if (fetchError) throw fetchError;
+        
+        if (data) {
+          const reportsArray = data.map((row) => ({
+            id: row.id,
+            ...row,
+            date: new Date(row.date || row.created_at),
+            timestamp: row.timestamp || row.created_at,
           }));
 
-          // Sort by date descending (newest first)
-          reportsArray.sort((a, b) => b.date - a.date);
-          
           setFirebaseReports(reportsArray);
         } else {
           setFirebaseReports([]);
         }
       } catch (err) {
-        console.error('Error fetching Firebase reports:', err);
+        console.error('Error fetching Supabase reports:', err);
       }
     };
 
-    fetchFirebaseReports();
+    fetchSupabaseReports();
   }, []);
 
   // Apply access control filtering

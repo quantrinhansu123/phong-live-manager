@@ -1,30 +1,29 @@
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import Home from './pages/Home';
-import ReportForm from './pages/ReportForm';
-import Login from './pages/Login';
-import Profile from './pages/Profile';
-import VanDon from './pages/VanDon';
-import ChangeLogViewer from './pages/ChangeLogViewer';
-import ProtectedRoute from './components/ProtectedRoute';
-import Header from './components/Header';
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Header from './components/Header';
+import ProtectedRoute from './components/ProtectedRoute';
 import BaoCaoChiTiet from './pages/BaoCaoChiTiet';
-import KPIReport from './pages/KPIReport';
-import HieuQuaMarketing from './pages/HieuQuaMarketing';
+import BaoCaoHieuSuatKPI from './pages/BaoCaoHieuSuatKPI';
 import BaoCaoMarketing from './pages/BaoCaoMarketing';
 import BaoCaoSale from './pages/BaoCaoSale';
-import F3Report from './pages/F3Report';
-import NhanSu from './pages/NhanSu';
-import ReportDashboard from './pages/ReportDashboard';
-import BaoCaoHieuSuatKPI from './pages/BaoCaoHieuSuatKPI';
+import ChangeLogViewer from './pages/ChangeLogViewer';
 import DanhSachDon from './pages/DanhSachDon';
-import QuanLyCSKH from './pages/QuanLyCSKH';
 import DonChiaCSKH from './pages/DonChiaCSKH';
-import XemBaoCaoMKT from './pages/XemBaoCaoMKT';
-import NhapDonMoi from './pages/NhapDonMoi';
+import F3Report from './pages/F3Report';
 import FFM from './pages/FFM';
+import HieuQuaMarketing from './pages/HieuQuaMarketing';
+import Home from './pages/Home';
+import KPIReport from './pages/KPIReport';
 import LenHSanXuat from './pages/LenHSanXuat';
+import Login from './pages/Login';
+import NhanSu from './pages/NhanSu';
+import NhapDonMoi from './pages/NhapDonMoi';
+import Profile from './pages/Profile';
+import QuanLyCSKH from './pages/QuanLyCSKH';
+import ReportDashboard from './pages/ReportDashboard';
+import VanDon from './pages/VanDon';
+import XemBaoCaoMKT from './pages/XemBaoCaoMKT';
 
 /* Header component extracted to `src/components/Header.jsx` */
 
@@ -66,7 +65,7 @@ function App() {
           position="top-right"
           autoClose={3000}
           hideProgressBar={false}
-          newestOnTop={false} 
+          newestOnTop={false}
           closeOnClick
           rtl={false}
           pauseOnFocusLoss

@@ -1,37 +1,33 @@
 /**
- * Script để tạo user admin vào Firebase Realtime Database
+ * Script để tạo user admin vào Supabase
  * Chạy: node create_admin.js
  */
 
-import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, set, get } from 'firebase/database';
+import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
 
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyASyxDOJ_pGwjBaQqThoYQRmWyq2sq6Eh0",
-  authDomain: "report-55c9f.firebaseapp.com",
-  databaseURL: "https://report-55c9f-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "report-55c9f",
-  storageBucket: "report-55c9f.firebasestorage.app",
-  messagingSenderId: "104832186162",
-  appId: "1:104832186162:web:de2428475f558f78b6c92b",
-  measurementId: "G-JLZJWEMVBF"
-};
+dotenv.config();
 
-// Khởi tạo Firebase
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+// Supabase configuration
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
 
-// Admin user - sử dụng UID cố định để dễ quản lý
-const ADMIN_UID = 'admin-001';
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Lỗi: Thiếu VITE_SUPABASE_URL hoặc VITE_SUPABASE_ANON_KEY trong .env');
+  process.exit(1);
+}
+
+// Khởi tạo Supabase
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Admin user
 const adminUser = {
   username: 'admin',
   password: '123456',
   email: 'admin@marketing.com',
   name: 'Administrator',
   role: 'admin',
-  id_ns: 'admin001',
   department: 'Admin',
   position: 'Admin',
   team: 'Admin',
@@ -51,45 +47,69 @@ async function createAdmin() {
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(adminUser.password, salt);
 
-    // Bước 1: Tạo user record trong users
-    console.log('📝 Đang tạo admin user trong users...');
-    const usersRef = ref(database, `users/${ADMIN_UID}`);
-    const userData = {
-      username: adminUser.username,
-      password: hashedPassword,
-      email: adminUser.email,
-      name: adminUser.name,
-      role: adminUser.role,
-      id_ns: adminUser.id_ns,
-      department: adminUser.department,
-      position: adminUser.position,
-      team: adminUser.team,
-      shift: adminUser.shift,
-      branch: adminUser.branch,
-      createdAt: new Date().toISOString(),
-      createdBy: 'auto-script'
-    };
+    // Kiểm tra nếu admin đã tồn tại
+    const { data: existingAdmin } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', adminUser.email)
+      .single();
+    
+    if (existingAdmin) {
+      console.log('⏭️  Admin user đã tồn tại, bỏ qua tạo mới\n');
+      await listAdmins();
+      process.exit(0);
+    }
 
-    await set(usersRef, userData);
+    // Bước 1: Tạo user record trong users table
+    console.log('📝 Đang tạo admin user trong users...');
+    const { data: newUser, error: userError } = await supabase
+      .from('users')
+      .insert([
+        {
+          username: adminUser.username,
+          password: hashedPassword,
+          email: adminUser.email,
+          name: adminUser.name,
+          role: adminUser.role,
+          department: adminUser.department,
+          position: adminUser.position,
+          team: adminUser.team,
+          shift: adminUser.shift,
+          branch: adminUser.branch,
+          created_at: new Date().toISOString(),
+          created_by: 'auto-script'
+        }
+      ])
+      .select();
+    
+    if (userError) throw userError;
     console.log('✅ Đã tạo record trong users');
 
-    // Bước 2: Tạo user record trong human_resources
-    console.log('📝 Đang tạo admin user trong human_resources...');
-    const hrRef = ref(database, `human_resources/${ADMIN_UID}`);
-    const hrData = {
-      name: adminUser.name,
-      email: adminUser.email,
-      role: adminUser.role,
-      Ca: adminUser.shift,
-      Team: adminUser.team,
-      'Thị trường': adminUser.branch,
-      'Ngày vào làm': new Date().toISOString().split('T')[0],
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      createdBy: 'auto-script'
-    };
+    const adminId = newUser[0].id;
 
-    await set(hrRef, hrData);
+    // Bước 2: Tạo user record trong human_resources table
+    console.log('📝 Đang tạo admin user trong human_resources...');
+    const { error: hrError } = await supabase
+      .from('human_resources')
+      .insert([
+        {
+          id: adminId,
+          'Họ Và Tên': adminUser.name,
+          email: adminUser.email,
+          role: adminUser.role,
+          Ca: adminUser.shift,
+          Team: adminUser.team,
+          'chi nhánh': adminUser.branch,
+          'Bộ phận': adminUser.department,
+          'Vị trí': adminUser.position,
+          'Ngày vào làm': new Date().toISOString().split('T')[0],
+          status: 'active',
+          created_at: new Date().toISOString(),
+          created_by: 'auto-script'
+        }
+      ]);
+    
+    if (hrError) throw hrError;
     console.log('✅ Đã tạo record trong human_resources');
 
     console.log('\n✅ Đã tạo admin user thành công!\n');
@@ -100,13 +120,11 @@ async function createAdmin() {
     console.log(`Email:    ${adminUser.email}`);
     console.log(`Name:     ${adminUser.name}`);
     console.log(`Role:     ${adminUser.role}`);
-    console.log(`User ID:  ${ADMIN_UID}`);
     console.log('-'.repeat(60));
     console.log('\n⚠️  LƯU Ý: Vui lòng đổi mật khẩu sau khi đăng nhập lần đầu!');
 
     // Liệt kê tất cả users
-    await listAllUsers();
-    await listHumanResources();
+    await listAdmins();
 
   } catch (error) {
     console.error('❌ Lỗi:', error.message);
@@ -115,59 +133,34 @@ async function createAdmin() {
   process.exit(0);
 }
 
-async function listAllUsers() {
+async function listAdmins() {
   try {
-    console.log('\n📋 Danh sách users trong bảng "users":');
+    console.log('\n📋 Danh sách users trong Supabase:');
     console.log('-'.repeat(100));
 
-    const usersRef = ref(database, 'users');
-    const snapshot = await get(usersRef);
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, username, name, email, role, team')
+      .order('created_at', { ascending: true });
 
-    if (snapshot.exists()) {
-      const users = snapshot.val();
+    if (error) throw error;
+
+    if (users && users.length > 0) {
       console.log('ID         | Username       | Name                | Email                          | Role  | Team');
       console.log('-'.repeat(100));
 
-      for (const [userId, userData] of Object.entries(users)) {
+      for (const user of users) {
         console.log(
-          `${userId.substring(0, 10).padEnd(10)} | ${(userData.username || 'N/A').padEnd(14)} | ${(userData.name || 'N/A').padEnd(19)} | ${(userData.email || 'N/A').padEnd(30)} | ${(userData.role || 'user').padEnd(5)} | ${userData.team || 'N/A'}`
+          `${(user.id || '').substring(0, 10).padEnd(10)} | ${(user.username || 'N/A').padEnd(14)} | ${(user.name || 'N/A').padEnd(19)} | ${(user.email || 'N/A').padEnd(30)} | ${(user.role || 'user').padEnd(5)} | ${user.team || 'N/A'}`
         );
       }
       console.log('-'.repeat(100));
-      console.log(`Tổng số: ${Object.keys(users).length} users`);
+      console.log(`Tổng số: ${users.length} users`);
     } else {
-      console.log('❌ Không có users nào trong bảng "users"');
+      console.log('❌ Không có users nào trong database');
     }
   } catch (error) {
     console.error('❌ Lỗi khi lấy danh sách users:', error.message);
-  }
-}
-
-async function listHumanResources() {
-  try {
-    console.log('\n📋 Danh sách users trong bảng "human_resources":');
-    console.log('-'.repeat(80));
-
-    const hrRef = ref(database, 'human_resources');
-    const snapshot = await get(hrRef);
-
-    if (snapshot.exists()) {
-      const users = snapshot.val();
-      console.log('ID         | Name                | Email                          | Role  | Team');
-      console.log('-'.repeat(80));
-
-      for (const [userId, userData] of Object.entries(users)) {
-        console.log(
-          `${userId.substring(0, 10).padEnd(10)} | ${(userData.name || 'N/A').padEnd(19)} | ${(userData.email || 'N/A').padEnd(30)} | ${(userData.role || 'user').padEnd(5)} | ${userData.Team || 'N/A'}`
-        );
-      }
-      console.log('-'.repeat(80));
-      console.log(`Tổng số: ${Object.keys(users).length} users`);
-    } else {
-      console.log('❌ Không có users nào trong bảng "human_resources"');
-    }
-  } catch (error) {
-    console.error('❌ Lỗi khi lấy danh sách human_resources:', error.message);
   }
 }
 

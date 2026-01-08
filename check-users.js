@@ -1,47 +1,70 @@
-import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, get } from 'firebase/database';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
-// Firebase configuration (without analytics)
-const firebaseConfig = {
-  apiKey: "AIzaSyAsWaXBamChgdkPUyjFOufet9aUfbHNSAw",
-  authDomain: "report-fc377.firebaseapp.com",
-  databaseURL: "https://report-fc377-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "report-fc377",
-  storageBucket: "report-fc377.firebasestorage.app",
-  messagingSenderId: "921544399883",
-  appId: "1:921544399883:web:6ee83814f62509ee33fb0e",
-  measurementId: "G-DDC3SKZD4T",
-};
+dotenv.config();
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+// Supabase configuration
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Lỗi: Thiếu VITE_SUPABASE_URL hoặc VITE_SUPABASE_ANON_KEY trong .env');
+  process.exit(1);
+}
+
+// Initialize Supabase
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkUsers() {
   try {
-    const usersRef = ref(database, 'users');
-    const snapshot = await get(usersRef);
+    console.log('='.repeat(60));
+    console.log('📋 Kiểm tra danh sách users trong Supabase');
+    console.log('='.repeat(60));
+    console.log();
 
-    if (snapshot.exists()) {
-      const users = snapshot.val();
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('id, username, email, password, role')
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    if (users && users.length > 0) {
       let count = 0;
       let noPassword = 0;
+      let admins = 0;
+      let leaders = 0;
 
-      for (const [id, user] of Object.entries(users)) {
+      console.log('ID         | Username         | Email                          | Role  | Password');
+      console.log('-'.repeat(100));
+
+      for (const user of users) {
         count++;
-        if (!user.password) {
-          console.log(`User ${id} (${user.email}): no password`);
-          noPassword++;
-        }
-      }
+        const hasPassword = user.password ? '✅ Có' : '❌ Không';
+        
+        if (!user.password) noPassword++;
+        if (user.role === 'admin') admins++;
+        if (user.role === 'leader') leaders++;
 
-      console.log(`Total users: ${count}, Users without password: ${noPassword}`);
+        console.log(
+          `${(user.id || '').substring(0, 10).padEnd(10)} | ${(user.username || 'N/A').padEnd(16)} | ${(user.email || 'N/A').padEnd(30)} | ${(user.role || 'user').padEnd(5)} | ${hasPassword}`
+        );
+      }
+      console.log('-'.repeat(100));
+      console.log();
+      console.log(`📊 Thống kê:`);
+      console.log(`   - Tổng users: ${count}`);
+      console.log(`   - Admin: ${admins}`);
+      console.log(`   - Leader: ${leaders}`);
+      console.log(`   - Users không có mật khẩu: ${noPassword}`);
     } else {
-      console.log('No users found');
+      console.log('❌ Không có users nào trong database');
     }
   } catch (error) {
-    console.error('Error:', error);
+    console.error('❌ Lỗi:', error.message);
   }
+
+  process.exit(0);
 }
 
 checkUsers();
