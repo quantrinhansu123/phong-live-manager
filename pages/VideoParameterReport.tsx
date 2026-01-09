@@ -158,9 +158,9 @@ export const VideoParameterReport: React.FC = () => {
         '完播率': video.watchRate !== undefined ? formatPercentage(video.watchRate) : '',
         '新增粉丝数': video.newFollowers !== undefined ? video.newFollowers : Math.floor(video.views / 50),
         '商品 ID': video.productId || video.id,
-        'CỬA HÀNG \n商店': storeName,
-        'NGƯỜI PHỤ TRÁCH\n负责人 ': video.personInCharge,
-        'HOST \n主播配合': video.host || ''
+        'CỬA HÀNG \r\n商店': storeName,
+        'NGƯỜI PHỤ TRÁCH\r\n负责人 ': video.personInCharge,
+        'HOST \r\n主播配合': video.host || ''
       };
     });
     exportToExcel(exportData, `video-report-${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -182,8 +182,8 @@ export const VideoParameterReport: React.FC = () => {
         '完播率': '5.26%',
         '新增粉丝数': 0,
         '商品 ID': '1733111651498559203',
-        'CỬA HÀNG \n商店': stores.length > 0 ? stores[0].name : '',
-        'NGƯỜI PHỤ TRÁCH\n负责人 ': 'Nhân viên',
+        'CỬA HÀNG \n商店': '',
+        'NGƯỜI PHỤ TRÁCH\n负责人 ': '',
         'HOST \n主播配合': ''
       },
       {
@@ -198,9 +198,9 @@ export const VideoParameterReport: React.FC = () => {
         '完播率': '4.35%',
         '新增粉丝数': 0,
         '商品 ID': '1733111651498559203',
-        'CỬA HÀNG \n商店': stores.length > 0 ? stores[0].name : '',
-        'NGƯỜI PHỤ TRÁCH\n负责人 ': 'Nhân viên',
-        'HOST \n主播配合': ''
+        'CỬA HÀNG \r\n商店': '',
+        'NGƯỜI PHỤ TRÁCH\r\n负责人 ': '',
+        'HOST \r\n主播配合': ''
       },
       {
         '视频名称': 'Nước giặt 5in1 thì khỏi bàn về độ tiện lợi mấy bà ơi #aokemeng #nuocgiat #xuhuongtiktok',
@@ -214,9 +214,9 @@ export const VideoParameterReport: React.FC = () => {
         '完播率': '1.41%',
         '新增粉丝数': 0,
         '商品 ID': '1733111651498559203',
-        'CỬA HÀNG \n商店': stores.length > 0 ? stores[0].name : '',
-        'NGƯỜI PHỤ TRÁCH\n负责人 ': 'Nhân viên',
-        'HOST \n主播配合': ''
+        'CỬA HÀNG \r\n商店': '',
+        'NGƯỜI PHỤ TRÁCH\r\n负责人 ': '',
+        'HOST \r\n主播配合': ''
       },
       {
         '视频名称': 'Cứu tinh cho chị em giặt tay nè #aokemeng #nuocgiat #xuhuongtiktok',
@@ -230,9 +230,9 @@ export const VideoParameterReport: React.FC = () => {
         '完播率': '2.17%',
         '新增粉丝数': 0,
         '商品 ID': '1733111651498559203',
-        'CỬA HÀNG \n商店': stores.length > 0 ? stores[0].name : '',
-        'NGƯỜI PHỤ TRÁCH\n负责人 ': 'Nhân viên',
-        'HOST \n主播配合': ''
+        'CỬA HÀNG \r\n商店': '',
+        'NGƯỜI PHỤ TRÁCH\r\n负责人 ': '',
+        'HOST \r\n主播配合': ''
       },
       {
         '视频名称': 'Mấy bà ơi vào đây mà xem #aokemeng #nuocgiat #xuhuongtiktok',
@@ -246,9 +246,9 @@ export const VideoParameterReport: React.FC = () => {
         '完播率': '2.91%',
         '新增粉丝数': 0,
         '商品 ID': '1731978720453363427',
-        'CỬA HÀNG \n商店': stores.length > 0 ? stores[0].name : '',
-        'NGƯỜI PHỤ TRÁCH\n负责人 ': 'Nhân viên',
-        'HOST \n主播配合': ''
+        'CỬA HÀNG \r\n商店': '',
+        'NGƯỜI PHỤ TRÁCH\r\n负责人 ': '',
+        'HOST \r\n主播配合': ''
       }
     ];
     exportToExcel(templateData, `template-video-${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -260,6 +260,13 @@ export const VideoParameterReport: React.FC = () => {
       const data = await importFromExcel(file);
       console.log('Imported data:', data);
 
+      // DEBUG: Show column names from first row
+      if (data && data.length > 0) {
+        console.log('=== EXCEL COLUMN NAMES ===');
+        console.log('Columns:', Object.keys(data[0]));
+        console.log('First row data:', data[0]);
+      }
+
       if (!data || data.length === 0) {
         alert('File Excel trống hoặc không có dữ liệu hợp lệ. (Excel文件为空或没有有效数据)');
         return;
@@ -267,9 +274,27 @@ export const VideoParameterReport: React.FC = () => {
 
       // Map Excel columns to VideoMetric - lưu đầy đủ tất cả thông tin từ Excel
       const newVideosData = data.map((row: any) => {
-        // Tìm store name
-        const storeName = row['CỬA HÀNG \n商店'] || row['CỬA HÀNG'] || row['商店'] || '';
-        const store = storeName ? stores.find(s => s.name === storeName) : null;
+        // Tìm store name - GIỮ NGUYÊN tên từ Excel
+        // Excel dùng \r\n (Windows line break)
+        const storeName = row['CỬA HÀNG \r\n商店'] ||
+          row['CỬA HÀNG \n商店'] ||
+          row['CỬA HÀNG\n商店'] ||
+          row['CỬA HÀNG 商店'] ||
+          row['CỬA HÀNG'] ||
+          row['商店'] ||
+          '';
+
+        // Tìm store theo tên chính xác
+        let storeId = 'unknown';
+        if (storeName) {
+          const store = stores.find(s => s.name.trim().toLowerCase() === storeName.trim().toLowerCase());
+          if (store) {
+            storeId = store.id;
+          } else {
+            // Nếu không tìm thấy store, giữ nguyên tên làm ID tạm
+            storeId = storeName;
+          }
+        }
 
         // Parse uploadDate và uploadTime - GIỮ NGUYÊN format từ Excel
         let uploadDateFull = row['发布时间'] || '';
@@ -287,8 +312,16 @@ export const VideoParameterReport: React.FC = () => {
           uploadDate = new Date().toISOString().split('T')[0];
         }
 
-        // Parse person in charge
-        const personInCharge = row['NGƯỜI PHỤ TRÁCH\n负责人 '] || row['NGƯỜI PHỤ TRÁCH'] || row['负责人'] || 'Nhân viên';
+        // Parse person in charge - GIỮ NGUYÊN giá trị từ Excel, KHÔNG dùng default
+        // Excel dùng \r\n (Windows line break) và có dấu cách ở cuối
+        const personInCharge = row['NGƯỜI PHỤ TRÁCH\r\n负责人 '] ||
+          row['NGƯỜI PHỤ TRÁCH\n负责人 '] ||
+          row['NGƯỜI PHỤ TRÁCH\n负责人'] ||
+          row['NGƯỜI PHỤ TRÁCH 负责人'] ||
+          row['NGƯỜI PHỤ TRÁCH'] ||
+          row['负责人'] ||
+          row['负责人 '] ||
+          '';
 
         // Parse title
         const title = row['视频名称'] || '';
@@ -325,13 +358,13 @@ export const VideoParameterReport: React.FC = () => {
         const productId = row['商品 ID'] ? String(row['商品 ID']) : '';
 
         // Parse host
-        const host = row['HOST \n主播配合'] || row['HOST'] || '';
+        const host = row['HOST \r\n主播配合'] || row['HOST \n主播配合'] || row['HOST'] || '';
 
         // Default platform là TikTok
         const platform = 'TikTok' as 'TikTok' | 'Facebook' | 'Shopee';
 
         return {
-          storeId: store?.id || stores[0]?.id || 'all',
+          storeId: storeId,
           title: title,
           platform: platform,
           uploadDate: uploadDate,
@@ -721,9 +754,6 @@ export const VideoParameterReport: React.FC = () => {
                     <th className="px-4 py-3">视频名称 (Tên video)</th>
                     <th className="px-4 py-3">发布时间 (Ngày đăng)</th>
                     <th className="px-4 py-3">时长 (Thời lượng)</th>
-                    <th className="px-4 py-3">平台 (Nền tảng)</th>
-                    <th className="px-4 py-3">店铺 (Cửa hàng)</th>
-                    <th className="px-4 py-3">负责人 (Người phụ trách)</th>
                     <th className="px-4 py-3 text-right">GMV (交易额)</th>
                     <th className="px-4 py-3 text-right">直接 GMV (GMV trực tiếp)</th>
                     <th className="px-4 py-3 text-right">观看人次 (Lượt xem)</th>
@@ -732,6 +762,8 @@ export const VideoParameterReport: React.FC = () => {
                     <th className="px-4 py-3 text-right">完播率 (Tỉ lệ xem hết)</th>
                     <th className="px-4 py-3 text-right">新增粉丝数 (Số fan mới)</th>
                     <th className="px-4 py-3">商品 ID (Mã sản phẩm)</th>
+                    <th className="px-4 py-3">店铺 (Cửa hàng)</th>
+                    <th className="px-4 py-3">负责人 (Người phụ trách)</th>
                     <th className="px-4 py-3">HOST (主播配合)</th>
                     <th className="px-4 py-3 text-center">Hành động (操作)</th>
                   </tr>
@@ -757,9 +789,6 @@ export const VideoParameterReport: React.FC = () => {
                           {video.uploadDate}{video.uploadTime ? ` ${video.uploadTime}` : ''}
                         </td>
                         <td className="px-4 py-4 text-gray-600">{video.duration || '-'}</td>
-                        <td className="px-4 py-4 text-gray-600">{video.platform}</td>
-                        <td className="px-4 py-4 text-gray-600">{storeName}</td>
-                        <td className="px-4 py-4 text-gray-600">{video.personInCharge}</td>
                         <td className="px-4 py-4 text-right font-bold text-green-600">{video.sales}</td>
                         <td className="px-4 py-4 text-right text-gray-600">{video.directGMV !== undefined ? video.directGMV : ''}</td>
                         <td className="px-4 py-4 text-right font-semibold">{video.views}</td>
@@ -768,6 +797,8 @@ export const VideoParameterReport: React.FC = () => {
                         <td className="px-4 py-4 text-right">{video.watchRate !== undefined ? `${video.watchRate}%` : '-'}</td>
                         <td className="px-4 py-4 text-right">{video.newFollowers !== undefined ? video.newFollowers : '-'}</td>
                         <td className="px-4 py-4 text-gray-600">{video.productId || '-'}</td>
+                        <td className="px-4 py-4 text-gray-600">{storeName}</td>
+                        <td className="px-4 py-4 text-gray-600">{video.personInCharge}</td>
                         <td className="px-4 py-4 text-gray-600">{video.host || '-'}</td>
                         <td className="px-4 py-4">
                           <div className="flex justify-center gap-2">
