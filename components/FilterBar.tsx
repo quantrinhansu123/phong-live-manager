@@ -26,6 +26,7 @@ interface FilterBarProps {
   onDateFromChange: (date: string) => void;
   onDateToChange: (date: string) => void;
   onQuickDateSelect: (from: string, to: string) => void;
+  inline?: boolean; // New prop for inline layout
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -42,9 +43,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onDateFromChange,
   onDateToChange,
   onQuickDateSelect,
+  inline = false,
 }) => {
   const [searchText, setSearchText] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(!inline); // Always show if inline
+  const [storeSearchText, setStoreSearchText] = useState('');
+  const [showStoreDropdown, setShowStoreDropdown] = useState(false);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -164,6 +168,193 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     }
   };
 
+  // Filter stores by search text
+  const filteredStoreOptions = filterFields.find(f => f.key === 'stores')?.options?.filter(opt =>
+    opt.label.toLowerCase().includes(storeSearchText.toLowerCase())
+  ) || [];
+
+  if (inline) {
+    // Inline layout: all filters on one row
+    const storeField = filterFields.find(f => f.key === 'stores');
+    const selectedStoreValues = selectedFilters['stores'] || [];
+    
+    return (
+      <div className="bg-white rounded shadow-sm border border-gray-200 p-4">
+        <div className="flex flex-wrap gap-3 items-end">
+          {/* Search */}
+          <div className="flex-1 min-w-[200px]">
+            <label className="text-xs text-gray-600 mb-1 block">Tìm kiếm (搜索):</label>
+            <input
+              type="text"
+              placeholder="Tìm kiếm tổng..."
+              value={searchText}
+              onChange={handleSearch}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy focus:ring-1 focus:ring-brand-navy"
+            />
+          </div>
+
+          {/* Store Filter - Searchable Dropdown */}
+          {storeField && (
+            <div className="min-w-[200px]">
+              <label className="text-xs text-gray-600 mb-1 block">Cửa hàng (商店):</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder={selectedStoreValues.length > 0 ? `${selectedStoreValues.length} đã chọn` : "Gõ để tìm..."}
+                  value={storeSearchText}
+                  onChange={(e) => {
+                    setStoreSearchText(e.target.value);
+                    setShowStoreDropdown(true);
+                  }}
+                  onFocus={() => setShowStoreDropdown(true)}
+                  onBlur={() => {
+                    // Delay to allow click on dropdown items
+                    setTimeout(() => setShowStoreDropdown(false), 200);
+                  }}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy"
+                />
+                {(showStoreDropdown && (storeSearchText || storeField.options)) && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
+                    {(storeSearchText ? filteredStoreOptions : storeField.options || []).map((option) => (
+                      <div
+                        key={option.value}
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // Prevent blur
+                          const isSelected = selectedStoreValues.includes(option.value);
+                          if (isSelected) {
+                            onFilterChange('stores', selectedStoreValues.filter(v => v !== option.value));
+                          } else {
+                            onFilterChange('stores', [...selectedStoreValues, option.value]);
+                          }
+                          setStoreSearchText('');
+                          setShowStoreDropdown(false);
+                        }}
+                        className={`px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 ${
+                          selectedStoreValues.includes(option.value) ? 'bg-blue-50 font-medium' : ''
+                        }`}
+                      >
+                        {selectedStoreValues.includes(option.value) && '✓ '}
+                        {option.label}
+                      </div>
+                    ))}
+                    {storeSearchText && filteredStoreOptions.length === 0 && (
+                      <div className="px-3 py-2 text-sm text-gray-500">Không tìm thấy</div>
+                    )}
+                  </div>
+                )}
+                {selectedStoreValues.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {selectedStoreValues.map((value) => {
+                      const option = storeField.options?.find(opt => opt.value === value);
+                      return option ? (
+                        <span
+                          key={value}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
+                        >
+                          {option.label}
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              onFilterChange('stores', selectedStoreValues.filter(v => v !== value));
+                            }}
+                            className="hover:text-blue-600"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Date Filter Dropdown */}
+          <div className="min-w-[180px]">
+            <label className="text-xs text-gray-600 mb-1 block">Lọc nhanh (快速筛选):</label>
+            <select
+              value=""
+              onChange={(e) => {
+                const selectedIndex = e.target.selectedIndex;
+                if (selectedIndex > 0) {
+                  const filter = allQuickFilters[selectedIndex - 1];
+                  handleQuickDateClick(filter);
+                }
+                e.target.value = '';
+              }}
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-brand-navy bg-white"
+            >
+              <option value="">Chọn thời gian...</option>
+              {allQuickFilters.map((filter, index) => (
+                <option key={index} value={filter.label}>
+                  {filter.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date From */}
+          <div className="min-w-[140px]">
+            <label className="text-xs text-gray-600 mb-1 block">Từ ngày (从日期):</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => onDateFromChange(e.target.value)}
+              className="w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:border-brand-navy"
+            />
+          </div>
+
+          {/* Date To */}
+          <div className="min-w-[140px]">
+            <label className="text-xs text-gray-600 mb-1 block">Đến ngày (至日期):</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => onDateToChange(e.target.value)}
+              className="w-full border border-gray-300 rounded px-2 py-2 text-sm focus:outline-none focus:border-brand-navy"
+            />
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={onExportExcel}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition text-sm font-medium flex items-center gap-2"
+              title="Tải xuống Excel"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Excel
+            </button>
+            <label className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition text-sm font-medium flex items-center gap-2 cursor-pointer" title="Tải lên Excel">
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Upload
+            </label>
+            <button
+              onClick={onReset}
+              className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition text-sm font-medium"
+              title="Reset"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Original layout (non-inline)
   return (
     <div className="bg-white rounded shadow-sm border border-gray-200 p-4 space-y-4">
       {/* Dòng 1: Tìm kiếm, Export, Import, Reset */}
@@ -213,12 +404,14 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       <div className="border-t border-gray-200 pt-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-bold text-gray-700">Bộ lọc (筛选)</h3>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="text-sm text-brand-navy hover:underline"
-          >
-            {showFilters ? 'Ẩn bộ lọc (隐藏筛选)' : 'Hiện bộ lọc (显示筛选)'}
-          </button>
+          {!inline && (
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="text-sm text-brand-navy hover:underline"
+            >
+              {showFilters ? 'Ẩn bộ lọc (隐藏筛选)' : 'Hiện bộ lọc (显示筛选)'}
+            </button>
+          )}
         </div>
 
         {showFilters && (

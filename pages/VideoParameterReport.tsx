@@ -5,11 +5,13 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { exportToExcel, importFromExcel } from '../utils/excelUtils';
 import { formatCurrency, parseCurrency, parsePercentage, formatPercentage, formatCurrencyForExcel } from '../utils/formatUtils';
 import { VideoEditModal } from '../components/VideoEditModal';
+import { FilterBar } from '../components/FilterBar';
 import { isPartner, getPartnerId, isAdmin, getCurrentUserName, isRegularEmployee, isVideoUploader } from '../utils/permissionUtils';
 
 export const VideoParameterReport: React.FC = () => {
   const [videos, setVideos] = useState<VideoMetric[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
+  const [personnelList, setPersonnelList] = useState<any[]>([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<VideoMetric | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
@@ -92,6 +94,7 @@ export const VideoParameterReport: React.FC = () => {
         setVideos(videoData);
       }
       setStores(storeData.length > 0 ? storeData : MOCK_STORES);
+      setPersonnelList(personnelData);
     } catch (error) {
       console.error('Error loading data:', error);
       setVideos(MOCK_VIDEO_METRICS);
@@ -104,21 +107,18 @@ export const VideoParameterReport: React.FC = () => {
   const filteredVideos = useMemo(() => {
     let filtered = videos;
 
-    // Không lọc theo ngày - hiển thị tất cả video (No date filtering - show all videos)
+    // Filter by date range
+    filtered = filtered.filter(v => {
+      const videoDate = new Date(v.uploadDate);
+      const fromDate = new Date(dateFrom);
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      return videoDate >= fromDate && videoDate <= toDate;
+    });
 
     // Filter by store
     if (selectedFilters.stores && selectedFilters.stores.length > 0) {
       filtered = filtered.filter(v => selectedFilters.stores.includes(v.storeId));
-    }
-
-    // Filter by platform
-    if (selectedFilters.platforms && selectedFilters.platforms.length > 0) {
-      filtered = filtered.filter(v => selectedFilters.platforms.includes(v.platform));
-    }
-
-    // Filter by person in charge
-    if (selectedFilters.persons && selectedFilters.persons.length > 0) {
-      filtered = filtered.filter(v => selectedFilters.persons.includes(v.personInCharge));
     }
 
     // Search filter
@@ -130,6 +130,7 @@ export const VideoParameterReport: React.FC = () => {
           v.title.toLowerCase().includes(searchLower) ||
           v.platform.toLowerCase().includes(searchLower) ||
           v.personInCharge.toLowerCase().includes(searchLower) ||
+          (v.host && v.host.toLowerCase().includes(searchLower)) ||
           v.uploadDate.includes(searchLower) ||
           storeName.toLowerCase().includes(searchLower) ||
           v.views.toString().includes(searchLower) ||
@@ -139,11 +140,17 @@ export const VideoParameterReport: React.FC = () => {
     }
 
     return filtered;
-  }, [videos, selectedFilters, searchText, stores]);
+  }, [videos, selectedFilters, searchText, stores, dateFrom, dateTo]);
 
   const handleExportExcel = () => {
     const exportData = filteredVideos.map(video => {
-      const storeName = stores.find(s => s.id === video.storeId)?.name || '';
+      // Tìm store name: thử tìm theo ID trước, nếu không tìm thấy thì thử tìm theo tên (vì có thể storeId đã được lưu là tên store)
+      let storeName = stores.find(s => s.id === video.storeId)?.name || '';
+      if (!storeName) {
+        // Nếu không tìm thấy theo ID, thử tìm theo tên (case-insensitive)
+        const storeByName = stores.find(s => s.name.trim().toLowerCase() === video.storeId.trim().toLowerCase());
+        storeName = storeByName?.name || video.storeId || ''; // Nếu vẫn không tìm thấy, dùng storeId (có thể là tên store)
+      }
 
       // Xuất CHÍNH XÁC dữ liệu đã lưu, không tính toán lại
       return {
@@ -423,8 +430,8 @@ export const VideoParameterReport: React.FC = () => {
   const currentCount = filteredVideos.length;
   const progressPercent = Math.min((currentCount / monthlyTarget) * 100, 100);
 
-  // Week Total Views Calculation
-  const totalViews = filteredVideos.reduce((sum, v) => sum + v.views, 0);
+  // Week Total Views Calculation (for charts)
+  const totalViewsForCharts = filteredVideos.reduce((sum, v) => sum + v.views, 0);
   const totalSales = filteredVideos.reduce((sum, v) => sum + v.sales, 0);
 
   // Chart data - Group by date
@@ -578,24 +585,80 @@ export const VideoParameterReport: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
+  // Calculate totals for KPI cards
+  const totalVideoCount = filteredVideos.length;
+  const totalViews = filteredVideos.reduce((sum, v) => sum + v.views, 0);
+  const totalGMV = filteredVideos.reduce((sum, v) => sum + v.sales, 0);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen font-sans space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800 uppercase">Quản lý & Báo cáo Video (视频管理和报告)</h2>
       </div>
 
+      {/* Filter Bar */}
+      <FilterBar
+        inline={true}
+        onSearch={setSearchText}
+        onExportExcel={handleExportExcel}
+        onImportExcel={handleImportExcel}
+        onReset={() => {
+          setSearchText('');
+          setSelectedFilters({});
+          const today = new Date();
+          const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+          setDateFrom(firstDayOfMonth.toISOString().split('T')[0]);
+          setDateTo(today.toISOString().split('T')[0]);
+        }}
+        filterFields={[
+          {
+            key: 'stores',
+            label: 'Cửa hàng',
+            type: 'checkbox',
+            options: stores.filter(s => s.id !== 'all').map(s => ({ value: s.id, label: s.name }))
+          }
+        ]}
+        selectedFilters={selectedFilters}
+        onFilterChange={(field, values) => {
+          setSelectedFilters(prev => ({ ...prev, [field]: values }));
+        }}
+        dateFrom={dateFrom}
+        dateTo={dateTo}
+        onDateFromChange={setDateFrom}
+        onDateToChange={setDateTo}
+        onQuickDateSelect={(from, to) => {
+          setDateFrom(from);
+          setDateTo(to);
+        }}
+      />
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded shadow-sm border-l-4 border-blue-500">
+          <p className="text-xs text-gray-500 uppercase font-bold">TỔNG VIDEO (总视频)</p>
+          <p className="text-xl font-bold text-gray-800 mt-1">{totalVideoCount.toLocaleString()}</p>
+        </div>
+        <div className="bg-white p-4 rounded shadow-sm border-l-4 border-orange-500">
+          <p className="text-xs text-gray-500 uppercase font-bold">TỔNG LƯỢT XEM (总浏览量)</p>
+          <p className="text-xl font-bold text-orange-600 mt-1">{totalViews.toLocaleString()}</p>
+        </div>
+        <div className="bg-white p-4 rounded shadow-sm border-l-4 border-green-500">
+          <p className="text-xs text-gray-500 uppercase font-bold">TỔNG GMV (总GMV)</p>
+          <p className="text-xl font-bold text-green-600 mt-1">{formatCurrency(totalGMV)}</p>
+        </div>
+      </div>
 
       {/* KPI Section */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
           <h3 className="text-xs text-gray-500 mb-1">场观总数</h3>
-          <p className="text-3xl font-bold text-blue-600">{new Intl.NumberFormat('vi-VN').format(totalViews)}</p>
+          <p className="text-3xl font-bold text-blue-600">{new Intl.NumberFormat('vi-VN').format(totalViewsForCharts)}</p>
           <p className="text-xs text-gray-400 mt-1">总场观</p>
         </div>
 
         <div className="bg-white p-4 rounded shadow-sm border border-gray-200">
           <h3 className="text-xs text-gray-500 mb-1">新增粉丝数</h3>
-          <p className="text-3xl font-bold text-pink-600">{new Intl.NumberFormat('vi-VN').format(Math.floor(totalViews / 50))}</p>
+          <p className="text-3xl font-bold text-pink-600">{new Intl.NumberFormat('vi-VN').format(Math.floor(totalViewsForCharts / 50))}</p>
           <p className="text-xs text-gray-400 mt-1">粉丝增量</p>
         </div>
 
